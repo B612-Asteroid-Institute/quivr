@@ -1,0 +1,6 @@
+class InvariantViolatedError(Exception):
+    ...
+
+
+class TableFragmentedError(InvariantViolatedError):
+    ...

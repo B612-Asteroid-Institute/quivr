@@ -43,6 +43,17 @@ def test_create_from_pydict():
     assert have.column("y").to_pylist() == [4, 5, 6]
 
 
+def test_table_to_structarray():
+    xs = pa.array([1, 2, 3], pa.int64())
+    ys = pa.array([4, 5, 6], pa.int64())
+    pair = Pair.from_arrays([xs, ys])
+
+    want = pa.StructArray.from_arrays([xs, ys], fields=list(Pair.schema))
+
+    have = pair.to_structarray()
+    assert have == want
+
+
 def test_create_wrapped_from_pydict():
     have = Wrapper.from_pydict(
         {

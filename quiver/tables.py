@@ -7,6 +7,8 @@ import numpy as np
 import numpy.typing as npt
 from abc import ABC, abstractmethod
 
+from .errors import TableFragmentedError
+
 _METADATA_MODEL_KEY = b"__quiver_model_pickle"
 _METADATA_NAME_KEY = b"__quiver_model_name"
 _METADATA_UNPICKLE_KWARGS_KEY = b"__quiver_model_unpickle_kwargs"
@@ -94,13 +96,25 @@ class TableBase(metaclass=TableMetaclass):
         return result
 
     def fragmented(self) -> bool:
-        """
-        Returns true if the Table has any fragmented arrays.
+        """Returns true if the Table has any fragmented arrays. If
+        this is the case, performance might be improved by calling
+        defragment on it.
+
         """
         return any(v > 1 for v in self.chunk_counts().values())
 
-    def to_structarray(self, auto_defrag: bool = True):
-        return pa.StructArray()
+    def to_structarray(self) -> pa.StructArray:
+        """Returns self as a StructArray.
+
+        This only works if self is not fragmented. Call table =
+        defragment(table) if table.fragmented() is True.
+        """
+        if self.fragmented():
+            raise TableFragmentedError(
+                "Tables cannot be converted to StructArrays while fragmented; call defragment(table) first."
+            )
+        arrays = [chunked_array.chunks[0] for chunked_array in self.table.columns]
+        return pa.StructArray.from_arrays(arrays, fields=list(self.schema))
 
     @classmethod
     def as_field(
