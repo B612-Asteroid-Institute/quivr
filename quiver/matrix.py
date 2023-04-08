@@ -4,6 +4,11 @@ import functools
 
 
 class MatrixExtensionType(pa.PyExtensionType):
+    """This is a custom type for embedding multi-dimensional arrays
+    into Table schemas.
+
+    """
+
     def __init__(self, shape: tuple[int, int], element_dtype: pa.DataType):
         self.shape = shape
         self.element_dtype = element_dtype

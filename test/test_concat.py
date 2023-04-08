@@ -1,3 +1,4 @@
+import pytest
 from .test_tables import Pair, Wrapper
 from quiver.concat import concatenate
 import pyarrow as pa
@@ -34,3 +35,16 @@ def test_concatenate_nested():
     assert len(have) == 6
     assert have.pair.x.to_pylist() == [1, 2, 3, 11, 22, 33]
     assert have.id.to_pylist() == ["v1", "v2", "v3", "v4", "v5", "v6"]
+
+
+@pytest.mark.benchmark(group="ops")
+def test_benchmark_concatenate_100(benchmark):
+    xs1 = pa.array([1, 2, 3], pa.int64())
+    ys1 = pa.array([4, 5, 6], pa.int64())
+    pair1 = Pair.from_arrays([xs1, ys1])
+
+    xs2 = pa.array([11, 22, 33], pa.int64())
+    ys2 = pa.array([44, 55, 66], pa.int64())
+    pair2 = Pair.from_arrays([xs2, ys2])
+
+    benchmark(concatenate, [pair1, pair2] * 50)
