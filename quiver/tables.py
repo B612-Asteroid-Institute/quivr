@@ -1,5 +1,6 @@
 import pyarrow as pa
-from typing import Optional, TypeVar, Generic, Union
+import pyarrow.compute as pc
+from typing import Optional, TypeVar, Generic, Union, Any
 import functools
 import pickle
 import pandas as pd
@@ -58,6 +59,9 @@ class TableMetaclass(type):
             yield (field.name, prop)
 
 
+TTableBase = TypeVar("TTableBase", bound="TableBase")
+
+
 class TableBase(metaclass=TableMetaclass):
     table: pa.Table
     schema: pa.Schema = pa.schema([])
@@ -82,6 +86,27 @@ class TableBase(metaclass=TableMetaclass):
     def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]):
         table = pa.Table.from_pydict(d, schema=cls.schema)
         return cls(table=table)
+
+    def select(self: TTableBase, column_name: str, value: Any) -> TTableBase:
+        """Select from the table by exact match, returning a new
+        Table which only contains rows for which the value in
+        column_name equals value.
+
+        """
+        table = self.table.filter(pc.field(column_name) == value)
+        return self.__class__(table)
+
+    def sort_by(self: TTableBase, by: Union[str, list[tuple[str, str]]]):
+        """Sorts the Table by the given column name (or multiple
+        columns). This operation requires a copy, and returns a new
+        Table using the copied data.
+
+        by should be a column name to sort by, or a list of (column,
+        order) tuples, where order can be "ascending" or "descending".
+
+        """
+        table = self.table.sort_by(by)
+        return self.__class__(table)
 
     def chunk_counts(self) -> dict[str, int]:
         """Returns the number of discrete memory chunks that make up

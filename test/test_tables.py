@@ -104,3 +104,30 @@ def test_check_fragmented():
     assert not pair.fragmented()
     pair = concatenate([pair, pair], defrag=False)
     assert pair.fragmented()
+
+
+def test_select():
+    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    have = pair.select("x", 3)
+    assert len(have) == 1
+    assert have.y[0].as_py() == 6
+
+
+def test_select_empty():
+    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    have = pair.select("x", 4)
+    assert len(have) == 0
+
+
+def test_sort_by():
+    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [5, 1, 2]})
+
+    sorted1 = pair.sort_by("y")
+    assert sorted1.x[0].as_py() == 2
+    assert sorted1.x[1].as_py() == 3
+    assert sorted1.x[2].as_py() == 1
+
+    sorted2 = pair.sort_by([("x", "descending")])
+    assert sorted2.x[0].as_py() == 3
+    assert sorted2.x[1].as_py() == 2
+    assert sorted2.x[2].as_py() == 1
