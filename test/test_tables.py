@@ -78,13 +78,3 @@ def test_iteration():
 
     assert values[2].x[0].as_py() == 3
     assert values[2].y[0].as_py() == 6
-
-
-def test_append():
-    xs1 = pa.array([1, 2, 3], pa.int64())
-    ys1 = pa.array([4, 5, 6], pa.int64())
-    pair1 = Pair.from_arrays([xs1, ys1])
-
-    xs2 = pa.array([11, 22, 33], pa.int64())
-    ys2 = pa.array([44, 55, 66], pa.int64())
-    pair2 = Pair.from_arrays([xs2, ys2])
