@@ -1,4 +1,4 @@
-class InvariantViolatedError(Exception):
+class InvariantViolatedError(RuntimeError):
     ...
 
 
