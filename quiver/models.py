@@ -1,0 +1,133 @@
+import pyarrow as pa
+from typing import Optional, TypeVar, Generic
+import functools
+import pickle
+import pandas as pd
+import numpy as np
+import numpy.typing as npt
+from abc import ABC, abstractmethod
+
+_METADATA_MODEL_KEY = b"__quiver_model_pickle"
+_METADATA_NAME_KEY = b"__quiver_model_name"
+_METADATA_UNPICKLE_KWARGS_KEY = b"__quiver_model_unpickle_kwargs"
+
+
+class ModelMetaclass(type):
+    """ModelMetaclass is a metaclass which attaches accessors
+    to Models based on their schema class-level attribute.
+
+    Each field in the class's schema becomes an attribute on the class.
+
+    """
+
+    def __new__(cls, name, bases, attrs):
+        # Invoked when a class is created. We use this to generate
+        # accessors for the class's schema's fields.
+        if "schema" not in attrs:
+            raise TypeError(f"Model {name} requires a schema attribute")
+        if not isinstance(attrs["schema"], pa.Schema):
+            raise TypeError(f"Model {name} schema attribute must be a pyarrow.Schema")
+        accessors = dict(cls.generate_accessors(attrs["schema"]))
+        attrs.update(accessors)
+        return super().__new__(cls, name, bases, attrs)
+
+    def generate_accessors(schema: pa.Schema):
+        """Generate all the property accessors for the schema's fields.
+
+        Each field is accessed by name. When getting the field, its
+        underlying value is unloaded out of the Arrow array. If the
+        field has a model attached to it, the model is instantiated
+        with the data. Otherwise, the data is returned as-is.
+
+        """
+
+        def getter(_self, field: pa.Field):
+            return _self.column(field.name)
+
+        def setter(_self):
+            raise NotImplementedError("Models are immutable")
+
+        def deleter(_self):
+            raise NotImplementedError("Models are immutable")
+
+        for idx, field in enumerate(schema):
+            g = functools.partial(getter, field=field)
+            prop = property(fget=g, fset=setter, fdel=deleter)
+            yield (field.name, prop)
+
+
+class BaseModel(metaclass=ModelMetaclass):
+    _data_table: pa.Table
+    schema: pa.Schema = pa.schema([])
+
+    def __init__(self, data: pa.Table):
+        if not isinstance(data, pa.Table):
+            raise TypeError(
+                f"Data must be a pyarrow.Table for {self.__class__.__name__}"
+            )
+        if data.schema != self.schema:
+            raise TypeError(
+                f"Data schema must match schema for {self.__class__.__name__}"
+            )
+        self._data_table = data
+
+    @classmethod
+    def from_arrays(cls, l: list[pa.array]):
+        data = pa.Table.from_arrays(l, schema=cls.schema)
+        return cls(data=data)
+
+    @classmethod
+    def as_field(
+        cls, name: str, nullable: bool = True, metadata: Optional[dict] = None
+    ):
+        metadata = metadata or {}
+        metadata[_METADATA_NAME_KEY] = cls.__name__
+        metadata[_METADATA_MODEL_KEY] = pickle.dumps(cls)
+        field = pa.field(
+            name, pa.struct(cls.schema), nullable=nullable, metadata=metadata
+        )
+        return field
+
+    def column(self, field_name: str):
+        field = self.schema.field(field_name)
+        if field.metadata is not None and _METADATA_MODEL_KEY in field.metadata:
+            # If the field has type information attached to it in
+            # metadata, pull it out. The metadata store the model (as
+            # a class object), and may optionally have some keyword
+            # arguments to be used when instantiating the model from
+            # the data.
+            model = pickle.loads(field.metadata[_METADATA_MODEL_KEY])
+            if _METADATA_UNPICKLE_KWARGS_KEY in field.metadata:
+                init_kwargs = pickle.loads(
+                    field.metadata[_METADATA_UNPICKLE_KWARGS_KEY]
+                )
+            else:
+                init_kwargs = {}
+            data = _sub_table(_data_table, field_name)
+            return model(data=data, **init_kwargs)
+        return self._data_table.column(field_name)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(size={len(self._data_table)})"
+
+    def __len__(self):
+        return len(self._data_table)
+
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            return self.__class__(self._data_table[idx : idx + 1])
+        return self.__class__(self._data_table[idx])
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i : i + 1]
+
+
+def _sub_table(tab: pa.Table, field_name: str):
+    """Given a table which contains a StructArray under given field
+    name, construct a table from the sub-object.
+
+    """
+    column = tab.column(field_name)
+    schema = pa.schema(column.type)
+    return ps.Table.from_arrays(column.flatten(), schema=schema)
