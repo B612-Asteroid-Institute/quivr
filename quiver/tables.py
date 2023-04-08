@@ -60,26 +60,26 @@ class TableBase(metaclass=TableMetaclass):
     table: pa.Table
     schema: pa.Schema = pa.schema([])
 
-    def __init__(self, data: pa.Table):
-        if not isinstance(data, pa.Table):
+    def __init__(self, table: pa.Table):
+        if not isinstance(table, pa.Table):
             raise TypeError(
                 f"Data must be a pyarrow.Table for {self.__class__.__name__}"
             )
-        if data.schema != self.schema:
+        if table.schema != self.schema:
             raise TypeError(
                 f"Data schema must match schema for {self.__class__.__name__}"
             )
-        self.table = data
+        self.table = table
 
     @classmethod
     def from_arrays(cls, l: list[pa.array]):
-        data = pa.Table.from_arrays(l, schema=cls.schema)
-        return cls(data=data)
+        table = pa.Table.from_arrays(l, schema=cls.schema)
+        return cls(table=table)
 
     @classmethod
     def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]):
-        data = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls(data=data)
+        table = pa.Table.from_pydict(d, schema=cls.schema)
+        return cls(table=table)
 
     @classmethod
     def as_field(
@@ -108,8 +108,8 @@ class TableBase(metaclass=TableMetaclass):
                 )
             else:
                 init_kwargs = {}
-            data = _sub_table(self.table, field_name)
-            return model(data=data, **init_kwargs)
+            table = _sub_table(self.table, field_name)
+            return model(table=table, **init_kwargs)
         return self.table.column(field_name)
 
     def __repr__(self):
