@@ -1,4 +1,5 @@
 from .matrix import MatrixArray, MatrixExtensionType
-from .models import BaseModel
+from .tables import TableBase
+from .concat import concatenate
 
-__all__ = ["BaseModel", "MatrixArray", "MatrixExtensionType"]
+__all__ = ["TableBase", "MatrixArray", "MatrixExtensionType", "concatenate"]

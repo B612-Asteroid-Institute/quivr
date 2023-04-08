@@ -1,5 +1,5 @@
 import pyarrow as pa
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, Union
 import functools
 import pickle
 import pandas as pd
@@ -12,9 +12,9 @@ _METADATA_NAME_KEY = b"__quiver_model_name"
 _METADATA_UNPICKLE_KWARGS_KEY = b"__quiver_model_unpickle_kwargs"
 
 
-class ModelMetaclass(type):
-    """ModelMetaclass is a metaclass which attaches accessors
-    to Models based on their schema class-level attribute.
+class TableMetaclass(type):
+    """TableMetaclass is a metaclass which attaches accessors
+    to Tables based on their schema class-level attribute.
 
     Each field in the class's schema becomes an attribute on the class.
 
@@ -24,9 +24,9 @@ class ModelMetaclass(type):
         # Invoked when a class is created. We use this to generate
         # accessors for the class's schema's fields.
         if "schema" not in attrs:
-            raise TypeError(f"Model {name} requires a schema attribute")
+            raise TypeError(f"Table {name} requires a schema attribute")
         if not isinstance(attrs["schema"], pa.Schema):
-            raise TypeError(f"Model {name} schema attribute must be a pyarrow.Schema")
+            raise TypeError(f"Table {name} schema attribute must be a pyarrow.Schema")
         accessors = dict(cls.generate_accessors(attrs["schema"]))
         attrs.update(accessors)
         return super().__new__(cls, name, bases, attrs)
@@ -45,10 +45,10 @@ class ModelMetaclass(type):
             return _self.column(field.name)
 
         def setter(_self):
-            raise NotImplementedError("Models are immutable")
+            raise NotImplementedError("Tables are immutable")
 
         def deleter(_self):
-            raise NotImplementedError("Models are immutable")
+            raise NotImplementedError("Tables are immutable")
 
         for idx, field in enumerate(schema):
             g = functools.partial(getter, field=field)
@@ -56,8 +56,8 @@ class ModelMetaclass(type):
             yield (field.name, prop)
 
 
-class BaseModel(metaclass=ModelMetaclass):
-    _data_table: pa.Table
+class TableBase(metaclass=TableMetaclass):
+    table: pa.Table
     schema: pa.Schema = pa.schema([])
 
     def __init__(self, data: pa.Table):
@@ -69,11 +69,16 @@ class BaseModel(metaclass=ModelMetaclass):
             raise TypeError(
                 f"Data schema must match schema for {self.__class__.__name__}"
             )
-        self._data_table = data
+        self.table = data
 
     @classmethod
     def from_arrays(cls, l: list[pa.array]):
         data = pa.Table.from_arrays(l, schema=cls.schema)
+        return cls(data=data)
+
+    @classmethod
+    def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]):
+        data = pa.Table.from_pydict(d, schema=cls.schema)
         return cls(data=data)
 
     @classmethod
@@ -103,20 +108,20 @@ class BaseModel(metaclass=ModelMetaclass):
                 )
             else:
                 init_kwargs = {}
-            data = _sub_table(_data_table, field_name)
+            data = _sub_table(self.table, field_name)
             return model(data=data, **init_kwargs)
-        return self._data_table.column(field_name)
+        return self.table.column(field_name)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(size={len(self._data_table)})"
+        return f"{self.__class__.__name__}(size={len(self.table)})"
 
     def __len__(self):
-        return len(self._data_table)
+        return len(self.table)
 
     def __getitem__(self, idx):
         if isinstance(idx, int):
-            return self.__class__(self._data_table[idx : idx + 1])
-        return self.__class__(self._data_table[idx])
+            return self.__class__(self.table[idx : idx + 1])
+        return self.__class__(self.table[idx])
 
     def __iter__(self):
         for i in range(len(self)):
@@ -130,4 +135,4 @@ def _sub_table(tab: pa.Table, field_name: str):
     """
     column = tab.column(field_name)
     schema = pa.schema(column.type)
-    return ps.Table.from_arrays(column.flatten(), schema=schema)
+    return pa.Table.from_arrays(column.flatten(), schema=schema)
