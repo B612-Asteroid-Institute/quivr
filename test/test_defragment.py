@@ -24,6 +24,7 @@ def test_defragment():
 
     assert len(combined.x.chunks) == 10
 
+
 @pytest.mark.benchmark(group="ops")
 def test_benchmark_defragment_100(benchmark):
     p1 = Pair.from_arrays(

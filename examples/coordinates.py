@@ -1,5 +1,5 @@
-from .models import TableBase
-from .matrix import MatrixExtensionType, MatrixArray
+from quiver import TableBase
+
 import pyarrow as pa
 import numpy as np
 import numpy.typing as npt
@@ -24,6 +24,7 @@ class CartesianCoordinates(TableBase):
         return stacked.reshape((len(stacked), 6, 6))
 
 
+
 class Orbit(TableBase):
     schema = pa.schema(
         [
@@ -33,3 +34,17 @@ class Orbit(TableBase):
         ]
     )
 
+
+
+def create_example_orbits(n_orbits: int):
+    xs = np.random.random(n_orbits)
+    ys = np.random.random(n_orbits)    
+    zs = np.random.random(n_orbits)    
+    vxs = np.random.random(n_orbits)
+    vys = np.random.random(n_orbits)    
+    vzs = np.random.random(n_orbits)
+    covs = np.random.random((n_orbits, 36))
+
+    cartesians = CartesianCoordinates.from_arrays([xs, ys, zs, vxs, vys, vzs, covs])
+    
+    

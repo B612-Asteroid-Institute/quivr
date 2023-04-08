@@ -81,6 +81,27 @@ class TableBase(metaclass=TableMetaclass):
         table = pa.Table.from_pydict(d, schema=cls.schema)
         return cls(table=table)
 
+    def chunk_counts(self) -> dict[str, int]:
+        """Returns the number of discrete memory chunks that make up
+        each of the Table's underlying arrays. The keys of the
+        resulting dictionary are the field names, and the values are
+        the number of chunks for that field's data.
+
+        """
+        result = {}
+        for i, field in enumerate(self.schema):
+            result[field.name] = self.table.column(i).num_chunks
+        return result
+
+    def fragmented(self) -> bool:
+        """
+        Returns true if the Table has any fragmented arrays.
+        """
+        return any(v > 1 for v in self.chunk_counts().values())
+
+    def to_structarray(self, auto_defrag: bool = True):
+        return pa.StructArray()
+
     @classmethod
     def as_field(
         cls, name: str, nullable: bool = True, metadata: Optional[dict] = None

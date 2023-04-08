@@ -1,4 +1,5 @@
 from quiver.tables import TableBase
+from quiver.concat import concatenate
 import pyarrow as pa
 
 
@@ -78,3 +79,17 @@ def test_iteration():
 
     assert values[2].x[0].as_py() == 3
     assert values[2].y[0].as_py() == 6
+
+
+def test_chunk_counts():
+    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    assert pair.chunk_counts() == {"x": 1, "y": 1}
+    pair = concatenate([pair, pair], defrag=False)
+    assert pair.chunk_counts() == {"x": 2, "y": 2}
+
+
+def test_check_fragmented():
+    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    assert not pair.fragmented()
+    pair = concatenate([pair, pair], defrag=False)
+    assert pair.fragmented()
