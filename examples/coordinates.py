@@ -24,7 +24,6 @@ class CartesianCoordinates(TableBase):
         return stacked.reshape((len(stacked), 6, 6))
 
 
-
 class Orbit(TableBase):
     schema = pa.schema(
         [
@@ -35,16 +34,21 @@ class Orbit(TableBase):
     )
 
 
-
 def create_example_orbits(n_orbits: int):
-    xs = np.random.random(n_orbits)
-    ys = np.random.random(n_orbits)    
-    zs = np.random.random(n_orbits)    
-    vxs = np.random.random(n_orbits)
-    vys = np.random.random(n_orbits)    
-    vzs = np.random.random(n_orbits)
-    covs = np.random.random((n_orbits, 36))
+    data = np.random.random((6, n_orbits))
 
-    cartesians = CartesianCoordinates.from_arrays([xs, ys, zs, vxs, vys, vzs, covs])
-    
-    
+    xs = pa.array(data[0], pa.float64())
+    ys = pa.array(data[1], pa.float64())
+    zs = pa.array(data[2], pa.float64())
+    vxs = pa.array(data[3], pa.float64())
+    vys = pa.array(data[4], pa.float64())
+    vzs = pa.array(data[5], pa.float64())
+    covs = pa.array(list(np.random.random((n_orbits, 36))), pa.list_(pa.float64(), 36))
+
+    coords = CartesianCoordinates.from_arrays([xs, ys, zs, vxs, vys, vzs, covs])
+
+    coords_sa = coords.to_structarray()
+    epochs = pa.array(np.random.random(n_orbits), pa.float64())
+    ids = pa.array([f"id{i}" for i in range(n_orbits)], type=pa.string())
+
+    return Orbit.from_arrays([coords_sa, epochs, ids])
