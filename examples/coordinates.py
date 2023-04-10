@@ -14,7 +14,7 @@ class CartesianCoordinates(TableBase):
             pa.field("vx", pa.float64()),
             pa.field("vy", pa.float64()),
             pa.field("vz", pa.float64()),
-            pa.field("covariance", pa.list_(pa.float64(), 36)),
+            pa.field("covariance", pa.list_(pa.float64())),
         ]
     )
 
@@ -33,6 +33,14 @@ class Orbit(TableBase):
         ]
     )
 
+class Etc(TableBase):
+    schema = pa.schema(
+        [
+            Orbit.as_field("orbit"),
+            pa.field("thing", pa.float64()),
+        ]
+    )
+
 
 def create_example_orbits(n_orbits: int):
     data = np.random.random((6, n_orbits))
@@ -43,7 +51,7 @@ def create_example_orbits(n_orbits: int):
     vxs = pa.array(data[3], pa.float64())
     vys = pa.array(data[4], pa.float64())
     vzs = pa.array(data[5], pa.float64())
-    covs = pa.array(list(np.random.random((n_orbits, 36))), pa.list_(pa.float64(), 36))
+    covs = pa.array(list(np.random.random((n_orbits, 36))), pa.list_(pa.float64()))
 
     coords = CartesianCoordinates.from_arrays([xs, ys, zs, vxs, vys, vzs, covs])
 

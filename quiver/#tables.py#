@@ -1,7 +1,5 @@
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.parquet
-import pyarrow.feather
 from typing import Optional, TypeVar, Generic, Union, Any
 import functools
 import pickle
@@ -169,10 +167,9 @@ class TableBase(metaclass=TableMetaclass):
         table_arrays = []
         for subfield in cls.schema:
             table_arrays.append(sa.field(subfield.name))
-            
+
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
         return cls(table=table)
-
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
@@ -303,33 +300,6 @@ class TableBase(metaclass=TableMetaclass):
     def __iter__(self):
         for i in range(len(self)):
             yield self[i : i + 1]
-
-    def to_parquet(self, path: str, **kwargs):
-        """Write the table to a Parquet file.
-
-        """
-        pyarrow.parquet.write_table(self.table, path, **kwargs)
-
-    @classmethod
-    def from_parquet(cls, path: str, **kwargs):
-        """Read a table from a Parquet file.
-
-        """
-        return cls(table=pyarrow.parquet.read_table(path, **kwargs))
-
-    def to_feather(self, path: str, **kwargs):
-        """Write the table to a Feather file.
-
-        """
-        pyarrow.feather.write_feather(self.table, path, **kwargs)
-
-    @classmethod
-    def from_feather(cls, path: str, **kwargs):
-        """Read a table from a Feather file.
-
-        """
-        return cls(table=pyarrow.feather.read_feather(path, **kwargs))
-    
 
 
 def _sub_table(tab: pa.Table, field_name: str):
