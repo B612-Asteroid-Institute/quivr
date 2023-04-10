@@ -100,7 +100,7 @@ You can embed one table's definition within another, and you can make fields nul
 class AsteroidOrbit(TableBase):
     schema = pa.schema(
         [
-              pa.field("designation", pa.string()),
+            pa.field("designation", pa.string()),
             pa.field("mass", pa.float64(), nullable=True),
             pa.field("radius", pa.float64(), nullable=True),
             Coordinates.as_field("coords"),
@@ -147,7 +147,7 @@ can do so like this:
 class AsteroidOrbit(TableBase):
     schema = pa.schema(
         [
-              pa.field("designation", pa.string()),
+            pa.field("designation", pa.string()),
             pa.field("mass", pa.float64(), nullable=True),
             pa.field("radius", pa.float64(), nullable=True),
             Coordinates.as_field("coords"),
@@ -179,7 +179,7 @@ class CoordinateCovariance(TableBase):
 class AsteroidOrbit(TableBase):
     schema = pa.schema(
         [
-              pa.field("designation", pa.string()),
+            pa.field("designation", pa.string()),
             pa.field("mass", pa.float64(), nullable=True),
             pa.field("radius", pa.float64(), nullable=True),
             Coordinates.as_field("coords"),
