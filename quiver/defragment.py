@@ -1,7 +1,6 @@
-from typing import TypeVar, Iterator
-from .tables import TableBase
-import pyarrow as pa
+from typing import TypeVar
 
+from .tables import TableBase
 
 GenericTable = TypeVar("GenericTable", bound=TableBase)
 

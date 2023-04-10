@@ -1,9 +1,10 @@
-import pyarrow as pa
-from quiver import TableBase
-import pyarrow.compute as pc
-from typing import Optional, TypeVar, Generic
-import mmh3
+from typing import Generic, Optional, TypeVar
 
+import mmh3
+import pyarrow as pa
+import pyarrow.compute as pc
+
+from quiver import TableBase
 
 T = TypeVar("T", bound=TableBase)
 

@@ -1,17 +1,16 @@
-import pyarrow as pa
-import pyarrow.compute as pc
-import pyarrow.parquet
-import pyarrow.feather
-from typing import Optional, TypeVar, Union, Any, Self
 import functools
 import pickle
-import pandas as pd
+from typing import Any, Optional, Self, Union
+
 import numpy as np
-import numpy.typing as npt
-from abc import ABC, abstractmethod
+import pandas as pd
+import pyarrow as pa
+import pyarrow.compute as pc
+import pyarrow.feather
+import pyarrow.parquet
 
 from .errors import TableFragmentedError
-from .schemagraph import compute_depth, _walk_schema
+from .schemagraph import _walk_schema, compute_depth
 
 _METADATA_MODEL_KEY = b"__quiver_model_pickle"
 _METADATA_NAME_KEY = b"__quiver_model_name"
@@ -66,7 +65,6 @@ class TableMetaclass(type):
             yield (field.name, prop)
 
 
-
 class TableBase(metaclass=TableMetaclass):
     table: pa.Table
     schema: pa.Schema = pa.schema([])
@@ -85,8 +83,8 @@ class TableBase(metaclass=TableMetaclass):
         self.table = table
 
     @classmethod
-    def from_arrays(cls, l: list[pa.array]):
-        table = pa.Table.from_arrays(l, schema=cls.schema)
+    def from_arrays(cls, arrays: list[pa.array]):
+        table = pa.Table.from_arrays(arrays, schema=cls.schema)
         return cls(table=table)
 
     @classmethod
@@ -139,8 +137,9 @@ class TableBase(metaclass=TableMetaclass):
         #
         # Then the struct array for the inner struct will be stored in
         # the dictionary at the key "foo.bar".
-        
+
         struct_arrays: dict[str, pa.StructArray] = {}
+
         def visitor(field: pa.Field, ancestors: list[pa.Field]):
             # Modify the dataframe in place, trimming out the columns we
             # have already processed in depth-first order.
@@ -188,10 +187,9 @@ class TableBase(metaclass=TableMetaclass):
         for subfield in cls.schema:
             # Pull out the fields of that root-level struct array.
             table_arrays.append(sa.field(subfield.name))
-            
+
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
         return cls(table=table)
-
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
@@ -324,37 +322,26 @@ class TableBase(metaclass=TableMetaclass):
             yield self[i : i + 1]
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
-        """Return a new Table with only the rows at the given indices.
-
-        """
+        """Return a new Table with only the rows at the given indices."""
         return self.__class__(self.table.take(row_indices))
 
     def to_parquet(self, path: str, **kwargs):
-        """Write the table to a Parquet file.
-
-        """
+        """Write the table to a Parquet file."""
         pyarrow.parquet.write_table(self.table, path, **kwargs)
 
     @classmethod
     def from_parquet(cls, path: str, **kwargs):
-        """Read a table from a Parquet file.
-
-        """
+        """Read a table from a Parquet file."""
         return cls(table=pyarrow.parquet.read_table(path, **kwargs))
 
     def to_feather(self, path: str, **kwargs):
-        """Write the table to a Feather file.
-
-        """
+        """Write the table to a Feather file."""
         pyarrow.feather.write_feather(self.table, path, **kwargs)
 
     @classmethod
     def from_feather(cls, path: str, **kwargs):
-        """Read a table from a Feather file.
-
-        """
+        """Read a table from a Feather file."""
         return cls(table=pyarrow.feather.read_feather(path, **kwargs))
-    
 
 
 def _sub_table(tab: pa.Table, field_name: str):

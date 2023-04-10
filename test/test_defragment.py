@@ -1,11 +1,11 @@
 import pyarrow as pa
 import pytest
 
-from quiver.defragment import defragment
 from quiver.concat import concatenate
-from quiver.tables import TableBase
+from quiver.defragment import defragment
 
 from .test_tables import Pair
+
 
 def test_defragment():
     p1 = Pair.from_arrays(
@@ -14,10 +14,10 @@ def test_defragment():
             pa.array([4, 5, 6], pa.int64()),
         ]
     )
-    combined = concatenate([p1]*10, defrag=False)
+    combined = concatenate([p1] * 10, defrag=False)
     assert len(combined) == 30
     assert len(combined.x.chunks) == 10
-    
+
     defragged = defragment(combined)
     assert len(defragged) == 30
     assert len(defragged.x.chunks) == 1
@@ -33,9 +33,5 @@ def test_benchmark_defragment_100(benchmark):
             pa.array([4, 5, 6], pa.int64()),
         ]
     )
-    combined = concatenate([p1]*100, defrag=False)
+    combined = concatenate([p1] * 100, defrag=False)
     benchmark(defragment, combined)
-
-    
-
-    

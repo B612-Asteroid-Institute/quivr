@@ -1,6 +1,4 @@
 import pyarrow as pa
-import numpy as np
-import functools
 
 
 class MatrixExtensionType(pa.PyExtensionType):

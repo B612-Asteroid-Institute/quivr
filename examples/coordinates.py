@@ -1,8 +1,8 @@
-from quiver import TableBase
-
-import pyarrow as pa
 import numpy as np
 import numpy.typing as npt
+import pyarrow as pa
+
+from quiver import TableBase
 
 
 class CartesianCoordinates(TableBase):
@@ -32,6 +32,7 @@ class Orbit(TableBase):
             pa.field("object_id", pa.string()),
         ]
     )
+
 
 class Etc(TableBase):
     schema = pa.schema(

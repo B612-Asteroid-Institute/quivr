@@ -1,4 +1,5 @@
-from typing import Optional, Callable, NoReturn
+from typing import Callable, NoReturn, Optional
+
 import pyarrow as pa
 
 

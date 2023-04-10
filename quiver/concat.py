@@ -1,8 +1,9 @@
-from typing import TypeVar, Iterator
-from .tables import TableBase
-from .defragment import defragment
+from typing import Iterator, TypeVar
+
 import pyarrow as pa
 
+from .defragment import defragment
+from .tables import TableBase
 
 Table = TypeVar("Table", bound=TableBase)
 

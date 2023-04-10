@@ -1,6 +1,7 @@
-from quiver.tables import TableBase
-from quiver.concat import concatenate
 import pyarrow as pa
+
+from quiver.concat import concatenate
+from quiver.tables import TableBase
 
 
 class Pair(TableBase):
