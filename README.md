@@ -197,7 +197,7 @@ determinants = np.linalg.det(orbits.covariance.matrix)
 
 
 ### Filtering
-You can also use this to filter by expressions on the data. See [Arrow
+You can also filter by expressions on the data. See [Arrow
 documentation](https://arrow.apache.org/docs/python/compute.html) for
 more details. You can use this to construct a quiver Table using an
 appropriately-schemaed Arrow Table:
@@ -206,6 +206,34 @@ appropriately-schemaed Arrow Table:
 
 big_orbits = AsteroidOrbit(orbits.table.filter(orbits.table["mass"] > 1e21))
 ```
+
+If you're plucking out rows that match a single value, you can use the
+"select" method on the Table:
+
+```python
+# Get the orbit of Ceres
+ceres_orbit = orbits.select("designation", "Ceres")
+```
+
+#### Indexes for Fast Lookups
+
+If you're going to be doing a lot of lookups on a particular column,
+it can be useful to create an index for that column. You can do using
+the `quiver.StringIndex` class to build an index for string values:
+
+```python
+# Build an index for the designation column
+designation_index = quiver.StringIndex(orbits, "designation")
+
+# Get the orbit of Ceres
+ceres_orbit = designation_index.lookup("Ceres")
+```
+
+The `lookup` method on the StringIndex returns Quiver Tables, or None
+if there is no match. Keep in mind that the returned tables might have
+multiple rows if there are multiple matches.
+
+_TODO: Add numeric and time-based indexes._
 
 ### Serialization
 

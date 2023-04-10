@@ -72,6 +72,7 @@ TTableBase = TypeVar("TTableBase", bound="TableBase")
 class TableBase(metaclass=TableMetaclass):
     table: pa.Table
     schema: pa.Schema = pa.schema([])
+    indexes: list[str] = []
 
     def __init__(self, table: pa.Table):
         if not isinstance(table, pa.Table):
@@ -303,6 +304,12 @@ class TableBase(metaclass=TableMetaclass):
     def __iter__(self):
         for i in range(len(self)):
             yield self[i : i + 1]
+
+    def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> TTableBase:
+        """Return a new Table with only the rows at the given indices.
+
+        """
+        return self.__class__(self.table.take(row_indices))
 
     def to_parquet(self, path: str, **kwargs):
         """Write the table to a Parquet file.
