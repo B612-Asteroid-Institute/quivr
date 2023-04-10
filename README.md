@@ -135,6 +135,66 @@ There is a very extensive set of functions available in the
 computations will, in general, use all cores available and do
 vectorized computations which are very fast.
 
+### Customizing behavior with methods
+
+Because Quiver tables are just Python classes, you can customize the
+behavior of your tables by adding or overriding methods. For example, if you want to add a
+method to compute the total mass of the asteroids in the table, you
+can do so like this:
+
+```python
+
+class AsteroidOrbit(TableBase):
+	schema = pa.schema(
+	    [
+	  		pa.field("designation", pa.string()),
+	        pa.field("mass", pa.float64(), nullable=True),
+			pa.field("radius", pa.float64(), nullable=True),
+	        Coordinates.as_field("coords"),
+	    ]
+	)
+
+	def total_mass(self):
+		return pc.sum(self.mass)
+
+```
+
+You can also use this to add "meta-fields" which are combinations of other fields. For example:
+
+```python
+class CoordinateCovariance(TableBase):
+	schema = pa.schema(
+	    [
+		    # The covariance matrix of the coordinates as a 6x6 matrix (3 positions, 3 velocities)
+		    pa.field("matrix_values", pa.list_(pa.float64(), 36)),
+	    ]
+	)
+
+	@property
+	def matrix(self):
+		# This is a numpy array of shape (n, 6, 6)
+		return self.matrix_values.to_numpy().reshape(-1, 6, 6)
+
+
+class AsteroidOrbit(TableBase):
+	schema = pa.schema(
+	    [
+	  		pa.field("designation", pa.string()),
+	        pa.field("mass", pa.float64(), nullable=True),
+			pa.field("radius", pa.float64(), nullable=True),
+	        Coordinates.as_field("coords"),
+			CoordinateCovariance.as_field("covariance"),
+	    ]
+	)
+	
+	
+	
+orbits = load_orbits() # Analogous to the example above
+
+# Compute the determinant of the covariance matrix for each asteroid
+determinants = np.linalg.det(orbits.covariance.matrix)
+```
+
 
 ### Filtering
 You can also use this to filter by expressions on the data. See [Arrow
