@@ -2,7 +2,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet
 import pyarrow.feather
-from typing import Optional, TypeVar, Generic, Union, Any
+from typing import Optional, TypeVar, Union, Any, Self
 import functools
 import pickle
 import pandas as pd
@@ -54,7 +54,7 @@ class TableMetaclass(type):
         def getter(_self, field: pa.Field):
             return _self.column(field.name)
 
-        def setter(_self):
+        def setter(_self, value: Any):
             raise NotImplementedError("Tables are immutable")
 
         def deleter(_self):
@@ -66,13 +66,12 @@ class TableMetaclass(type):
             yield (field.name, prop)
 
 
-TTableBase = TypeVar("TTableBase", bound="TableBase")
-
 
 class TableBase(metaclass=TableMetaclass):
     table: pa.Table
     schema: pa.Schema = pa.schema([])
     indexes: list[str] = []
+    _schema_depth: int
 
     def __init__(self, table: pa.Table):
         if not isinstance(table, pa.Table):
@@ -124,36 +123,54 @@ class TableBase(metaclass=TableMetaclass):
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls.from_dataframe(df, schema=cls.schema)
+            return cls(table=pa.from_dataframe(df, schema=cls.schema))
 
         root = pa.field("", pa.struct(cls.schema))
 
-        struct_arrays = {}
-
+        # Walk the schema, and build a StructArray for each embedded
+        # type. These are stored in a dictionary, keyed by their
+        # dot-separated path. For example, if the schema is:
+        #
+        #   pa.field("foo", pa.struct([
+        #       pa.field("bar", pa.struct([
+        #           pa.field("baz", pa.int64())
+        #       ]))
+        #   ]))
+        #
+        # Then the struct array for the inner struct will be stored in
+        # the dictionary at the key "foo.bar".
+        
+        struct_arrays: dict[str, pa.StructArray] = {}
         def visitor(field: pa.Field, ancestors: list[pa.Field]):
+            # Modify the dataframe in place, trimming out the columns we
+            # have already processed in depth-first order.
             nonlocal df
             if len(ancestors) == 0:
                 # Root - gets special behavior.
                 df_key = ""
             else:
-                df_key = ".".join([f.name for f in ancestors if f.name] + [field.name])
+                lineage = [f.name for f in ancestors if f.name] + [field.name]
+                df_key = ".".join(lineage)
 
             # Pull out just the columns relevant to this field
             field_columns = df.columns[df.columns.str.startswith(df_key)]
             field_df = df[field_columns]
 
-            # Replace column names like "foo.bar.baz" with "baz"
+            # Replace column names like "foo.bar.baz" with "baz", the
+            # last component.
             if len(ancestors) == 0:
+                # If we're at the root, use the original column names.
                 names = field_df.columns
             else:
                 names = field_df.columns.str.slice(len(df_key) + 1)
             field_df.columns = names
 
-            # Build a StructArray of all of the children
+            # Build a StructArray of all of the subfields.
             arrays = []
             for subfield in field.type:
                 sa_key = df_key + "." + subfield.name if df_key else subfield.name
                 if sa_key in struct_arrays:
+                    # We've already built this array, so just use it.
                     arrays.append(struct_arrays[sa_key])
                 else:
                     arrays.append(field_df[subfield.name])
@@ -164,11 +181,12 @@ class TableBase(metaclass=TableMetaclass):
             df = df.drop(field_columns, axis="columns")
 
         _walk_schema(root, visitor, None)
-        # Now build a table back up
+        # Now build a table back up. Grab the root-level struct array.
         sa = struct_arrays[""]
 
         table_arrays = []
         for subfield in cls.schema:
+            # Pull out the fields of that root-level struct array.
             table_arrays.append(sa.field(subfield.name))
             
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
@@ -186,7 +204,7 @@ class TableBase(metaclass=TableMetaclass):
             table = table.flatten()
         return table
 
-    def select(self: TTableBase, column_name: str, value: Any) -> TTableBase:
+    def select(self, column_name: str, value: Any) -> Self:
         """Select from the table by exact match, returning a new
         Table which only contains rows for which the value in
         column_name equals value.
@@ -195,7 +213,7 @@ class TableBase(metaclass=TableMetaclass):
         table = self.table.filter(pc.field(column_name) == value)
         return self.__class__(table)
 
-    def sort_by(self: TTableBase, by: Union[str, list[tuple[str, str]]]):
+    def sort_by(self, by: Union[str, list[tuple[str, str]]]) -> Self:
         """Sorts the Table by the given column name (or multiple
         columns). This operation requires a copy, and returns a new
         Table using the copied data.
@@ -256,7 +274,7 @@ class TableBase(metaclass=TableMetaclass):
         """
         table = self.table
         if flatten:
-            table = self.flatten()
+            table = self.flattened_table()
         return table.to_pandas()
 
     @classmethod
@@ -305,7 +323,7 @@ class TableBase(metaclass=TableMetaclass):
         for i in range(len(self)):
             yield self[i : i + 1]
 
-    def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> TTableBase:
+    def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
         """Return a new Table with only the rows at the given indices.
 
         """

@@ -1,14 +1,14 @@
 import pyarrow as pa
 from quiver import TableBase
 import pyarrow.compute as pc
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Generic
 import mmh3
 
 
 T = TypeVar("T", bound=TableBase)
 
 
-class StringIndex(object):
+class StringIndex(object, Generic[T]):
     """StringIndex is a simple index that maps a string column to a
     list of row indices. It can be used for fast lookups of sub-slices
     of a Table based on string values.

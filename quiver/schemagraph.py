@@ -1,10 +1,10 @@
-from typing import Optional, Callable
+from typing import Optional, Callable, NoReturn
 import pyarrow as pa
 
 
 def _walk_schema(
     field: pa.Field,
-    visitor: Callable[pa.Field, list[pa.Field]],
+    visitor: Callable[[pa.Field, list[pa.Field]], NoReturn],
     ancestors: Optional[list] = None,
 ):
     # Visit every struct field embedded within a field in depth-first fashion.

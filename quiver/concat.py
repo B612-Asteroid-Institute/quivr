@@ -21,10 +21,13 @@ def concatenate(values: Iterator[Table], defrag: bool = True) -> Table:
 
     """
     batches = []
+    first = True
     for v in values:
         batches += v.table.to_batches()
+        if first:
+            cls = v.__class__
+            first = False
     table = pa.Table.from_batches(batches)
-    cls = values[0].__class__
     result = cls(table=table)
     if defrag:
         result = defragment(result)

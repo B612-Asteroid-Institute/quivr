@@ -3,7 +3,7 @@ from .tables import TableBase
 import pyarrow as pa
 
 
-GenericTable = TypeVar("Table", bound=TableBase)
+GenericTable = TypeVar("GenericTable", bound=TableBase)
 
 
 def defragment(table: GenericTable) -> GenericTable:
