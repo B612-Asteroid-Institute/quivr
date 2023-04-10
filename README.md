@@ -67,7 +67,7 @@ class Coordinates(TableBase):
 
 Then, you can construct tables from data:
 
-```
+```python
 
 coords = Coordinates.from_pydict({
 	"x": np.array([ 1.00760887, -2.06203093,  1.24360546, -1.00131722]),
