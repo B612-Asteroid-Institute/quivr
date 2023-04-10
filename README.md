@@ -27,14 +27,14 @@ prototyping, they aren't as great for building sturdy applications:
    poses unnecessarily heavy requirements.
  - The mutability of DataFrames can make debugging difficult and lead
    to confusing state.
-   
+
 We don't want to throw everything out, here. Vectorized computations
 are often absolutely necessary for data work. But what if we could
 have those vectorized computations, but with:
  - Types enforced at runtime, with no dynamically column information.
  - Relatively uniform performance due to a no-copy orientation
  - Immutable data, allowing multiple views at very fast speed
-  
+
 This is what Quiver's Tables try to provide.
 
 ## Installation
@@ -52,20 +52,130 @@ from quiver import TableBase
 import pyarrow as pa
 
 
-class People(TableBase):
+class Coordinates(TableBase):
     schema = pa.schema(
 	    [
-	        pa.field("name", pa.string()),
-			pa.field("height_cm", pa.float64()),
-			pa.field("weight_kg", pa.float64()),
-			pa.field("birthdate", pa.date64()),
+	        pa.field("x", pa.float64()),
+	        pa.field("y", pa.float64()),
+	        pa.field("z", pa.float64()),
+	        pa.field("vx", pa.float64()),
+	        pa.field("vy", pa.float64()),
+	        pa.field("vz", pa.float64()),
 	    ]
 	)
 ```
 
+Then, you can construct tables from data:
+
+```
+
+coords = Coordinates.from_pydict({
+	"x": np.array([ 1.00760887, -2.06203093,  1.24360546, -1.00131722]),
+	"y": np.array([-2.7227298 ,  0.70239707,  2.23125432,  0.37269832]),
+	"z": np.array([-0.27148738, -0.31768623, -0.2180482 , -0.02528401]),
+	"vx": np.array([ 0.00920172, -0.00570486, -0.00877929, -0.00809866]),
+	"vy": np.array([ 0.00297888, -0.00914301,  0.00525891, -0.01119134]),
+	"vz": np.array([-0.00160217,  0.00677584,  0.00091095, -0.00140548])
+})
+
+# Sort the table by the z column. This returns a copy.
+coords_z_sorted = coords.sort_by("z")
+
+print(len(coords))
+# prints 4
+
+# Access any of the columns as a numpy array with zero copy:
+xs = coords.x.to_numpy()
+
+# Present the table as a pandas DataFrame, with zero copy if possible:
+df = coords.to_dataframe()
+```
+
+### Embedded definitions and nullable fields
+
+You can embed one table's definition within another, and you can make fields nullable:
+
+```python
+
+class AsteroidOrbit(TableBase):
+	schema = pa.schema(
+	    [
+	  		pa.field("designation", pa.string()),
+	        pa.field("mass", pa.float64(), nullable=True),
+			pa.field("radius", pa.float64(), nullable=True),
+	        Coordinates.as_field("coords"),
+	    ]
+	)
+
+# You can construct embedded fields from Arrow StructArrays, which you can get from
+# other Quiver tables using the to_structarray() method with zero copy.
+orbits = AsteroidOrbit.from_pydict({
+	"designation": np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
+	"mass": np.array([9.393e20, 2.06e21, 2.59e20, None]),
+	"radius": np.array([4.6e6, 2.7e6, 2.6e6, None]),
+	"coords": coords.to_structarray(),
+})
+```
+
+### Computing
+
+You can use the columns of the data to do computations:
+
+```python
+import pyarrow.compute as pc
+
+median_mass = pc.quantile(orbits.mass, q=0.5)
+# median_mass is a pyarrow.Scalar, which you can get the value of with .as_py()
+print(median_mass.as_py())
+```
+
+There is a very extensive set of functions available in the
+`pyarrow.compute` package, which you can see
+[here](https://arrow.apache.org/docs/python/compute.html). These
+computations will, in general, use all cores available and do
+vectorized computations which are very fast.
 
 
+### Filtering
+You can also use this to filter by expressions on the data. See [Arrow
+documentation](https://arrow.apache.org/docs/python/compute.html) for
+more details. You can use this to construct a quiver Table using an
+appropriately-schemaed Arrow Table:
+
+```python
+
+big_orbits = AsteroidOrbit(orbits.table.filter(orbits.table["mass"] > 1e21))
+```
+
+### Serialization
+
+#### Feather
+Feather is a fast, zero-copy serialization format for Arrow tables. It
+can be used for interprocess communication, or for working with data
+on disk via memory mapping.
+
+```python
+orbits.to_feather("orbits.feather")
+
+orbits_roundtripped = AsteroidOrbit.from_feather("orbits.feather")
+
+# use memory mapping to work with a large file without copying it into memory
+orbits_mmap = AsteroidOrbit.from_feather("orbits.feather", memory_map=True)
+```
 
 
+#### Parquet
+
+You can serialize your tables to Parquet files, and read them back:
+
+```python
+orbits.to_parquet("orbits.parquet")
+
+orbits_roundtripped = AsteroidOrbit.from_parquet("orbits.parquet")
+```
+
+See the [Arrow
+documentation](https://arrow.apache.org/docs/python/parquet.html) for
+more details on the Parquet format used.
 
 
