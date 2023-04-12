@@ -1,7 +1,7 @@
 import pyarrow as pa
 
-from quiver.matrix import MatrixArray, MatrixExtensionType
-from quiver.tables import TableBase
+from quivr.matrix import MatrixArray, MatrixExtensionType
+from quivr.tables import TableBase
 
 
 class Position(TableBase):

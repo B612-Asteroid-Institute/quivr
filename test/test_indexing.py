@@ -1,7 +1,7 @@
 import pyarrow as pa
 
-from quiver.indexing import StringIndex
-from quiver.tables import TableBase
+from quivr.indexing import StringIndex
+from quivr.tables import TableBase
 
 
 class TableWithString(TableBase):
@@ -15,9 +15,7 @@ class TableWithString(TableBase):
 
 
 def test_indexing():
-    table = TableWithString.from_arrays(
-        [pa.array([1, 2, 3]), pa.array(["a", "b", "c"]), pa.array([4, 5, 6])]
-    )
+    table = TableWithString.from_arrays([pa.array([1, 2, 3]), pa.array(["a", "b", "c"]), pa.array([4, 5, 6])])
     index = StringIndex(table, "name")
     assert len(index.lookup("a")) == 1
     assert index.lookup("a").id.to_pylist() == [1]
@@ -26,9 +24,7 @@ def test_indexing():
 
 
 def test_indexing_duplicate():
-    table = TableWithString.from_arrays(
-        [pa.array([1, 2, 3]), pa.array(["a", "a", "c"]), pa.array([4, 5, 6])]
-    )
+    table = TableWithString.from_arrays([pa.array([1, 2, 3]), pa.array(["a", "a", "c"]), pa.array([4, 5, 6])])
     index = StringIndex(table, "name")
     assert len(index.lookup("a")) == 2
     assert index.lookup("a").id.to_pylist() == [1, 2]

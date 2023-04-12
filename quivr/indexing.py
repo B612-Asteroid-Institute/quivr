@@ -4,12 +4,12 @@ import mmh3
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from quiver import TableBase
+from .tables import TableBase
 
 T = TypeVar("T", bound=TableBase)
 
 
-class StringIndex(object, Generic[T]):
+class StringIndex(Generic[T]):
     """StringIndex is a simple index that maps a string column to a
     list of row indices. It can be used for fast lookups of sub-slices
     of a Table based on string values.
@@ -50,9 +50,7 @@ class StringIndex(object, Generic[T]):
 
         null_mask = [True if x is None else False for x in index_array]
 
-        return pa.array(
-            index_array, type=pa.map_(pa.string(), pa.list_(pa.int32())), mask=null_mask
-        )
+        return pa.array(index_array, type=pa.map_(pa.string(), pa.list_(pa.int32())), mask=null_mask)
 
     def _indices(self, value: str) -> Optional[pa.Int32Array]:
         slot = mmh3.hash(value) % len(self.idx)
@@ -60,9 +58,7 @@ class StringIndex(object, Generic[T]):
         if not map_scalar.is_valid:
             return None
 
-        index_list = pc.map_lookup(
-            map_scalar, query_key=pa.scalar(value), occurrence="all"
-        )
+        index_list = pc.map_lookup(map_scalar, query_key=pa.scalar(value), occurrence="all")
         if not index_list.is_valid:
             return None
 

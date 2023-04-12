@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "quiver"
+name = "quivr"
 description = "Container library for working with tabular Arrow data"
 readme = "README.md"
 authors = [
@@ -19,15 +19,15 @@ dependencies = [
 dynamic = [ "version" ]
 
 [project.urls]
-Source = "https://github.com/spenczar/quiver"
+Source = "https://github.com/spenczar/quivr"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/quiver",
+  "/quivr",
 ]
 
 [tool.hatch.version]
-path = "quiver/__version__.py"
+path = "quivr/__version__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -35,7 +35,7 @@ dependencies = [
   "mypy",
   "pandas-stubs",
   "pytest",
-  "pytest-benchmark",  
+  "pytest-benchmark",
   "ruff",
 ]
 
@@ -46,16 +46,16 @@ check = [
   "test",
 ]
 lint = [
-  "ruff ./quiver ./test",
-  "black --check ./quiver ./test",
-  "isort --check-only ./quiver ./test"
+  "ruff ./quivr ./test",
+  "black --check ./quivr ./test",
+  "isort --check-only ./quivr ./test"
 ]
 format = [
-  "black ./quiver ./test",
-  "isort ./quiver ./test"
+  "black ./quivr ./test",
+  "isort ./quivr ./test"
 ]
 typecheck = [
-  "mypy ./quiver",
+  "mypy ./quivr",
 ]
 test = [
   "pytest --benchmark-disable ./test",
@@ -73,4 +73,3 @@ profile = "black"
 [tool.ruff]
 line-length = 110
 target-version = "py311"
-

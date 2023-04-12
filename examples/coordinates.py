@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import pyarrow as pa
 
-from quiver import TableBase
+from quivr import TableBase
 
 
 class CartesianCoordinates(TableBase):

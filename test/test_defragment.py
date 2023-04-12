@@ -1,8 +1,8 @@
 import pyarrow as pa
 import pytest
 
-from quiver.concat import concatenate
-from quiver.defragment import defragment
+from quivr.concat import concatenate
+from quivr.defragment import defragment
 
 from .test_tables import Pair
 

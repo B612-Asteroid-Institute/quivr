@@ -1,8 +1,8 @@
-# quiver
+# quivr
 
-Quiver is a Python library which provides great containers for Arrow data.
+Quivr is a Python library which provides great containers for Arrow data.
 
-Quiver's `Table`s are like DataFrames, but with strict schemas to
+Quivr's `Table`s are like DataFrames, but with strict schemas to
 enforce types and expectations. They are backed by the
 high-performance Arrow memory model, making them well-suited for
 streaming IO, RPCs, and serialization/deserialization to Parquet.
@@ -35,7 +35,7 @@ have those vectorized computations, but with:
  - Relatively uniform performance due to a no-copy orientation
  - Immutable data, allowing multiple views at very fast speed
 
-This is what Quiver's Tables try to provide.
+This is what Quivr's Tables try to provide.
 
 ## Installation
 
@@ -43,12 +43,12 @@ Check out this repo, and `pip install` it.
 
 ## Usage
 
-Your main entrypoint to Quiver is through defining classes which
+Your main entrypoint to Quivr is through defining classes which
 represent your tables. You write a `pyarrow.Schema` as the `schema`
-class attribute of your class, and Quiver will take care of the rest.
+class attribute of your class, and Quivr will take care of the rest.
 
 ```python
-from quiver import TableBase
+from quivr import TableBase
 import pyarrow as pa
 
 
@@ -108,7 +108,7 @@ class AsteroidOrbit(TableBase):
     )
 
 # You can construct embedded fields from Arrow StructArrays, which you can get from
-# other Quiver tables using the to_structarray() method with zero copy.
+# other Quivr tables using the to_structarray() method with zero copy.
 orbits = AsteroidOrbit.from_pydict({
     "designation": np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
     "mass": np.array([9.393e20, 2.06e21, 2.59e20, None]),
@@ -137,7 +137,7 @@ vectorized computations which are very fast.
 
 ### Customizing behavior with methods
 
-Because Quiver tables are just Python classes, you can customize the
+Because Quivr tables are just Python classes, you can customize the
 behavior of your tables by adding or overriding methods. For example, if you want to add a
 method to compute the total mass of the asteroids in the table, you
 can do so like this:
@@ -199,7 +199,7 @@ determinants = np.linalg.det(orbits.covariance.matrix)
 ### Filtering
 You can also filter by expressions on the data. See [Arrow
 documentation](https://arrow.apache.org/docs/python/compute.html) for
-more details. You can use this to construct a quiver Table using an
+more details. You can use this to construct a quivr Table using an
 appropriately-schemaed Arrow Table:
 
 ```python
@@ -219,17 +219,17 @@ ceres_orbit = orbits.select("designation", "Ceres")
 
 If you're going to be doing a lot of lookups on a particular column,
 it can be useful to create an index for that column. You can do using
-the `quiver.StringIndex` class to build an index for string values:
+the `quivr.StringIndex` class to build an index for string values:
 
 ```python
 # Build an index for the designation column
-designation_index = quiver.StringIndex(orbits, "designation")
+designation_index = quivr.StringIndex(orbits, "designation")
 
 # Get the orbit of Ceres
 ceres_orbit = designation_index.lookup("Ceres")
 ```
 
-The `lookup` method on the StringIndex returns Quiver Tables, or None
+The `lookup` method on the StringIndex returns Quivr Tables, or None
 if there is no match. Keep in mind that the returned tables might have
 multiple rows if there are multiple matches.
 

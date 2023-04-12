@@ -1,7 +1,7 @@
 import pyarrow as pa
 import pytest
 
-from quiver.concat import concatenate
+from quivr.concat import concatenate
 
 from .test_tables import Pair, Wrapper
 

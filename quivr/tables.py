@@ -12,9 +12,9 @@ import pyarrow.parquet
 from .errors import TableFragmentedError
 from .schemagraph import _walk_schema, compute_depth
 
-_METADATA_MODEL_KEY = b"__quiver_model_pickle"
-_METADATA_NAME_KEY = b"__quiver_model_name"
-_METADATA_UNPICKLE_KWARGS_KEY = b"__quiver_model_unpickle_kwargs"
+_METADATA_MODEL_KEY = b"__quivr_model_pickle"
+_METADATA_NAME_KEY = b"__quivr_model_name"
+_METADATA_UNPICKLE_KWARGS_KEY = b"__quivr_model_unpickle_kwargs"
 
 
 class TableMetaclass(type):
@@ -68,18 +68,13 @@ class TableMetaclass(type):
 class TableBase(metaclass=TableMetaclass):
     table: pa.Table
     schema: pa.Schema = pa.schema([])
-    indexes: list[str] = []
     _schema_depth: int
 
     def __init__(self, table: pa.Table):
         if not isinstance(table, pa.Table):
-            raise TypeError(
-                f"Data must be a pyarrow.Table for {self.__class__.__name__}"
-            )
+            raise TypeError(f"Data must be a pyarrow.Table for {self.__class__.__name__}")
         if table.schema != self.schema:
-            raise TypeError(
-                f"Data schema must match schema for {self.__class__.__name__}"
-            )
+            raise TypeError(f"Data schema must match schema for {self.__class__.__name__}")
         self.table = table
 
     @classmethod
@@ -276,15 +271,11 @@ class TableBase(metaclass=TableMetaclass):
         return table.to_pandas()
 
     @classmethod
-    def as_field(
-        cls, name: str, nullable: bool = True, metadata: Optional[dict] = None
-    ):
+    def as_field(cls, name: str, nullable: bool = True, metadata: Optional[dict] = None):
         metadata = metadata or {}
         metadata[_METADATA_NAME_KEY] = cls.__name__
         metadata[_METADATA_MODEL_KEY] = pickle.dumps(cls)
-        field = pa.field(
-            name, pa.struct(cls.schema), nullable=nullable, metadata=metadata
-        )
+        field = pa.field(name, pa.struct(cls.schema), nullable=nullable, metadata=metadata)
         return field
 
     def column(self, field_name: str):
@@ -297,9 +288,7 @@ class TableBase(metaclass=TableMetaclass):
             # the data.
             model = pickle.loads(field.metadata[_METADATA_MODEL_KEY])
             if _METADATA_UNPICKLE_KWARGS_KEY in field.metadata:
-                init_kwargs = pickle.loads(
-                    field.metadata[_METADATA_UNPICKLE_KWARGS_KEY]
-                )
+                init_kwargs = pickle.loads(field.metadata[_METADATA_UNPICKLE_KWARGS_KEY])
             else:
                 init_kwargs = {}
             table = _sub_table(self.table, field_name)
