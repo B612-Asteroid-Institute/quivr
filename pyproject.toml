@@ -1,3 +1,76 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "quiver"
+description = "Container library for working with tabular Arrow data"
+readme = "README.md"
+authors = [
+   { name = "Spencer Nelson", email = "spencer@spencerwnelson.com" }
+]
+requires-python = ">= 3.11"
+dependencies = [
+  "pandas",
+  "pyarrow",
+  "numpy",
+  "mmh3",
+]
+dynamic = [ "version" ]
+
+[project.urls]
+Source = "https://github.com/spenczar/quiver"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/quiver",
+]
+
+[tool.hatch.version]
+path = "quiver/__version__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "isort",
+  "mypy",
+  "pandas-stubs",
+  "pytest",
+  "pytest-benchmark",  
+  "ruff",
+]
+
+[tool.hatch.envs.default.scripts]
+check = [
+  "lint",
+  "typecheck",
+  "test",
+]
+lint = [
+  "ruff ./quiver ./test",
+  "black --check ./quiver ./test",
+  "isort --check-only ./quiver ./test"
+]
+format = [
+  "black ./quiver ./test",
+  "isort ./quiver ./test"
+]
+typecheck = [
+  "mypy ./quiver",
+]
+test = [
+  "pytest --benchmark-disable ./test",
+]
+benchmark = [
+  "pytest --benchmark-only ./test"
+]
+
+[tool.black]
+line-length = 110
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
