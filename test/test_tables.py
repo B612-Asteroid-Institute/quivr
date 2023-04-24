@@ -140,3 +140,33 @@ def test_from_pylist():
     assert wrapper.id.to_pylist() == ["1", "2"]
     assert wrapper.pair.x.to_pylist() == [1, 3]
     assert wrapper.pair.y.to_pylist() == [2, 4]
+
+
+class Layer1(TableBase):
+    schema = pa.schema([("x", pa.int64())])
+
+
+class Layer2(TableBase):
+    schema = pa.schema([("y", pa.int64()), Layer1.as_field("layer1")])
+
+
+class Layer3(TableBase):
+    schema = pa.schema([("z", pa.int64()), Layer2.as_field("layer2")])
+
+
+def test_unflatten_table():
+    data = [
+        {"z": 1, "layer2": {"y": 2, "layer1": {"x": 3}}},
+        {"z": 4, "layer2": {"y": 5, "layer1": {"x": 6}}},
+    ]
+
+    l3 = Layer3.from_pylist(data)
+    flat_table = l3.flattened_table()
+
+    unflat_table = Layer3._unflatten_table(flat_table)
+
+    assert unflat_table.column("z").to_pylist() == [1, 4]
+
+    have = Layer3(table=unflat_table)
+
+    assert have == l3

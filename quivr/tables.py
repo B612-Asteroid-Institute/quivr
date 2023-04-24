@@ -133,6 +133,48 @@ class TableBase(metaclass=TableMetaclass):
         return cls(table=table)
 
     @classmethod
+    def _unflatten_table(cls, table: pa.Table):
+        """Unflatten a Table.
+
+        This is used when loading a flattened DataFrame into a nested
+        Table. It takes a Table with a flat schema, and returns a
+        Table with a nested schema.
+
+        """
+        struct_fields = []
+
+        for field in cls.schema:
+            if pa.types.is_struct(field.type):
+                struct_fields.append(field)
+
+        if len(struct_fields) == 0:
+            return cls(table=pa.from_dataframe(df, schema=cls.schema))
+
+        # Walk the schema, and build a StructArray for each embedded
+        # type.
+
+        def struct_array_for(field: pa.Field, ancestors: list[pa.Field]):
+            prefix = ".".join([f.name for f in ancestors if f.name] + [field.name])
+
+            child_arrays = []
+            for subfield in field.type:
+                if pa.types.is_struct(subfield.type):
+                    child_arrays.append(struct_array_for(subfield, ancestors + [field]))
+                else:
+                    path = prefix + "." + subfield.name
+                    child_arrays.append(table.column(path).combine_chunks())
+            return pa.StructArray.from_arrays(child_arrays, fields=list(field.type))
+
+        child_arrays = []
+        for field in cls.schema:
+            if pa.types.is_struct(field.type):
+                child_arrays.append(struct_array_for(field, []))
+            else:
+                child_arrays.append(table.column(field.name).combine_chunks())
+
+        return pa.Table.from_arrays(child_arrays, schema=cls.schema)
+
+    @classmethod
     def from_flat_dataframe(cls, df: pd.DataFrame):
         """Load a flattened DataFrame into the Table.
 
@@ -337,6 +379,11 @@ class TableBase(metaclass=TableMetaclass):
     def __iter__(self):
         for i in range(len(self)):
             yield self[i : i + 1]
+
+    def __eq__(self, other):
+        if not isinstance(other, TableBase):
+            return NotImplemented
+        return self.table.equals(other.table)
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
         """Return a new Table with only the rows at the given indices."""
