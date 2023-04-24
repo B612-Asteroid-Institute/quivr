@@ -1,11 +1,16 @@
+"""Table base classes."""
+
 import functools
 import pickle
 from typing import Any, Optional, Self, Union
+from io import IOBase
+import os
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
@@ -425,6 +430,16 @@ class TableBase(metaclass=TableMetaclass):
     def from_feather(cls, path: str, **kwargs):
         """Read a table from a Feather file."""
         return cls(table=pyarrow.feather.read_feather(path, **kwargs))
+
+    def to_csv(self, path: str):
+        """Write the table to a CSV file. Any nested structure is flattened."""
+        pyarrow.csv.write_csv(self.flattened_table(), path)
+
+    @classmethod
+    def from_csv(cls, input_file: Union[str, os.PathLike, IOBase]):
+        """Read a table from a CSV file."""
+        flat_table = pyarrow.csv.read_csv(input_file)
+        return cls(table=cls._unflatten_table(flat_table))
 
 
 def _sub_table(tab: pa.Table, field_name: str):

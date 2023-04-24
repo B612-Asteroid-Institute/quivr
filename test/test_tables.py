@@ -1,7 +1,8 @@
 import pyarrow as pa
-
+import io
 from quivr.concat import concatenate
 from quivr.tables import TableBase
+import textwrap
 
 
 class Pair(TableBase):
@@ -133,8 +134,51 @@ def test_sort_by():
     assert sorted2.x[1].as_py() == 2
     assert sorted2.x[2].as_py() == 1
 
+
+def test_to_csv():
+    data = [
+        {"id": "1", "pair": {"x": 1, "y": 2}},
+        {"id": "2", "pair": {"x": 3, "y": 4}},
+    ]
+    wrapper = Wrapper.from_pylist(data)
+
+    buf = io.BytesIO()
+    wrapper.to_csv(buf)
+
+    buf.seek(0)
+    have = buf.read().decode("utf8")
+    expected = textwrap.dedent(
+        """
+    "pair.x","pair.y","id"
+    1,2,"1"
+    3,4,"2"
+    """
+    )
+    assert have.strip() == expected.strip()
+
+
+def test_from_csv():
+    csv = io.BytesIO(
+        textwrap.dedent(
+            """
+    "pair.x","pair.y","id"
+    1,2,"1"
+    3,4,"2"
+    """
+        ).encode("utf8")
+    )
+
+    wrapper = Wrapper.from_csv(csv)
+    assert wrapper.id.to_pylist() == ["1", "2"]
+    assert wrapper.pair.x.to_pylist() == [1, 3]
+    assert wrapper.pair.y.to_pylist() == [2, 4]
+
+
 def test_from_pylist():
-    data = [{"id": "1", "pair": {"x": 1, "y": 2}}, {"id": "2", "pair": {"x": 3, "y": 4}}]
+    data = [
+        {"id": "1", "pair": {"x": 1, "y": 2}},
+        {"id": "2", "pair": {"x": 3, "y": 4}},
+    ]
     wrapper = Wrapper.from_pylist(data)
 
     assert wrapper.id.to_pylist() == ["1", "2"]
