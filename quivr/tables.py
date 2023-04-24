@@ -88,6 +88,34 @@ class TableBase(metaclass=TableMetaclass):
         return cls(table=table)
 
     @classmethod
+    def from_pylist(cls, l: list):
+        """
+        Create a TableBase object from a list of values.
+
+        Nested and hierarchical values can be represented as dictionaries in the list.
+
+        Args:
+            l: A list of values. Each value corresponds to a row in the table.
+
+        Returns:
+            A TableBase object.
+
+        Examples:
+            >>> import quivr
+            >>> class Inner(quivr.TableBase):
+            ...     schema = pyarrow.schema([pyarrow.field("a", pyarrow.string())])
+            ...
+            >>> class Outer(quivr.TableBase):
+            ...     schema = pyarrow.schema([pyarrow.field("z", pyarrow.string()), Inner.as_field("i")])
+            ...
+            >>> data = [{"z": "v1", "i": {"a": "v1_in"}}, {"z": "v2", "i": {"a": "v2_in"}}]
+            >>> Outer.from_pylist(data)
+            Outer(size=2)
+        """
+        table = pa.Table.from_pylist(l, schema=cls.schema)
+        return cls(table=table)
+
+    @classmethod
     def from_dataframe(cls, df: pd.DataFrame):
         """Load a DataFrame into the Table.
 

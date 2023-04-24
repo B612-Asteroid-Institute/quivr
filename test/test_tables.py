@@ -132,3 +132,11 @@ def test_sort_by():
     assert sorted2.x[0].as_py() == 3
     assert sorted2.x[1].as_py() == 2
     assert sorted2.x[2].as_py() == 1
+
+def test_from_pylist():
+    data = [{"id": "1", "pair": {"x": 1, "y": 2}}, {"id": "2", "pair": {"x": 3, "y": 4}}]
+    wrapper = Wrapper.from_pylist(data)
+
+    assert wrapper.id.to_pylist() == ["1", "2"]
+    assert wrapper.pair.x.to_pylist() == [1, 3]
+    assert wrapper.pair.y.to_pylist() == [2, 4]
