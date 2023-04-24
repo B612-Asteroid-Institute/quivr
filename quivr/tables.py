@@ -72,13 +72,26 @@ class TableBase(metaclass=TableMetaclass):
 
     def __init__(self, table: pa.Table):
         if not isinstance(table, pa.Table):
-            raise TypeError(f"Data must be a pyarrow.Table for {self.__class__.__name__}")
+            raise TypeError(
+                f"Data must be a pyarrow.Table for {self.__class__.__name__}"
+            )
         if table.schema != self.schema:
-            raise TypeError(f"Data schema must match schema for {self.__class__.__name__}")
+            raise TypeError(
+                f"Data schema must match schema for {self.__class__.__name__}"
+            )
         self.table = table
 
     @classmethod
     def from_arrays(cls, arrays: list[pa.array]):
+        """Create a TableBase object from a list of arrays.
+
+        Args:
+            arrays: A list of pyarrow.Array objects.
+
+        Returns:
+            A TableBase object.
+
+        """
         table = pa.Table.from_arrays(arrays, schema=cls.schema)
         return cls(table=table)
 
@@ -341,11 +354,15 @@ class TableBase(metaclass=TableMetaclass):
         return table.to_pandas()
 
     @classmethod
-    def as_field(cls, name: str, nullable: bool = True, metadata: Optional[dict] = None):
+    def as_field(
+        cls, name: str, nullable: bool = True, metadata: Optional[dict] = None
+    ):
         metadata = metadata or {}
         metadata[_METADATA_NAME_KEY] = cls.__name__
         metadata[_METADATA_MODEL_KEY] = pickle.dumps(cls)
-        field = pa.field(name, pa.struct(cls.schema), nullable=nullable, metadata=metadata)
+        field = pa.field(
+            name, pa.struct(cls.schema), nullable=nullable, metadata=metadata
+        )
         return field
 
     def column(self, field_name: str):
@@ -358,7 +375,9 @@ class TableBase(metaclass=TableMetaclass):
             # the data.
             model = pickle.loads(field.metadata[_METADATA_MODEL_KEY])
             if _METADATA_UNPICKLE_KWARGS_KEY in field.metadata:
-                init_kwargs = pickle.loads(field.metadata[_METADATA_UNPICKLE_KWARGS_KEY])
+                init_kwargs = pickle.loads(
+                    field.metadata[_METADATA_UNPICKLE_KWARGS_KEY]
+                )
             else:
                 init_kwargs = {}
             table = _sub_table(self.table, field_name)
