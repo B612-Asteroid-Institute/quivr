@@ -76,6 +76,7 @@ class TableBase(metaclass=TableMetaclass):
     _schema_depth: int
 
     def __init__(self, table: pa.Table):
+        self.table = []
         if not isinstance(table, pa.Table):
             raise TypeError(
                 f"Data must be a pyarrow.Table for {self.__class__.__name__}"
@@ -429,7 +430,7 @@ class TableBase(metaclass=TableMetaclass):
     @classmethod
     def from_feather(cls, path: str, **kwargs):
         """Read a table from a Feather file."""
-        return cls(table=pyarrow.feather.read_feather(path, **kwargs))
+        return cls(table=pyarrow.feather.read_table(path, **kwargs))
 
     def to_csv(self, path: str):
         """Write the table to a CSV file. Any nested structure is flattened."""
