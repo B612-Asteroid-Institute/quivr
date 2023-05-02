@@ -78,17 +78,93 @@ class TableBase(metaclass=TableMetaclass):
     def __init__(self, table: pa.Table):
         self.table = []
         if not isinstance(table, pa.Table):
-            raise TypeError(
-                f"Data must be a pyarrow.Table for {self.__class__.__name__}"
-            )
+            raise TypeError(f"Data must be a pyarrow.Table for {self.__class__.__name__}")
         if table.schema != self.schema:
-            raise TypeError(
-                f"Data schema must match schema for {self.__class__.__name__}"
-            )
+            raise TypeError(f"Data schema must match schema for {self.__class__.__name__}")
         self.table = table
 
     @classmethod
-    def from_arrays(cls, arrays: list[pa.array]):
+    def from_data(cls, data: Optional[Any] = None, **kwargs) -> Self:
+        """Create an instance of the TableBase and populate it with data.
+
+        This is a convenience method which tries to infer the right
+        underlying constructors to use based on the type of data. It
+        can also accept keyword-style arguments to pass data in. If
+        you know the data's structure well in advance, the more
+        precise constructors (from_arrays, from_pylist, etc) should be
+        preferred.
+
+        Examples:
+            >>> import quivr
+            >>> class MyTable(quivr.TableBase):
+            ...     schema = pyarrow.schema([
+            ...         pyarrow.field("a", pyarrow.string()),
+            ...         pyarrow.field("b", pyarrow.int64()),
+            ...     ])
+            ...
+            >>> # All of these are equivalent:
+            >>> MyTable.from_data([["a", 1], ["b", 2]])
+            MyTable(size=2)
+            >>> MyTable.from_data({"a": ["a", "b"], "b": [1, 2]})
+            MyTable(size=2)
+            >>> MyTable.from_data([{"a": "a", "b": 1}, {"a": "b", "b": 2}])
+            MyTable(size=2)
+            >>> MyTable.from_data(a=["a", "b"], b=[1, 2])
+            MyTable(size=2)
+            >>> import numpy as np
+            >>> MyTable.from_data(a=np.array(["a", "b"]), b=np.array([1, 2]))
+            MyTable(size=2)
+        """
+        if data is None:
+            return cls.from_kwargs(**kwargs)
+
+        if isinstance(data, pa.Table):
+            return cls(table=data)
+        if isinstance(data, dict):
+            return cls.from_pydict(data)
+        if isinstance(data, list):
+            if len(data) == 0:
+                return cls.from_rows(data)
+            if isinstance(data[0], dict):
+                return cls.from_rows(data)
+            elif isinstance(data[0], list):
+                return cls.from_lists(data)
+        if isinstance(data, pd.DataFrame):
+            return cls.from_pandas(data)
+        if isinstance(data, np.ndarray):
+            return cls.from_numpy(data)
+        raise TypeError(f"Unsupported data type: {type(data)}")
+
+    @classmethod
+    def from_kwargs(cls, **kwargs) -> Self:
+        """Create a TableBase object from keyword arguments.
+
+        Each keyword argument corresponds to a column in the table.
+
+        Each keyword value can be a list, numpy array, pyarrow array,
+        or TableBase instance.
+
+        """
+
+        arrays = []
+        for column_name in cls.schema.names:
+            if column_name not in kwargs:
+                raise ValueError(f"Missing column {column_name}")
+            value = kwargs[column_name]
+            if isinstance(value, TableBase):
+                arrays.append(value.to_structarray())
+            elif isinstance(value, pa.Array):
+                arrays.append(value)
+            elif isinstance(value, np.ndarray):
+                arrays.append(pa.array(value))
+            elif isinstance(value, list):
+                arrays.append(pa.array(value))
+            else:
+                raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
+        return cls.from_arrays(arrays)
+
+    @classmethod
+    def from_arrays(cls, arrays: list[pa.array]) -> Self:
         """Create a TableBase object from a list of arrays.
 
         Args:
@@ -107,11 +183,9 @@ class TableBase(metaclass=TableMetaclass):
         return cls(table=table)
 
     @classmethod
-    def from_pylist(cls, l: list):
+    def from_rows(cls, l: list[dict]):
         """
-        Create a TableBase object from a list of values.
-
-        Nested and hierarchical values can be represented as dictionaries in the list.
+        Create a TableBase object from a list of dictionaries.
 
         Args:
             l: A list of values. Each value corresponds to a row in the table.
@@ -132,6 +206,23 @@ class TableBase(metaclass=TableMetaclass):
             Outer(size=2)
         """
         table = pa.Table.from_pylist(l, schema=cls.schema)
+        return cls(table=table)
+
+    @classmethod
+    def from_lists(cls, l: list[list]) -> Self:
+        """Create a TableBase object from a list of lists.
+
+        Each inner list corresponds to a column in the table. They
+        should be specified in the same order as the columns in the
+        schema.
+
+        Args:
+            l: A list of lists. Each inner list corresponds to a column in the table.
+
+        Returns:
+            A TableBase object.
+        """
+        table = pa.Table.from_arrays(list(map(pa.array, l)), schema=cls.schema)
         return cls(table=table)
 
     @classmethod
@@ -360,15 +451,11 @@ class TableBase(metaclass=TableMetaclass):
         return table.to_pandas()
 
     @classmethod
-    def as_field(
-        cls, name: str, nullable: bool = True, metadata: Optional[dict] = None
-    ):
+    def as_field(cls, name: str, nullable: bool = True, metadata: Optional[dict] = None):
         metadata = metadata or {}
         metadata[_METADATA_NAME_KEY] = cls.__name__
         metadata[_METADATA_MODEL_KEY] = pickle.dumps(cls)
-        field = pa.field(
-            name, pa.struct(cls.schema), nullable=nullable, metadata=metadata
-        )
+        field = pa.field(name, pa.struct(cls.schema), nullable=nullable, metadata=metadata)
         return field
 
     def column(self, field_name: str):
@@ -381,9 +468,7 @@ class TableBase(metaclass=TableMetaclass):
             # the data.
             model = pickle.loads(field.metadata[_METADATA_MODEL_KEY])
             if _METADATA_UNPICKLE_KWARGS_KEY in field.metadata:
-                init_kwargs = pickle.loads(
-                    field.metadata[_METADATA_UNPICKLE_KWARGS_KEY]
-                )
+                init_kwargs = pickle.loads(field.metadata[_METADATA_UNPICKLE_KWARGS_KEY])
             else:
                 init_kwargs = {}
             table = _sub_table(self.table, field_name)

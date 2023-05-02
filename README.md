@@ -69,14 +69,14 @@ Then, you can construct tables from data:
 
 ```python
 
-coords = Coordinates.from_pydict({
-    "x": np.array([ 1.00760887, -2.06203093,  1.24360546, -1.00131722]),
-    "y": np.array([-2.7227298 ,  0.70239707,  2.23125432,  0.37269832]),
-    "z": np.array([-0.27148738, -0.31768623, -0.2180482 , -0.02528401]),
-    "vx": np.array([ 0.00920172, -0.00570486, -0.00877929, -0.00809866]),
-    "vy": np.array([ 0.00297888, -0.00914301,  0.00525891, -0.01119134]),
-    "vz": np.array([-0.00160217,  0.00677584,  0.00091095, -0.00140548])
-})
+coords = Coordinates.from_data(
+    x=np.array([ 1.00760887, -2.06203093,  1.24360546, -1.00131722]),
+    y=np.array([-2.7227298 ,  0.70239707,  2.23125432,  0.37269832]),
+    z=np.array([-0.27148738, -0.31768623, -0.2180482 , -0.02528401]),
+    vx=np.array([ 0.00920172, -0.00570486, -0.00877929, -0.00809866]),
+    vy=np.array([ 0.00297888, -0.00914301,  0.00525891, -0.01119134]),
+    vz=np.array([-0.00160217,  0.00677584,  0.00091095, -0.00140548])
+)
 
 # Sort the table by the z column. This returns a copy.
 coords_z_sorted = coords.sort_by("z")
@@ -109,12 +109,12 @@ class AsteroidOrbit(TableBase):
 
 # You can construct embedded fields from Arrow StructArrays, which you can get from
 # other Quivr tables using the to_structarray() method with zero copy.
-orbits = AsteroidOrbit.from_pydict({
-    "designation": np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
-    "mass": np.array([9.393e20, 2.06e21, 2.59e20, None]),
-    "radius": np.array([4.6e6, 2.7e6, 2.6e6, None]),
-    "coords": coords.to_structarray(),
-})
+orbits = AsteroidOrbit.from_data(
+    designation=np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
+    mass=np.array([9.393e20, 2.06e21, 2.59e20, None]),
+    radius=np.array([4.6e6, 2.7e6, 2.6e6, None]),
+    coords=coords.to_structarray(),
+)
 ```
 
 ### Computing

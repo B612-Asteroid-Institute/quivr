@@ -140,7 +140,7 @@ def test_to_csv():
         {"id": "1", "pair": {"x": 1, "y": 2}},
         {"id": "2", "pair": {"x": 3, "y": 4}},
     ]
-    wrapper = Wrapper.from_pylist(data)
+    wrapper = Wrapper.from_rows(data)
 
     buf = io.BytesIO()
     wrapper.to_csv(buf)
@@ -179,7 +179,7 @@ def test_from_pylist():
         {"id": "1", "pair": {"x": 1, "y": 2}},
         {"id": "2", "pair": {"x": 3, "y": 4}},
     ]
-    wrapper = Wrapper.from_pylist(data)
+    wrapper = Wrapper.from_rows(data)
 
     assert wrapper.id.to_pylist() == ["1", "2"]
     assert wrapper.pair.x.to_pylist() == [1, 3]
@@ -204,7 +204,7 @@ def test_unflatten_table():
         {"z": 4, "layer2": {"y": 5, "layer1": {"x": 6}}},
     ]
 
-    l3 = Layer3.from_pylist(data)
+    l3 = Layer3.from_rows(data)
     flat_table = l3.flattened_table()
 
     unflat_table = Layer3._unflatten_table(flat_table)
@@ -214,3 +214,46 @@ def test_unflatten_table():
     have = Layer3(table=unflat_table)
 
     assert have == l3
+
+
+def test_from_kwargs():
+    l1 = Layer1.from_kwargs(x=[1, 2, 3])
+    assert l1.x.to_pylist() == [1, 2, 3]
+
+    l2 = Layer2.from_kwargs(y=[4, 5, 6], layer1=l1)
+    assert l2.y.to_pylist() == [4, 5, 6]
+    assert l2.layer1.x.to_pylist() == [1, 2, 3]
+
+    l3 = Layer3.from_kwargs(z=[7, 8, 9], layer2=l2)
+    assert l3.z.to_pylist() == [7, 8, 9]
+    assert l3.layer2.y.to_pylist() == [4, 5, 6]
+    assert l3.layer2.layer1.x.to_pylist() == [1, 2, 3]
+
+
+def test_from_data_using_kwargs():
+    have = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+    assert have.x.to_pylist() == [1, 2, 3]
+    assert have.y.to_pylist() == [4, 5, 6]
+
+    # Change the ordering
+    have = Pair.from_data(y=[4, 5, 6], x=[1, 2, 3])
+    assert have.x.to_pylist() == [1, 2, 3]
+    assert have.y.to_pylist() == [4, 5, 6]
+
+    # Refer to a nested value
+    pair = have
+    wrapper = Wrapper.from_data(id=["1", "2", "3"], pair=pair)
+    assert wrapper.id.to_pylist() == ["1", "2", "3"]
+    assert wrapper.pair.x.to_pylist() == [1, 2, 3]
+
+
+def test_from_data_using_positional_list():
+    have = Pair.from_data([[1, 2, 3], [4, 5, 6]])
+    assert have.x.to_pylist() == [1, 2, 3]
+    assert have.y.to_pylist() == [4, 5, 6]
+
+
+def test_from_data_using_positional_dict():
+    have = Pair.from_data({"x": [1, 2, 3], "y": [4, 5, 6]})
+    assert have.x.to_pylist() == [1, 2, 3]
+    assert have.y.to_pylist() == [4, 5, 6]
