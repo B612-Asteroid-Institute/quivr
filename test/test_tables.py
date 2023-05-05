@@ -1,21 +1,20 @@
 import pyarrow as pa
+import numpy as np
 import io
 from quivr.concat import concatenate
-from quivr.tables import TableBase
+from quivr.tables import Table
+from quivr.fields import Int64Field, StringField
 import textwrap
 
 
-class Pair(TableBase):
-    schema = pa.schema(
-        [
-            pa.field("x", pa.int64()),
-            pa.field("y", pa.int64()),
-        ]
-    )
+class Pair(Table):
+    x = Int64Field()
+    y = Int64Field()
 
 
-class Wrapper(TableBase):
-    schema = pa.schema([Pair.as_field("pair"), pa.field("id", pa.string())])
+class Wrapper(Table):
+    pair = Pair.as_field()
+    id = StringField()
 
 
 def test_create_from_arrays():
@@ -23,8 +22,8 @@ def test_create_from_arrays():
     ys = pa.array([4, 5, 6], pa.int64())
     have = Pair.from_arrays([xs, ys])
     assert len(have) == 3
-    assert have.column("x").to_pylist() == [1, 2, 3]
-    assert have.column("y").to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.column("x"), [1, 2, 3])
+    np.testing.assert_array_equal(have.column("y"), [4, 5, 6])
 
 
 def test_create_wrapped_from_arrays():
@@ -35,14 +34,14 @@ def test_create_wrapped_from_arrays():
 
     have = Wrapper.from_arrays([pairs, ids])
     assert len(have) == 3
-    assert have.column("id").to_pylist() == ["v1", "v2", "v3"]
+    np.testing.assert_array_equal(have.column("id"), ["v1", "v2", "v3"])
 
 
 def test_create_from_pydict():
     have = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
     assert len(have) == 3
-    assert have.column("x").to_pylist() == [1, 2, 3]
-    assert have.column("y").to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.column("x"), [1, 2, 3])
+    np.testing.assert_array_equal(have.column("y"), [4, 5, 6])
 
 
 def test_table_to_structarray():
@@ -68,13 +67,13 @@ def test_create_wrapped_from_pydict():
         }
     )
     assert len(have) == 3
-    assert have.column("id").to_pylist() == ["v1", "v2", "v3"]
+    np.testing.assert_array_equal(have.column("id"), ["v1", "v2", "v3"])
 
 
 def test_generated_accessors():
     have = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
-    assert have.x.to_pylist() == [1, 2, 3]
-    assert have.y.to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])
 
 
 def test_iteration():
@@ -169,9 +168,9 @@ def test_from_csv():
     )
 
     wrapper = Wrapper.from_csv(csv)
-    assert wrapper.id.to_pylist() == ["1", "2"]
-    assert wrapper.pair.x.to_pylist() == [1, 3]
-    assert wrapper.pair.y.to_pylist() == [2, 4]
+    np.testing.assert_array_equal(wrapper.id, ["1", "2"])
+    np.testing.assert_array_equal(wrapper.pair.x, [1, 3])
+    np.testing.assert_array_equal(wrapper.pair.y, [2, 4])
 
 
 def test_from_pylist():
@@ -181,21 +180,23 @@ def test_from_pylist():
     ]
     wrapper = Wrapper.from_rows(data)
 
-    assert wrapper.id.to_pylist() == ["1", "2"]
-    assert wrapper.pair.x.to_pylist() == [1, 3]
-    assert wrapper.pair.y.to_pylist() == [2, 4]
+    np.testing.assert_array_equal(wrapper.id, ["1", "2"])
+    np.testing.assert_array_equal(wrapper.pair.x, [1, 3])
+    np.testing.assert_array_equal(wrapper.pair.y, [2, 4])
 
 
-class Layer1(TableBase):
-    schema = pa.schema([("x", pa.int64())])
+class Layer1(Table):
+    x = Int64Field()
 
 
-class Layer2(TableBase):
-    schema = pa.schema([("y", pa.int64()), Layer1.as_field("layer1")])
+class Layer2(Table):
+    y = Int64Field()
+    layer1 = Layer1.as_field()
 
 
-class Layer3(TableBase):
-    schema = pa.schema([("z", pa.int64()), Layer2.as_field("layer2")])
+class Layer3(Table):
+    z = Int64Field()
+    layer2 = Layer2.as_field()
 
 
 def test_unflatten_table():
@@ -209,51 +210,51 @@ def test_unflatten_table():
 
     unflat_table = Layer3._unflatten_table(flat_table)
 
-    assert unflat_table.column("z").to_pylist() == [1, 4]
+    np.testing.assert_array_equal(unflat_table.column("z"), [1, 4])
 
-    have = Layer3(table=unflat_table)
+    have = Layer3(pa_table=unflat_table)
 
     assert have == l3
 
 
 def test_from_kwargs():
     l1 = Layer1.from_kwargs(x=[1, 2, 3])
-    assert l1.x.to_pylist() == [1, 2, 3]
+    np.testing.assert_array_equal(l1.x, [1, 2, 3])
 
     l2 = Layer2.from_kwargs(y=[4, 5, 6], layer1=l1)
-    assert l2.y.to_pylist() == [4, 5, 6]
-    assert l2.layer1.x.to_pylist() == [1, 2, 3]
+    np.testing.assert_array_equal(l2.y, [4, 5, 6])
+    np.testing.assert_array_equal(l2.layer1.x, [1, 2, 3])
 
     l3 = Layer3.from_kwargs(z=[7, 8, 9], layer2=l2)
-    assert l3.z.to_pylist() == [7, 8, 9]
-    assert l3.layer2.y.to_pylist() == [4, 5, 6]
-    assert l3.layer2.layer1.x.to_pylist() == [1, 2, 3]
+    np.testing.assert_array_equal(l3.z, [7, 8, 9])
+    np.testing.assert_array_equal(l3.layer2.y, [4, 5, 6])
+    np.testing.assert_array_equal(l3.layer2.layer1.x, [1, 2, 3])
 
 
 def test_from_data_using_kwargs():
     have = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
-    assert have.x.to_pylist() == [1, 2, 3]
-    assert have.y.to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])
 
     # Change the ordering
     have = Pair.from_data(y=[4, 5, 6], x=[1, 2, 3])
-    assert have.x.to_pylist() == [1, 2, 3]
-    assert have.y.to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])
 
     # Refer to a nested value
     pair = have
     wrapper = Wrapper.from_data(id=["1", "2", "3"], pair=pair)
-    assert wrapper.id.to_pylist() == ["1", "2", "3"]
-    assert wrapper.pair.x.to_pylist() == [1, 2, 3]
+    np.testing.assert_array_equal(wrapper.id, ["1", "2", "3"])
+    np.testing.assert_array_equal(wrapper.pair.x, [1, 2, 3])
 
 
 def test_from_data_using_positional_list():
     have = Pair.from_data([[1, 2, 3], [4, 5, 6]])
-    assert have.x.to_pylist() == [1, 2, 3]
-    assert have.y.to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])
 
 
 def test_from_data_using_positional_dict():
     have = Pair.from_data({"x": [1, 2, 3], "y": [4, 5, 6]})
-    assert have.x.to_pylist() == [1, 2, 3]
-    assert have.y.to_pylist() == [4, 5, 6]
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])

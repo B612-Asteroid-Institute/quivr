@@ -44,25 +44,22 @@ Check out this repo, and `pip install` it.
 ## Usage
 
 Your main entrypoint to Quivr is through defining classes which
-represent your tables. You write a `pyarrow.Schema` as the `schema`
-class attribute of your class, and Quivr will take care of the rest.
+represent your tables. You write a subclass of quivr.Table, annotating
+it with Fields that describe the data you're working with, and quivr
+will handle the rest.
 
 ```python
-from quivr import TableBase
+from quivr import Table, Float64Field
 import pyarrow as pa
 
 
 class Coordinates(TableBase):
-    schema = pa.schema(
-        [
-            pa.field("x", pa.float64()),
-            pa.field("y", pa.float64()),
-            pa.field("z", pa.float64()),
-            pa.field("vx", pa.float64()),
-            pa.field("vy", pa.float64()),
-            pa.field("vz", pa.float64()),
-        ]
-    )
+	x = Float64Field()
+	y = Float64Field()
+	z = Float64Field()
+	vx = Float64Field()
+	vy = Float64Field()
+	vz = Float64Field()
 ```
 
 Then, you can construct tables from data:
@@ -98,14 +95,10 @@ You can embed one table's definition within another, and you can make fields nul
 ```python
 
 class AsteroidOrbit(TableBase):
-    schema = pa.schema(
-        [
-            pa.field("designation", pa.string()),
-            pa.field("mass", pa.float64(), nullable=True),
-            pa.field("radius", pa.float64(), nullable=True),
-            Coordinates.as_field("coords"),
-        ]
-    )
+	designation = StringField()
+	mass = Float64Field(nullable=True)
+	radius = Float64Field(nullable=True)
+	coords = Coordinates.as_field()
 
 # You can construct embedded fields from Arrow StructArrays, which you can get from
 # other Quivr tables using the to_structarray() method with zero copy.
@@ -119,12 +112,25 @@ orbits = AsteroidOrbit.from_data(
 
 ### Computing
 
-You can use the columns of the data to do computations:
+#### Using Numpy
+When you reference columns, you'll get numpy arrays which you can use to do computations:
+
+```python
+import numpy as np
+
+print(np.quantile(orbits.mass + 10, 0.5)
+```
+
+
+#### Using pyarrow.compute
+
+You can also use access columns of the data as Arrow Arrays to do
+computations using the Pyarrow compute kernels:
 
 ```python
 import pyarrow.compute as pc
 
-median_mass = pc.quantile(orbits.mass, q=0.5)
+median_mass = pc.quantile(pc.add(orbits.column(mass, as_numpy=False), 10), q=0.5)
 # median_mass is a pyarrow.Scalar, which you can get the value of with .as_py()
 print(median_mass.as_py())
 ```
@@ -145,14 +151,10 @@ can do so like this:
 ```python
 
 class AsteroidOrbit(TableBase):
-    schema = pa.schema(
-        [
-            pa.field("designation", pa.string()),
-            pa.field("mass", pa.float64(), nullable=True),
-            pa.field("radius", pa.float64(), nullable=True),
-            Coordinates.as_field("coords"),
-        ]
-    )
+	designation = StringField()
+	mass = Float64Field(nullable=True)
+	radius = Float64Field(nullable=True)
+	coords = Coordinates.as_field()
 
     def total_mass(self):
         return pc.sum(self.mass)
@@ -163,12 +165,7 @@ You can also use this to add "meta-fields" which are combinations of other field
 
 ```python
 class CoordinateCovariance(TableBase):
-    schema = pa.schema(
-        [
-            # The covariance matrix of the coordinates as a 6x6 matrix (3 positions, 3 velocities)
-            pa.field("matrix_values", pa.list_(pa.float64(), 36)),
-        ]
-    )
+	matrix_values = ListField(pa.float64(), 36)
 
     @property
     def matrix(self):
@@ -177,17 +174,11 @@ class CoordinateCovariance(TableBase):
 
 
 class AsteroidOrbit(TableBase):
-    schema = pa.schema(
-        [
-            pa.field("designation", pa.string()),
-            pa.field("mass", pa.float64(), nullable=True),
-            pa.field("radius", pa.float64(), nullable=True),
-            Coordinates.as_field("coords"),
-            CoordinateCovariance.as_field("covariance"),
-        ]
-    )
-
-
+	designation = StringField()
+	mass = Float64Field(nullable=True)
+	radius = Float64Field(nullable=True)
+	coords = Coordinates.as_field()
+	covariance = CoordinateCovariance.as_field()
 
 orbits = load_orbits() # Analogous to the example above
 

@@ -3,12 +3,12 @@ from typing import Iterator, TypeVar
 import pyarrow as pa
 
 from .defragment import defragment
-from .tables import TableBase
+from .tables import Table
 
-Table = TypeVar("Table", bound=TableBase)
+T = TypeVar("T", bound=Table)
 
 
-def concatenate(values: Iterator[Table], defrag: bool = True) -> Table:
+def concatenate(values: Iterator[T], defrag: bool = True) -> T:
     """Concatenate a collection of Tables into a single Table.
 
     All input Tables must have the same schema (typically, this will
@@ -29,7 +29,7 @@ def concatenate(values: Iterator[Table], defrag: bool = True) -> Table:
             cls = v.__class__
             first = False
     table = pa.Table.from_batches(batches)
-    result = cls(table=table)
+    result = cls(pa_table=table)
     if defrag:
         result = defragment(result)
     return result

@@ -4,9 +4,9 @@ import mmh3
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from .tables import TableBase
+from .tables import Table
 
-T = TypeVar("T", bound=TableBase)
+T = TypeVar("T", bound=Table)
 
 
 class StringIndex(Generic[T]):

@@ -1,10 +1,8 @@
-"""Table base classes."""
-
 import functools
-import pickle
-from typing import Any, Optional, Self, Union
+from typing import Generic, TypeVar, TypeAlias, Union, Optional, Self, ClassVar, Any
 from io import IOBase
 import os
+
 
 import numpy as np
 import pandas as pd
@@ -14,78 +12,33 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
+from .fields import Field, SubTableField, MetadataDict
+from .schemagraph import _walk_schema
 from .errors import TableFragmentedError
-from .schemagraph import _walk_schema, compute_depth
-
-_METADATA_MODEL_KEY = b"__quivr_model_pickle"
-_METADATA_NAME_KEY = b"__quivr_model_name"
-_METADATA_UNPICKLE_KWARGS_KEY = b"__quivr_model_unpickle_kwargs"
 
 
-class TableMetaclass(type):
-    """TableMetaclass is a metaclass which attaches accessors
-    to Tables based on their schema class-level attribute.
-
-    Each field in the class's schema becomes an attribute on the class.
-
-    """
-
-    def __new__(cls, name, bases, attrs):
-        # Invoked when a class is created. We use this to generate
-        # accessors for the class's schema's fields.
-        if "schema" not in attrs:
-            raise TypeError(f"Table {name} requires a schema attribute")
-        if not isinstance(attrs["schema"], pa.Schema):
-            raise TypeError(f"Table {name} schema attribute must be a pyarrow.Schema")
-        accessors = dict(cls.generate_accessors(attrs["schema"]))
-        attrs.update(accessors)
-
-        # Compute the depth of the schema, which is used when flattening.
-        attrs["_schema_depth"] = compute_depth(attrs["schema"])
-
-        return super().__new__(cls, name, bases, attrs)
-
-    def generate_accessors(schema: pa.Schema):
-        """Generate all the property accessors for the schema's fields.
-
-        Each field is accessed by name. When getting the field, its
-        underlying value is unloaded out of the Arrow array. If the
-        field has a model attached to it, the model is instantiated
-        with the data. Otherwise, the data is returned as-is.
-
-        """
-
-        def getter(_self, field: pa.Field):
-            return _self.column(field.name)
-
-        def setter(_self, value: Any):
-            raise NotImplementedError("Tables are immutable")
-
-        def deleter(_self):
-            raise NotImplementedError("Tables are immutable")
-
-        for idx, field in enumerate(schema):
-            g = functools.partial(getter, field=field)
-            prop = property(fget=g, fset=setter, fdel=deleter)
-            yield (field.name, prop)
-
-
-class TableBase(metaclass=TableMetaclass):
+class Table:
+    schema: ClassVar[pa.Schema]
     table: pa.Table
-    schema: pa.Schema = pa.schema([])
-    _schema_depth: int
 
-    def __init__(self, table: pa.Table):
-        self.table = []
-        if not isinstance(table, pa.Table):
-            raise TypeError(f"Data must be a pyarrow.Table for {self.__class__.__name__}")
-        if table.schema != self.schema:
-            raise TypeError(f"Data schema must match schema for {self.__class__.__name__}")
-        self.table = table
+    def __init_subclass__(cls, **kwargs):
+        fields = []
+        for name, field in cls.__dict__.items():
+            if isinstance(field, Field):
+                fields.append(field.pyarrow_field())
+
+        # Generate a pyarrow schema
+        schema = pa.schema(fields)
+        cls.schema = schema
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self, pa_table: pa.Table):
+        self.table = pa_table
 
     @classmethod
     def from_data(cls, data: Optional[Any] = None, **kwargs) -> Self:
-        """Create an instance of the TableBase and populate it with data.
+        """
+        Create an instance of the Table and populate it with data.
 
         This is a convenience method which tries to infer the right
         underlying constructors to use based on the type of data. It
@@ -131,27 +84,32 @@ class TableBase(metaclass=TableMetaclass):
                 return cls.from_lists(data)
         if isinstance(data, pd.DataFrame):
             return cls.from_pandas(data)
-        if isinstance(data, np.ndarray):
-            return cls.from_numpy(data)
-        raise TypeError(f"Unsupported data type: {type(data)}")
+        raise TypeError(f"Unsupported type: {type(data)}")
+
+    @classmethod
+    def from_pydict(cls, data: dict[str, list], *args, **kwargs) -> Self:
+        table = pa.Table.from_pydict(data, schema=cls.schema)
+        return cls(table, *args, **kwargs)
+
+    @classmethod
+    def as_field(cls, nullable: bool = True, metadata: Optional[MetadataDict] = None) -> SubTableField:
+        return SubTableField(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
     def from_kwargs(cls, **kwargs) -> Self:
-        """Create a TableBase object from keyword arguments.
+        """Create a Table instance from keyword arguments.
 
-        Each keyword argument corresponds to a column in the table.
+        Each keyword argument corresponds to a field in the Table.
 
-        Each keyword value can be a list, numpy array, pyarrow array,
-        or TableBase instance.
-
+        The keys should correspond to the field names, and the values
+        can be a list, numpy array, pyarrow array, or Table instance.
         """
-
         arrays = []
         for column_name in cls.schema.names:
             if column_name not in kwargs:
                 raise ValueError(f"Missing column {column_name}")
             value = kwargs[column_name]
-            if isinstance(value, TableBase):
+            if isinstance(value, Table):
                 arrays.append(value.to_structarray())
             elif isinstance(value, pa.Array):
                 arrays.append(value)
@@ -165,65 +123,67 @@ class TableBase(metaclass=TableMetaclass):
 
     @classmethod
     def from_arrays(cls, arrays: list[pa.array]) -> Self:
-        """Create a TableBase object from a list of arrays.
+        """Create a Table object from a list of arrays.
 
         Args:
             arrays: A list of pyarrow.Array objects.
 
         Returns:
-            A TableBase object.
+            A Table object.
 
         """
         table = pa.Table.from_arrays(arrays, schema=cls.schema)
-        return cls(table=table)
+        return cls(pa_table=table)
 
     @classmethod
-    def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]):
+    def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]) -> Self:
         table = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls(table=table)
+        return cls(pa_table=table)
 
     @classmethod
-    def from_rows(cls, l: list[dict]):
+    def from_rows(cls, l: list[dict]) -> Self:
         """
-        Create a TableBase object from a list of dictionaries.
+        Create a Table object from a list of dictionaries.
 
         Args:
             l: A list of values. Each value corresponds to a row in the table.
 
         Returns:
-            A TableBase object.
+            A Table object.
 
         Examples:
             >>> import quivr
-            >>> class Inner(quivr.TableBase):
-            ...     schema = pyarrow.schema([pyarrow.field("a", pyarrow.string())])
+            >>> class Inner(quivr.Table):
+            ...     a = quivr.StringField()
             ...
             >>> class Outer(quivr.TableBase):
-            ...     schema = pyarrow.schema([pyarrow.field("z", pyarrow.string()), Inner.as_field("i")])
+            ...     z = quivr.StringField()
+            ...     i = Inner.as_field()
             ...
             >>> data = [{"z": "v1", "i": {"a": "v1_in"}}, {"z": "v2", "i": {"a": "v2_in"}}]
             >>> Outer.from_pylist(data)
             Outer(size=2)
         """
         table = pa.Table.from_pylist(l, schema=cls.schema)
-        return cls(table=table)
+        return cls(pa_table=table)
 
     @classmethod
     def from_lists(cls, l: list[list]) -> Self:
-        """Create a TableBase object from a list of lists.
+        """Create a Table object from a list of lists.
 
-        Each inner list corresponds to a column in the table. They
-        should be specified in the same order as the columns in the
-        schema.
+        Each inner list corresponds to a field in the Table. They
+        should be specified in the same order as the fields in the
+        class.
 
         Args:
             l: A list of lists. Each inner list corresponds to a column in the table.
 
         Returns:
             A TableBase object.
+
         """
         table = pa.Table.from_arrays(list(map(pa.array, l)), schema=cls.schema)
-        return cls(table=table)
+        return cls(pa_table=table)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame):
@@ -240,7 +200,7 @@ class TableBase(metaclass=TableMetaclass):
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
-        return cls(table=table)
+        return cls(pa_table=table)
 
     @classmethod
     def _unflatten_table(cls, table: pa.Table):
@@ -258,7 +218,7 @@ class TableBase(metaclass=TableMetaclass):
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(table=pa.from_dataframe(df, schema=cls.schema))
+            return cls(pa_table=pa.from_dataframe(df, schema=cls.schema))
 
         # Walk the schema, and build a StructArray for each embedded
         # type.
@@ -296,7 +256,7 @@ class TableBase(metaclass=TableMetaclass):
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(table=pa.from_dataframe(df, schema=cls.schema))
+            return cls(pa_table=pa.from_dataframe(df, schema=cls.schema))
 
         root = pa.field("", pa.struct(cls.schema))
 
@@ -364,16 +324,16 @@ class TableBase(metaclass=TableMetaclass):
             table_arrays.append(sa.field(subfield.name))
 
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
-        return cls(table=table)
+        return cls(pa_table=table)
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
         taking into account any nested structure, and return the data
         table itself.
-
         """
+
         table = self.table
-        for i in range(self._schema_depth - 1):
+        while any(isinstance(field.type, pa.StructType) for field in table.schema):
             table = table.flatten()
         return table
 
@@ -450,29 +410,8 @@ class TableBase(metaclass=TableMetaclass):
             table = self.flattened_table()
         return table.to_pandas()
 
-    @classmethod
-    def as_field(cls, name: str, nullable: bool = True, metadata: Optional[dict] = None):
-        metadata = metadata or {}
-        metadata[_METADATA_NAME_KEY] = cls.__name__
-        metadata[_METADATA_MODEL_KEY] = pickle.dumps(cls)
-        field = pa.field(name, pa.struct(cls.schema), nullable=nullable, metadata=metadata)
-        return field
-
-    def column(self, field_name: str):
-        field = self.schema.field(field_name)
-        if field.metadata is not None and _METADATA_MODEL_KEY in field.metadata:
-            # If the field has type information attached to it in
-            # metadata, pull it out. The metadata store the model (as
-            # a class object), and may optionally have some keyword
-            # arguments to be used when instantiating the model from
-            # the data.
-            model = pickle.loads(field.metadata[_METADATA_MODEL_KEY])
-            if _METADATA_UNPICKLE_KWARGS_KEY in field.metadata:
-                init_kwargs = pickle.loads(field.metadata[_METADATA_UNPICKLE_KWARGS_KEY])
-            else:
-                init_kwargs = {}
-            table = _sub_table(self.table, field_name)
-            return model(table=table, **init_kwargs)
+    def column(self, field_name: str) -> pa.ChunkedArray:
+        """Returns the column with the given name as a raw pyarrow ChunkedArray."""
         return self.table.column(field_name)
 
     def __repr__(self):
@@ -482,6 +421,9 @@ class TableBase(metaclass=TableMetaclass):
         return len(self.table)
 
     def __getitem__(self, idx):
+        # TODO: This comes out a little funky. You get chunked arrays
+        # instead of arrays. Is there a way to flatten them safely?
+        
         if isinstance(idx, int):
             return self.__class__(self.table[idx : idx + 1])
         return self.__class__(self.table[idx])
@@ -490,10 +432,12 @@ class TableBase(metaclass=TableMetaclass):
         for i in range(len(self)):
             yield self[i : i + 1]
 
-    def __eq__(self, other):
-        if not isinstance(other, TableBase):
-            return NotImplemented
-        return self.table.equals(other.table)
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Table):
+            return self.table.equals(other.table)
+        if isinstance(other, pa.Table):
+            return self.table.equals(other)
+        return False
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
         """Return a new Table with only the rows at the given indices."""
@@ -506,7 +450,7 @@ class TableBase(metaclass=TableMetaclass):
     @classmethod
     def from_parquet(cls, path: str, **kwargs):
         """Read a table from a Parquet file."""
-        return cls(table=pyarrow.parquet.read_table(path, **kwargs))
+        return cls(pa_table=pyarrow.parquet.read_table(path, **kwargs))
 
     def to_feather(self, path: str, **kwargs):
         """Write the table to a Feather file."""
@@ -515,7 +459,7 @@ class TableBase(metaclass=TableMetaclass):
     @classmethod
     def from_feather(cls, path: str, **kwargs):
         """Read a table from a Feather file."""
-        return cls(table=pyarrow.feather.read_table(path, **kwargs))
+        return cls(pa_table=pyarrow.feather.read_table(path, **kwargs))
 
     def to_csv(self, path: str):
         """Write the table to a CSV file. Any nested structure is flattened."""
@@ -525,14 +469,4 @@ class TableBase(metaclass=TableMetaclass):
     def from_csv(cls, input_file: Union[str, os.PathLike, IOBase]):
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
-        return cls(table=cls._unflatten_table(flat_table))
-
-
-def _sub_table(tab: pa.Table, field_name: str):
-    """Given a table which contains a StructArray under given field
-    name, construct a table from the sub-object.
-
-    """
-    column = tab.column(field_name)
-    schema = pa.schema(column.type)
-    return pa.Table.from_arrays(column.flatten(), schema=schema)
+        return cls(pa_table=cls._unflatten_table(flat_table))

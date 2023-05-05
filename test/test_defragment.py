@@ -16,13 +16,13 @@ def test_defragment():
     )
     combined = concatenate([p1] * 10, defrag=False)
     assert len(combined) == 30
-    assert len(combined.x.chunks) == 10
+    assert len(combined.column("x").chunks) == 10
 
     defragged = defragment(combined)
     assert len(defragged) == 30
-    assert len(defragged.x.chunks) == 1
+    assert len(defragged.column("x").chunks) == 1
 
-    assert len(combined.x.chunks) == 10
+    assert len(combined.column("x").chunks) == 10
 
 
 @pytest.mark.benchmark(group="ops")

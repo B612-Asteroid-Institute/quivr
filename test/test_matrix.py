@@ -1,26 +1,19 @@
 import pyarrow as pa
 
 from quivr.matrix import MatrixArray, MatrixExtensionType
-from quivr.tables import TableBase
+from quivr.tables import Table
+from quivr.fields import Field, Float64Field, StringField
 
 
-class Position(TableBase):
-    schema = pa.schema(
-        [
-            pa.field("x", pa.float64()),
-            pa.field("y", pa.float64()),
-            pa.field("cov", MatrixExtensionType((2, 2), pa.float64())),
-        ]
-    )
+class Position(Table):
+    x = Float64Field()
+    y = Float64Field()
+    cov = Field(MatrixExtensionType((2, 2), pa.float64()))
 
 
-class PositionWrapper(TableBase):
-    schema = pa.schema(
-        [
-            Position.as_field("pos"),
-            pa.field("id", pa.string()),
-        ]
-    )
+class PositionWrapper(Table):
+    pos = Position.as_field()
+    id = StringField()
 
 
 def test_matrix_from_pydict():
@@ -36,7 +29,7 @@ def test_matrix_from_pydict():
     have = Position.from_pydict(data)
     assert len(have) == 3
 
-    assert type(have.cov.chunks[0]) == MatrixArray
+    assert type(have.column("cov").chunks[0]) == MatrixArray
 
 
 def test_matrix_from_array():
@@ -53,7 +46,7 @@ def test_matrix_from_array():
     have = Position.from_arrays([xs, ys, cov])
     assert len(have) == 3
 
-    assert type(have.cov.chunks[0]) == MatrixArray
+    assert type(have.column("cov").chunks[0]) == MatrixArray
 
 
 def test_nested_matrix_from_array():
@@ -72,4 +65,4 @@ def test_nested_matrix_from_array():
 
     have = PositionWrapper.from_arrays([pos, ids])
     assert len(have) == 3
-    assert type(have.pos.cov.chunks[0]) == MatrixArray
+    assert type(have.pos.column("cov").chunks[0]) == MatrixArray

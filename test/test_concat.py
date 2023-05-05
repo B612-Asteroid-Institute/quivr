@@ -1,4 +1,5 @@
 import pyarrow as pa
+import numpy as np
 import pytest
 
 from quivr.concat import concatenate
@@ -17,7 +18,7 @@ def test_concatenate():
 
     have = concatenate([pair1, pair2])
     assert len(have) == 6
-    assert have.x.to_pylist() == [1, 2, 3, 11, 22, 33]
+    np.testing.assert_array_equal(have.x, [1, 2, 3, 11, 22, 33])
 
 
 def test_concatenate_nested():
@@ -35,8 +36,8 @@ def test_concatenate_nested():
 
     have = concatenate([w1, w2])
     assert len(have) == 6
-    assert have.pair.x.to_pylist() == [1, 2, 3, 11, 22, 33]
-    assert have.id.to_pylist() == ["v1", "v2", "v3", "v4", "v5", "v6"]
+    np.testing.assert_array_equal(have.pair.x, [1, 2, 3, 11, 22, 33])
+    np.testing.assert_array_equal(have.id, ["v1", "v2", "v3", "v4", "v5", "v6"])
 
 
 @pytest.mark.benchmark(group="ops")

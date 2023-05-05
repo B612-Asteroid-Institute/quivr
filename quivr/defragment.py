@@ -1,8 +1,8 @@
 from typing import TypeVar
 
-from .tables import TableBase
+from .tables import Table
 
-GenericTable = TypeVar("GenericTable", bound=TableBase)
+GenericTable = TypeVar("GenericTable", bound=Table)
 
 
 def defragment(table: GenericTable) -> GenericTable:
@@ -13,4 +13,4 @@ def defragment(table: GenericTable) -> GenericTable:
     """
 
     combined = table.table.combine_chunks()
-    return table.__class__(table=combined)
+    return table.__class__(pa_table=combined)

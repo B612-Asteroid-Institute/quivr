@@ -23,13 +23,3 @@ def _walk_schema(
     ancestors.pop()
     visitor(field, ancestors)
 
-
-def compute_depth(schema: pa.Schema) -> int:
-    """Compute the maximum depth of the schema, thinking of it as a tree which contains struct types."""
-    max_depth = 1
-    for field in schema:
-        if pa.types.is_struct(field.type):
-            depth = 1 + compute_depth(pa.schema(field.type))
-            if depth > max_depth:
-                max_depth = depth
-    return max_depth
