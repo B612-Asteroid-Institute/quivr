@@ -1,1 +1,3 @@
 dist/
+*~
+.mypy_cache
