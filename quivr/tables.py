@@ -1,8 +1,6 @@
-import functools
-from typing import Generic, TypeVar, TypeAlias, Union, Optional, Self, ClassVar, Any
-from io import IOBase
 import os
-
+from io import IOBase
+from typing import Any, ClassVar, Optional, Self, Union
 
 import numpy as np
 import pandas as pd
@@ -12,9 +10,9 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
-from .fields import Field, SubTableField, MetadataDict
-from .schemagraph import _walk_schema
 from .errors import TableFragmentedError
+from .fields import Field, MetadataDict, SubTableField
+from .schemagraph import _walk_schema
 
 
 class Table:
@@ -136,12 +134,12 @@ class Table:
         return cls(pa_table=table)
 
     @classmethod
-    def from_rows(cls, l: list[dict]) -> Self:
+    def from_rows(cls, rows: list[dict]) -> Self:
         """
         Create a Table object from a list of dictionaries.
 
         Args:
-            l: A list of values. Each value corresponds to a row in the table.
+            rows: A list of values. Each value corresponds to a row in the table.
 
         Returns:
             A Table object.
@@ -159,11 +157,11 @@ class Table:
             >>> Outer.from_pylist(data)
             Outer(size=2)
         """
-        table = pa.Table.from_pylist(l, schema=cls.schema)
+        table = pa.Table.from_pylist(rows, schema=cls.schema)
         return cls(pa_table=table)
 
     @classmethod
-    def from_lists(cls, l: list[list]) -> Self:
+    def from_lists(cls, lists: list[list]) -> Self:
         """Create a Table object from a list of lists.
 
         Each inner list corresponds to a field in the Table. They
@@ -171,13 +169,13 @@ class Table:
         class.
 
         Args:
-            l: A list of lists. Each inner list corresponds to a column in the table.
+            lists: A list of lists. Each inner list corresponds to a column in the table.
 
         Returns:
             A TableBase object.
 
         """
-        table = pa.Table.from_arrays(list(map(pa.array, l)), schema=cls.schema)
+        table = pa.Table.from_arrays(list(map(pa.array, lists)), schema=cls.schema)
         return cls(pa_table=table)
 
     @classmethod
@@ -418,7 +416,7 @@ class Table:
     def __getitem__(self, idx):
         # TODO: This comes out a little funky. You get chunked arrays
         # instead of arrays. Is there a way to flatten them safely?
-        
+
         if isinstance(idx, int):
             return self.__class__(self.table[idx : idx + 1])
         return self.__class__(self.table[idx])

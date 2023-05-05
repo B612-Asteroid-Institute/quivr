@@ -22,4 +22,3 @@ def _walk_schema(
 
     ancestors.pop()
     visitor(field, ancestors)
-

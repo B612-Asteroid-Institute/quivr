@@ -1,10 +1,12 @@
-import pyarrow as pa
-import numpy as np
 import io
-from quivr.concat import concatenate
-from quivr.tables import Table
-from quivr.fields import Int64Field, StringField
 import textwrap
+
+import numpy as np
+import pyarrow as pa
+
+from quivr.concat import concatenate
+from quivr.fields import Int64Field, StringField
+from quivr.tables import Table
 
 
 class Pair(Table):

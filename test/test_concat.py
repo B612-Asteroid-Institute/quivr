@@ -1,5 +1,5 @@
-import pyarrow as pa
 import numpy as np
+import pyarrow as pa
 import pytest
 
 from quivr.concat import concatenate

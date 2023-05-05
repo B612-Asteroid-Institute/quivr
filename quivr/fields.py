@@ -1,4 +1,4 @@
-from typing import Optional, Union, TypeAlias, TYPE_CHECKING, TypeVar, Generic
+from typing import TYPE_CHECKING, Generic, Optional, TypeAlias, TypeVar, Union
 
 import pyarrow as pa
 

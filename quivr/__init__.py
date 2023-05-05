@@ -1,42 +1,39 @@
 from .concat import concatenate
-from .indexing import StringIndex
-from .matrix import MatrixArray, MatrixExtensionType
-from .tables import Table
 from .fields import (
+    BinaryField,
+    Date32Field,
+    Date64Field,
+    Decimal128Field,
+    Decimal256Field,
+    DictionaryField,
+    DurationField,
     Field,
-    SubTableField,
-    Int8Field,
+    Float16Field,
+    Float32Field,
+    Float64Field,
     Int16Field,
     Int32Field,
     Int64Field,
+    LargeBinaryField,
+    LargeListField,
+    LargeStringField,
+    ListField,
+    MapField,
+    MonthDayNanoIntervalField,
+    NullField,
+    RunEndEncodedField,
+    StringField,
+    StructField,
+    Time32Field,
+    Time64Field,
+    TimestampField,
     UInt8Field,
     UInt16Field,
     UInt32Field,
     UInt64Field,
-    Float16Field,
-    Float32Field,
-    Float64Field,
-    StringField,
-    LargeBinaryField,
-    LargeStringField,
-    Date32Field,
-    Date64Field,
-    TimestampField,
-    Time32Field,
-    Time64Field,
-    DurationField,
-    MonthDayNanoIntervalField,
-    BinaryField,
-    Decimal128Field,
-    Decimal256Field,
-    NullField,
-    ListField,
-    LargeListField,
-    MapField,
-    DictionaryField,
-    StructField,
-    RunEndEncodedField
 )
+from .indexing import StringIndex
+from .matrix import MatrixArray, MatrixExtensionType
 
 __all__ = [
     "TableBase",
@@ -45,8 +42,7 @@ __all__ = [
     "concatenate",
     "StringIndex",
     "Field",
-    "SubTableField"
-    "Int8Field",
+    "SubTableField" "Int8Field",
     "Int16Field",
     "Int32Field",
     "Int64Field",
@@ -76,5 +72,5 @@ __all__ = [
     "MapField",
     "DictionaryField",
     "StructField",
-    "RunEndEncodedField"
+    "RunEndEncodedField",
 ]

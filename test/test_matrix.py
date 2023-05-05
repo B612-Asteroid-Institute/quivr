@@ -1,8 +1,8 @@
 import pyarrow as pa
 
+from quivr.fields import Field, Float64Field, StringField
 from quivr.matrix import MatrixArray, MatrixExtensionType
 from quivr.tables import Table
-from quivr.fields import Field, Float64Field, StringField
 
 
 class Position(Table):

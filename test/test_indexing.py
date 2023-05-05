@@ -1,15 +1,16 @@
-import pyarrow as pa
 import numpy as np
+import pyarrow as pa
 
+from quivr.fields import Int64Field, StringField
 from quivr.indexing import StringIndex
 from quivr.tables import Table
-from quivr.fields import Int64Field, StringField
 
 
 class TableWithString(Table):
     id = Int64Field()
     name = StringField()
     value = Int64Field()
+
 
 def test_indexing():
     table = TableWithString.from_arrays([pa.array([1, 2, 3]), pa.array(["a", "b", "c"]), pa.array([4, 5, 6])])
