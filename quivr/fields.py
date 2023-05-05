@@ -3,7 +3,7 @@ from typing import Optional, Union, TypeAlias, TYPE_CHECKING, TypeVar, Generic
 import pyarrow as pa
 
 if TYPE_CHECKING:
-    from .table import Table
+    from .tables import Table
 
 Byteslike: TypeAlias = Union[bytes, bytearray, memoryview, str]
 MetadataDict: TypeAlias = dict[Byteslike, Byteslike]
@@ -21,6 +21,10 @@ class Field:
 
     def __get__(self, obj: "Table", objtype: type):
         return obj.table.column(self.name)
+
+    def __set__(self, obj: "Table", value):
+        idx = obj.table.schema.get_field_index(self.name)
+        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value])
 
     def __set_name__(self, owner: type, name: str):
         self.name = name

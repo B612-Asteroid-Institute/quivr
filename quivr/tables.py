@@ -72,7 +72,7 @@ class Table:
             return cls.from_kwargs(**kwargs)
 
         if isinstance(data, pa.Table):
-            return cls(table=data)
+            return cls(pa_table=data)
         if isinstance(data, dict):
             return cls.from_pydict(data)
         if isinstance(data, list):
@@ -83,16 +83,11 @@ class Table:
             elif isinstance(data[0], list):
                 return cls.from_lists(data)
         if isinstance(data, pd.DataFrame):
-            return cls.from_pandas(data)
+            return cls.from_dataframe(data)
         raise TypeError(f"Unsupported type: {type(data)}")
 
     @classmethod
-    def from_pydict(cls, data: dict[str, list], *args, **kwargs) -> Self:
-        table = pa.Table.from_pydict(data, schema=cls.schema)
-        return cls(table, *args, **kwargs)
-
-    @classmethod
-    def as_field(cls, nullable: bool = True, metadata: Optional[MetadataDict] = None) -> SubTableField:
+    def as_field(cls, nullable: bool = True, metadata: Optional[MetadataDict] = None) -> SubTableField[Self]:
         return SubTableField(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
@@ -218,7 +213,7 @@ class Table:
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(pa_table=pa.from_dataframe(df, schema=cls.schema))
+            return cls(pa_table=table)
 
         # Walk the schema, and build a StructArray for each embedded
         # type.
