@@ -45,6 +45,9 @@ check = [
   "typecheck",
   "test",
 ]
+fix = [
+  "ruff ./quivr ./test --fix"
+]
 lint = [
   "ruff ./quivr ./test",
   "black --check ./quivr ./test",
