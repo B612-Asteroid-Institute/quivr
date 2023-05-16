@@ -98,10 +98,38 @@ class Table:
         can be a list, numpy array, pyarrow array, or Table instance.
         """
         arrays = []
-        for column_name in cls.schema.names:
+        size = None
+
+        # We don't know the size of the table until we've found a
+        # field in the schema which corresponds to a kwarg with data.
+        # Therefore, we need to keep track of which columns are empty
+        # *before* we've discovered the size of the table so we can
+        # populate them with nulls later.
+        empty_columns = []
+
+        for i, field in enumerate(cls.schema):
+            column_name = field.name
             if column_name not in kwargs:
-                raise ValueError(f"Missing column {column_name}")
+                if not field.nullable:
+                    raise ValueError(f"Missing non-nullable column {column_name}")
+                else:
+                    if size is not None:
+                        arrays.append(pa.nulls(size, type=cls.schema[i].type))
+                    else:
+                        # We'll have to wait until we get to a non-None column
+                        # to figure out the size.
+                        empty_columns.append(i)
+                        arrays.append(None)
+                    continue
+
             value = kwargs[column_name]
+            if size is None:
+                size = len(value)
+            elif len(value) != size:
+                raise ValueError(
+                    f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
+                )
+
             if isinstance(value, Table):
                 arrays.append(value.to_structarray())
             elif isinstance(value, pa.Array):
@@ -112,6 +140,12 @@ class Table:
                 arrays.append(pa.array(value))
             else:
                 raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
+
+        if size is None:
+            raise ValueError("No data provided")
+
+        for idx in empty_columns:
+            arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
         return cls.from_arrays(arrays)
 
     @classmethod

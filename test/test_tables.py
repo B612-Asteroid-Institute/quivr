@@ -3,6 +3,7 @@ import textwrap
 
 import numpy as np
 import pyarrow as pa
+import pytest
 
 from quivr.concat import concatenate
 from quivr.fields import Int64Field, StringField
@@ -231,6 +232,47 @@ def test_from_kwargs():
     np.testing.assert_array_equal(l3.z, [7, 8, 9])
     np.testing.assert_array_equal(l3.layer2.y, [4, 5, 6])
     np.testing.assert_array_equal(l3.layer2.layer1.x, [1, 2, 3])
+
+
+def test_from_kwargs_with_missing():
+    class SomeTable(Table):
+        x = Int64Field(nullable=True)
+        y = Int64Field(nullable=False)
+        z = Int64Field(nullable=True)
+
+    # Eliding nullable fields is OK
+    have = SomeTable.from_kwargs(y=[1, 2, 3])
+    assert have.x.null_count == 3
+    assert have.y.null_count == 0
+    assert have.z.null_count == 3
+    np.testing.assert_array_equal(have.y, [1, 2, 3])
+
+    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+        have = SomeTable.from_kwargs(x=[1, 2, 3])
+    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+        have = SomeTable.from_kwargs(z=[1, 2, 3])
+
+    # Eliding nullable fields is OK
+    have = SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    assert have.x.null_count == 0
+    assert have.y.null_count == 0
+    assert have.z.null_count == 3
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])
+
+
+def test_from_kwargs_raises_mismatched_sizes():
+    class SomeTable(Table):
+        x = Int64Field()
+        y = Int64Field()
+
+    with pytest.raises(ValueError, match=r"Column y has wrong length 4 \(first column has length 3\)"):
+        SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6, 7])
+
+
+def test_from_kwargs_no_data():
+    with pytest.raises(ValueError, match="No data provided"):
+        Pair.from_kwargs()
 
 
 def test_from_data_using_kwargs():
