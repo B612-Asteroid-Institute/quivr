@@ -34,9 +34,10 @@ from .fields import (
 )
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
+from .tables import Table
 
 __all__ = [
-    "TableBase",
+    "Table",
     "MatrixArray",
     "MatrixExtensionType",
     "concatenate",
