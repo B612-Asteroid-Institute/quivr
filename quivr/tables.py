@@ -141,6 +141,9 @@ class Table:
             else:
                 raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
 
+        if size is None:
+            raise ValueError("No data provided")
+
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
         return cls.from_arrays(arrays)

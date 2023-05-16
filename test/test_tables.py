@@ -270,6 +270,11 @@ def test_from_kwargs_raises_mismatched_sizes():
         SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6, 7])
 
 
+def test_from_kwargs_no_data():
+    with pytest.raises(ValueError, match="No data provided"):
+        Pair.from_kwargs()
+
+
 def test_from_data_using_kwargs():
     have = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
     np.testing.assert_array_equal(have.x, [1, 2, 3])
