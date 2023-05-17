@@ -30,8 +30,8 @@ class Table:
         cls.schema = schema
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, pa_table: pa.Table):
-        self.table = pa_table
+    def __init__(self, table: pa.Table):
+        self.table = table
 
     @classmethod
     def from_data(cls, data: Optional[Any] = None, **kwargs) -> Self:
@@ -70,7 +70,7 @@ class Table:
             return cls.from_kwargs(**kwargs)
 
         if isinstance(data, pa.Table):
-            return cls(pa_table=data)
+            return cls(table=data)
         if isinstance(data, dict):
             return cls.from_pydict(data)
         if isinstance(data, list):
@@ -159,12 +159,12 @@ class Table:
 
         """
         table = pa.Table.from_arrays(arrays, schema=cls.schema)
-        return cls(pa_table=table)
+        return cls(table=table)
 
     @classmethod
     def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]) -> Self:
         table = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls(pa_table=table)
+        return cls(table=table)
 
     @classmethod
     def from_rows(cls, rows: list[dict]) -> Self:
@@ -191,7 +191,7 @@ class Table:
             Outer(size=2)
         """
         table = pa.Table.from_pylist(rows, schema=cls.schema)
-        return cls(pa_table=table)
+        return cls(table=table)
 
     @classmethod
     def from_lists(cls, lists: list[list]) -> Self:
@@ -209,7 +209,7 @@ class Table:
 
         """
         table = pa.Table.from_arrays(list(map(pa.array, lists)), schema=cls.schema)
-        return cls(pa_table=table)
+        return cls(table=table)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame):
@@ -226,7 +226,7 @@ class Table:
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
-        return cls(pa_table=table)
+        return cls(table=table)
 
     @classmethod
     def _unflatten_table(cls, table: pa.Table):
@@ -244,7 +244,7 @@ class Table:
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(pa_table=table)
+            return cls(table=table)
 
         # Walk the schema, and build a StructArray for each embedded
         # type.
@@ -282,7 +282,7 @@ class Table:
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(pa_table=pa.from_dataframe(df, schema=cls.schema))
+            return cls(table=pa.from_dataframe(df, schema=cls.schema))
 
         root = pa.field("", pa.struct(cls.schema))
 
@@ -350,7 +350,7 @@ class Table:
             table_arrays.append(sa.field(subfield.name))
 
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
-        return cls(pa_table=table)
+        return cls(table=table)
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
@@ -476,7 +476,7 @@ class Table:
     @classmethod
     def from_parquet(cls, path: str, **kwargs):
         """Read a table from a Parquet file."""
-        return cls(pa_table=pyarrow.parquet.read_table(path, **kwargs))
+        return cls(table=pyarrow.parquet.read_table(path, **kwargs))
 
     def to_feather(self, path: str, **kwargs):
         """Write the table to a Feather file."""
@@ -485,7 +485,7 @@ class Table:
     @classmethod
     def from_feather(cls, path: str, **kwargs):
         """Read a table from a Feather file."""
-        return cls(pa_table=pyarrow.feather.read_table(path, **kwargs))
+        return cls(table=pyarrow.feather.read_table(path, **kwargs))
 
     def to_csv(self, path: str):
         """Write the table to a CSV file. Any nested structure is flattened."""
@@ -495,4 +495,4 @@ class Table:
     def from_csv(cls, input_file: Union[str, os.PathLike, IOBase]):
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
-        return cls(pa_table=cls._unflatten_table(flat_table))
+        return cls(table=cls._unflatten_table(flat_table))

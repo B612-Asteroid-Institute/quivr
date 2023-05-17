@@ -29,7 +29,7 @@ def concatenate(values: Iterator[T], defrag: bool = True) -> T:
             cls = v.__class__
             first = False
     table = pa.Table.from_batches(batches)
-    result = cls(pa_table=table)
+    result = cls(table=table)
     if defrag:
         result = defragment(result)
     return result

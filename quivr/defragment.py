@@ -13,4 +13,4 @@ def defragment(table: GenericTable) -> GenericTable:
     """
 
     combined = table.table.combine_chunks()
-    return table.__class__(pa_table=combined)
+    return table.__class__(table=combined)

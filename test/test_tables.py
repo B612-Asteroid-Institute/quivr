@@ -215,7 +215,7 @@ def test_unflatten_table():
 
     np.testing.assert_array_equal(unflat_table.column("z"), [1, 4])
 
-    have = Layer3(pa_table=unflat_table)
+    have = Layer3(table=unflat_table)
 
     assert have == l3
 
@@ -286,6 +286,7 @@ def test_from_kwargs_with_missing_as_none():
     assert have.z.null_count == 3
     np.testing.assert_array_equal(have.x, [1, 2, 3])
     np.testing.assert_array_equal(have.y, [4, 5, 6])
+
 
 def test_from_kwargs_raises_mismatched_sizes():
     class SomeTable(Table):
