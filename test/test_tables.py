@@ -261,6 +261,32 @@ def test_from_kwargs_with_missing():
     np.testing.assert_array_equal(have.y, [4, 5, 6])
 
 
+def test_from_kwargs_with_missing_as_none():
+    class SomeTable(Table):
+        x = Int64Field(nullable=True)
+        y = Int64Field(nullable=False)
+        z = Int64Field(nullable=True)
+
+    # Eliding nullable fields is OK
+    have = SomeTable.from_kwargs(x=None, y=[1, 2, 3], z=None)
+    assert have.x.null_count == 3
+    assert have.y.null_count == 0
+    assert have.z.null_count == 3
+    np.testing.assert_array_equal(have.y, [1, 2, 3])
+
+    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+        have = SomeTable.from_kwargs(x=[1, 2, 3], y=None)
+    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+        have = SomeTable.from_kwargs(z=[1, 2, 3], y=None)
+
+    # Eliding nullable fields is OK
+    have = SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], z=None)
+    assert have.x.null_count == 0
+    assert have.y.null_count == 0
+    assert have.z.null_count == 3
+    np.testing.assert_array_equal(have.x, [1, 2, 3])
+    np.testing.assert_array_equal(have.y, [4, 5, 6])
+
 def test_from_kwargs_raises_mismatched_sizes():
     class SomeTable(Table):
         x = Int64Field()

@@ -109,7 +109,8 @@ class Table:
 
         for i, field in enumerate(cls.schema):
             column_name = field.name
-            if column_name not in kwargs:
+            value = kwargs.get(column_name)
+            if value is None:
                 if not field.nullable:
                     raise ValueError(f"Missing non-nullable column {column_name}")
                 else:
@@ -121,8 +122,6 @@ class Table:
                         empty_columns.append(i)
                         arrays.append(None)
                     continue
-
-            value = kwargs[column_name]
             if size is None:
                 size = len(value)
             elif len(value) != size:
