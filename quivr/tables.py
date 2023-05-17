@@ -28,6 +28,15 @@ class Table:
         # Generate a pyarrow schema
         schema = pa.schema(fields)
         cls.schema = schema
+
+        # If the subclass has an __init__ override, it must have a
+        # with_table override as well.
+        if "__init__" in cls.__dict__ and "with_table" not in cls.__dict__:
+            raise TypeError(
+                f"{cls.__name__} has an __init__ override, but does not have a with_table "
+                + "override. You must implement both or neither."
+            )
+
         super().__init_subclass__(**kwargs)
 
     def __init__(self, table: pa.Table):
@@ -70,18 +79,18 @@ class Table:
             return cls.from_kwargs(**kwargs)
 
         if isinstance(data, pa.Table):
-            return cls(table=data)
+            return cls(table=data, **kwargs)
         if isinstance(data, dict):
-            return cls.from_pydict(data)
+            return cls.from_pydict(data, **kwargs)
         if isinstance(data, list):
             if len(data) == 0:
-                return cls.from_rows(data)
+                return cls.from_rows(data, **kwargs)
             if isinstance(data[0], dict):
-                return cls.from_rows(data)
+                return cls.from_rows(data, **kwargs)
             elif isinstance(data[0], list):
-                return cls.from_lists(data)
+                return cls.from_lists(data, **kwargs)
         if isinstance(data, pd.DataFrame):
-            return cls.from_dataframe(data)
+            return cls.from_dataframe(data, **kwargs)
         raise TypeError(f"Unsupported type: {type(data)}")
 
     @classmethod
@@ -109,7 +118,8 @@ class Table:
 
         for i, field in enumerate(cls.schema):
             column_name = field.name
-            value = kwargs.get(column_name)
+            value = kwargs.pop(column_name, None)
+
             if value is None:
                 if not field.nullable:
                     raise ValueError(f"Missing non-nullable column {column_name}")
@@ -145,34 +155,36 @@ class Table:
 
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
-        return cls.from_arrays(arrays)
+        return cls.from_arrays(arrays, **kwargs)
 
     @classmethod
-    def from_arrays(cls, arrays: list[pa.array]) -> Self:
+    def from_arrays(cls, arrays: list[pa.array], **kwargs) -> Self:
         """Create a Table object from a list of arrays.
 
         Args:
             arrays: A list of pyarrow.Array objects.
+            **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
 
         Returns:
             A Table object.
 
         """
         table = pa.Table.from_arrays(arrays, schema=cls.schema)
-        return cls(table=table)
+        return cls(table=table, **kwargs)
 
     @classmethod
-    def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]]) -> Self:
+    def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]], **kwargs) -> Self:
         table = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls(table=table)
+        return cls(table=table, **kwargs)
 
     @classmethod
-    def from_rows(cls, rows: list[dict]) -> Self:
+    def from_rows(cls, rows: list[dict], **kwargs) -> Self:
         """
         Create a Table object from a list of dictionaries.
 
         Args:
             rows: A list of values. Each value corresponds to a row in the table.
+            **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
 
         Returns:
             A Table object.
@@ -191,10 +203,10 @@ class Table:
             Outer(size=2)
         """
         table = pa.Table.from_pylist(rows, schema=cls.schema)
-        return cls(table=table)
+        return cls(table=table, **kwargs)
 
     @classmethod
-    def from_lists(cls, lists: list[list]) -> Self:
+    def from_lists(cls, lists: list[list], **kwargs) -> Self:
         """Create a Table object from a list of lists.
 
         Each inner list corresponds to a field in the Table. They
@@ -203,16 +215,18 @@ class Table:
 
         Args:
             lists: A list of lists. Each inner list corresponds to a column in the table.
+            **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+
 
         Returns:
             A TableBase object.
 
         """
         table = pa.Table.from_arrays(list(map(pa.array, lists)), schema=cls.schema)
-        return cls(table=table)
+        return cls(table=table, **kwargs)
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame):
+    def from_dataframe(cls, df: pd.DataFrame, **kwargs):
         """Load a DataFrame into the Table.
 
         If the DataFrame is missing any of the Table's columns, an
@@ -226,13 +240,13 @@ class Table:
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
-        return cls(table=table)
+        return cls(table=table, **kwargs)
 
     @classmethod
     def _unflatten_table(cls, table: pa.Table):
         """Unflatten a Table.
 
-        This is used when loading a flattened DataFrame into a nested
+        This is used when loading a flattened CSV into a nested
         Table. It takes a Table with a flat schema, and returns a
         Table with a nested schema.
 
@@ -242,9 +256,6 @@ class Table:
         for field in cls.schema:
             if pa.types.is_struct(field.type):
                 struct_fields.append(field)
-
-        if len(struct_fields) == 0:
-            return cls(table=table)
 
         # Walk the schema, and build a StructArray for each embedded
         # type.
@@ -271,7 +282,7 @@ class Table:
         return pa.Table.from_arrays(child_arrays, schema=cls.schema)
 
     @classmethod
-    def from_flat_dataframe(cls, df: pd.DataFrame):
+    def from_flat_dataframe(cls, df: pd.DataFrame, **kwargs):
         """Load a flattened DataFrame into the Table.
 
         known bug: Doesn't correctly interpret fixed-length lists.
@@ -282,7 +293,7 @@ class Table:
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(table=pa.from_dataframe(df, schema=cls.schema))
+            return cls(table=pa.Table.from_pandas(df, schema=cls.schema), **kwargs)
 
         root = pa.field("", pa.struct(cls.schema))
 
@@ -350,7 +361,7 @@ class Table:
             table_arrays.append(sa.field(subfield.name))
 
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
-        return cls(table=table)
+        return cls(table=table, **kwargs)
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
@@ -446,13 +457,18 @@ class Table:
     def __len__(self):
         return len(self.table)
 
+    def with_table(self, table: pa.Table) -> Self:
+        return self.__class__(table)
+
     def __getitem__(self, idx):
         # TODO: This comes out a little funky. You get chunked arrays
         # instead of arrays. Is there a way to flatten them safely?
 
         if isinstance(idx, int):
-            return self.__class__(self.table[idx : idx + 1])
-        return self.__class__(self.table[idx])
+            table = self.table[idx : idx + 1]
+        else:
+            table = self.table[idx]
+        return self.with_table(table)
 
     def __iter__(self):
         for i in range(len(self)):
@@ -476,7 +492,7 @@ class Table:
     @classmethod
     def from_parquet(cls, path: str, **kwargs):
         """Read a table from a Parquet file."""
-        return cls(table=pyarrow.parquet.read_table(path, **kwargs))
+        return cls(table=pyarrow.parquet.read_table(path), **kwargs)
 
     def to_feather(self, path: str, **kwargs):
         """Write the table to a Feather file."""
@@ -485,14 +501,14 @@ class Table:
     @classmethod
     def from_feather(cls, path: str, **kwargs):
         """Read a table from a Feather file."""
-        return cls(table=pyarrow.feather.read_table(path, **kwargs))
+        return cls(table=pyarrow.feather.read_table(path), **kwargs)
 
     def to_csv(self, path: str):
         """Write the table to a CSV file. Any nested structure is flattened."""
         pyarrow.csv.write_csv(self.flattened_table(), path)
 
     @classmethod
-    def from_csv(cls, input_file: Union[str, os.PathLike, IOBase]):
+    def from_csv(cls, input_file: Union[str, os.PathLike, IOBase], **kwargs):
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
-        return cls(table=cls._unflatten_table(flat_table))
+        return cls(table=cls._unflatten_table(flat_table), **kwargs)

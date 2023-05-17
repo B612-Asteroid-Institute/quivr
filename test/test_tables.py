@@ -1,7 +1,10 @@
+from typing import Self
 import io
+import os
 import textwrap
 
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pytest
 
@@ -329,3 +332,129 @@ def test_from_data_using_positional_dict():
     have = Pair.from_data({"x": [1, 2, 3], "y": [4, 5, 6]})
     np.testing.assert_array_equal(have.x, [1, 2, 3])
     np.testing.assert_array_equal(have.y, [4, 5, 6])
+
+
+class TableWithAttributes(Table):
+    x = Int64Field()
+    y = Int64Field()
+
+    def __init__(self, table: pa.Table, attrib: str):
+        self.attrib = attrib
+        super().__init__(table)
+
+    def with_table(self, table: pa.Table) -> Self:
+        return TableWithAttributes(table, attrib=self.attrib)
+
+
+class TestTableAttributes:
+    def test_from_pydict(self):
+        have = TableWithAttributes.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]}, attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_rows(self):
+        have = TableWithAttributes.from_rows(
+            [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}],
+            attrib="foo",
+        )
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_lists(self):
+        have = TableWithAttributes.from_lists([[1, 2, 3], [4, 5, 6]], attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_dataframe(self):
+        have = TableWithAttributes.from_dataframe(
+            pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}),
+            attrib="foo",
+        )
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_flat_dataframe(self):
+        have = TableWithAttributes.from_flat_dataframe(
+            pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}),
+            attrib="foo",
+        )
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_kwargs(self):
+        have = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_arrays(self):
+        xs = pa.array([1, 2, 3])
+        ys = pa.array([4, 5, 6])
+        have = TableWithAttributes.from_arrays([xs, ys], attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_data(self):
+        have = TableWithAttributes.from_data(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_parquet(self, tmp_path):
+        path = os.path.join(tmp_path, "test.parquet")
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.to_parquet(path)
+
+        have = TableWithAttributes.from_parquet(path, attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_feather(self, tmp_path):
+        path = os.path.join(tmp_path, "test.feather")
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.to_feather(path)
+
+        have = TableWithAttributes.from_feather(path, attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_from_csv(self, tmp_path):
+        path = os.path.join(tmp_path, "test.csv")
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.to_csv(path)
+
+        have = TableWithAttributes.from_csv(path, attrib="foo")
+        np.testing.assert_array_equal(have.x, [1, 2, 3])
+        np.testing.assert_array_equal(have.y, [4, 5, 6])
+        assert have.attrib == "foo"
+
+    def test_getitem(self):
+        have = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+
+        sliced = have[1:]
+        np.testing.assert_array_equal(sliced.x, [2, 3])
+        np.testing.assert_array_equal(sliced.y, [5, 6])
+        assert sliced.attrib == "foo"
+
+        indexed = have[1]
+        np.testing.assert_array_equal(indexed.x, [2])
+        np.testing.assert_array_equal(indexed.y, [5])
+        assert indexed.attrib == "foo"
+
+def test_init_subclass_with_attributes_without_withtable():
+    with pytest.raises(TypeError):
+        class MyTable(Table):
+            x = Int64Field()
+            attrib: str
+
+            def __init__(self, table: pa.Table, attrib: str):
+                self.attrib = attrib
+                super().__init__(table)

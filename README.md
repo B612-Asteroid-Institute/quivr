@@ -186,6 +186,47 @@ orbits = load_orbits() # Analogous to the example above
 determinants = np.linalg.det(orbits.covariance.matrix)
 ```
 
+### Adding instance attributes
+
+You can also add more attributes (that is, non-Field ones) to your
+class and its instances, but doing so requires a bit more attention.
+
+You can override `__init__` to add instance-level attributes. However,
+if you do this, there are a few rules:
+
+ 1. Your `__init__` method must have an attribute called `table`, with
+    type `pyarrow.Table`, and you must pass this to Table's `__init__`
+    (via `super().__init__(table)`).
+ 2. You must implement a `with_table(self, table: pa.Table) -> Self`
+    method which returns a **new** instance with the provided table,
+    bringing along the current values of all instance attributes.
+
+For example:
+
+```python
+from typing import Self
+
+class AsteroidOrbit(Table):
+    designation = StringField()
+	mass = Float64Field(nullable=True)
+	
+	def __init__(self, table: pa.Table, mu: float):
+	    super().__init__(table)
+		self.mu = mu
+		
+	def with_table(self, table: pa.Table) -> Self:
+        return AsteroidOrbit(table, self.mu)
+```
+
+The `with_table` method will be used in iteration, slicing and
+indexing operations, so try to make it pretty quick.
+
+In addition, note that serialization methods (`to_csv`, `to_feather`,
+and `to_parquet`) will not, by default, bring along your instance
+attributes. If you would like to serialize the instance attributes,
+either override those methods or add additional serialization methods
+of your own, and similarly implement deserializers.
+
 
 ### Filtering
 You can also filter by expressions on the data. See [Arrow
