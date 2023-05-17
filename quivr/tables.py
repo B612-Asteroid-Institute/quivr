@@ -109,7 +109,8 @@ class Table:
 
         for i, field in enumerate(cls.schema):
             column_name = field.name
-            if column_name not in kwargs:
+            value = kwargs.get(column_name)
+            if value is None:
                 if not field.nullable:
                     raise ValueError(f"Missing non-nullable column {column_name}")
                 else:
@@ -121,33 +122,23 @@ class Table:
                         empty_columns.append(i)
                         arrays.append(None)
                     continue
+            if size is None:
+                size = len(value)
+            elif len(value) != size:
+                raise ValueError(
+                    f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
+                )
 
-            value = kwargs[column_name]
-            if value is not None:
-                if size is None:
-                    size = len(value)
-                elif len(value) != size:
-                    raise ValueError(
-                        f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
-                    )
-                
-                if isinstance(value, Table):
-                    arrays.append(value.to_structarray())
-                elif isinstance(value, pa.Array):
-                    arrays.append(value)
-                elif isinstance(value, np.ndarray):
-                    arrays.append(pa.array(value))
-                elif isinstance(value, list):
-                    arrays.append(pa.array(value))
-                else:
-                    raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
+            if isinstance(value, Table):
+                arrays.append(value.to_structarray())
+            elif isinstance(value, pa.Array):
+                arrays.append(value)
+            elif isinstance(value, np.ndarray):
+                arrays.append(pa.array(value))
+            elif isinstance(value, list):
+                arrays.append(pa.array(value))
             else:
-                if not field.nullable:
-                    raise ValueError(f"Missing non-nullable column {column_name}")
-                
-                empty_columns.append(i)
-                arrays.append(None)
-                continue
+                raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
 
         if size is None:
             raise ValueError("No data provided")
