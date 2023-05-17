@@ -1,3 +1,4 @@
 dist/
 *~
 .mypy_cache
+.dir-locals.el
