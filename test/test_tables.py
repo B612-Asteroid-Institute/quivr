@@ -1,7 +1,7 @@
-from typing import Self
 import io
 import os
 import textwrap
+from typing import Self
 
 import numpy as np
 import pandas as pd
@@ -449,8 +449,10 @@ class TestTableAttributes:
         np.testing.assert_array_equal(indexed.y, [5])
         assert indexed.attrib == "foo"
 
+
 def test_init_subclass_with_attributes_without_withtable():
     with pytest.raises(TypeError):
+
         class MyTable(Table):
             x = Int64Field()
             attrib: str
