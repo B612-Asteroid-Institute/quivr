@@ -123,23 +123,31 @@ class Table:
                     continue
 
             value = kwargs[column_name]
-            if size is None:
-                size = len(value)
-            elif len(value) != size:
-                raise ValueError(
-                    f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
-                )
-
-            if isinstance(value, Table):
-                arrays.append(value.to_structarray())
-            elif isinstance(value, pa.Array):
-                arrays.append(value)
-            elif isinstance(value, np.ndarray):
-                arrays.append(pa.array(value))
-            elif isinstance(value, list):
-                arrays.append(pa.array(value))
+            if value is not None:
+                if size is None:
+                    size = len(value)
+                elif len(value) != size:
+                    raise ValueError(
+                        f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
+                    )
+                
+                if isinstance(value, Table):
+                    arrays.append(value.to_structarray())
+                elif isinstance(value, pa.Array):
+                    arrays.append(value)
+                elif isinstance(value, np.ndarray):
+                    arrays.append(pa.array(value))
+                elif isinstance(value, list):
+                    arrays.append(pa.array(value))
+                else:
+                    raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
             else:
-                raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
+                if not field.nullable:
+                    raise ValueError(f"Missing non-nullable column {column_name}")
+                
+                empty_columns.append(i)
+                arrays.append(None)
+                continue
 
         if size is None:
             raise ValueError("No data provided")
