@@ -144,9 +144,9 @@ class Table:
             elif isinstance(value, pa.Array):
                 arrays.append(value)
             elif isinstance(value, np.ndarray):
-                arrays.append(pa.array(value))
+                arrays.append(pa.array(value, type=field.type))
             elif isinstance(value, list):
-                arrays.append(pa.array(value))
+                arrays.append(pa.array(value, type=field.type))
             else:
                 raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
 

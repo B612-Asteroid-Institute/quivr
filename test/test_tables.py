@@ -9,7 +9,7 @@ import pyarrow as pa
 import pytest
 
 from quivr.concat import concatenate
-from quivr.fields import Int64Field, StringField
+from quivr.fields import Int64Field, StringField, DictionaryField
 from quivr.tables import Table
 
 
@@ -235,6 +235,13 @@ def test_from_kwargs():
     np.testing.assert_array_equal(l3.z, [7, 8, 9])
     np.testing.assert_array_equal(l3.layer2.y, [4, 5, 6])
     np.testing.assert_array_equal(l3.layer2.layer1.x, [1, 2, 3])
+
+def test_from_kwargs_dictionary_type():
+    class SomeTable(Table):
+        vals = DictionaryField(index_type=pa.int8(), value_type=pa.string())
+
+    have = SomeTable.from_kwargs(vals=["a", "b", "b"])
+    assert have.vals[0].as_py() == "a"
 
 
 def test_from_kwargs_with_missing():
