@@ -490,9 +490,39 @@ class Table:
         pyarrow.parquet.write_table(self.table, path, **kwargs)
 
     @classmethod
-    def from_parquet(cls, path: str, **kwargs):
-        """Read a table from a Parquet file."""
-        return cls(table=pyarrow.parquet.read_table(path), **kwargs)
+    def from_parquet(
+        cls,
+        path: str,
+        memory_map: bool = False,
+        pq_buffer_size: int = 0,
+        filters: Optional[pc.Expression] = None,
+        **kwargs,
+    ):
+        """Read a table from a Parquet file.
+
+        Arguments:
+            path: The path to the Parquet file.
+            memory_map: If True, memory-map the file, otherwise read it into memory.
+            pq_buffer_size: If positive, perform read buffering when
+                deserializing individual column chunks. Otherwise, IO
+                calls are unbuffered.
+            filters: An optional filter predicate to apply to the
+                data. Rows which do not match the predicate will be
+                removed from scanned data. For more information, see
+                the PyArrow documentation on
+                pyarrow.parquet.read_table and its filter parameter.
+            **kwargs: Additional keyword arguments to pass to the __init__ method.
+
+
+        """
+        table = pyarrow.parquet.read_table(
+            source=path,
+            columns=[field.name for field in cls.schema],
+            memory_map=memory_map,
+            buffer_size=pq_buffer_size,
+            filters=filters,
+        )
+        return cls(table=table, **kwargs)
 
     def to_feather(self, path: str, **kwargs):
         """Write the table to a Feather file."""
