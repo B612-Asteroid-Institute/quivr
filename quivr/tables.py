@@ -10,7 +10,7 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
-from .errors import TableFragmentedError
+from .errors import TableFragmentedError, ValidationError
 from .fields import Field, MetadataDict, SubTableField
 from .schemagraph import _walk_schema
 
@@ -21,13 +21,19 @@ class Table:
 
     def __init_subclass__(cls, **kwargs):
         fields = []
+        field_validators = {}
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
                 fields.append(field.pyarrow_field())
+                if field.validator is not None:
+                    field_validators[name] = field.validator
 
         # Generate a pyarrow schema
         schema = pa.schema(fields)
         cls.schema = schema
+
+        # Add validators
+        cls._field_validators = field_validators
 
         # If the subclass has an __init__ override, it must have a
         # with_table override as well.
@@ -43,7 +49,7 @@ class Table:
         self.table = table
 
     @classmethod
-    def from_data(cls, data: Optional[Any] = None, **kwargs) -> Self:
+    def from_data(cls, data: Optional[Any] = None, validate: bool = True, **kwargs) -> Self:
         """
         Create an instance of the Table and populate it with data.
 
@@ -53,6 +59,10 @@ class Table:
         you know the data's structure well in advance, the more
         precise constructors (from_arrays, from_pylist, etc) should be
         preferred.
+
+        If the validate argument is True, the data will be validated
+        against the table's schema. If validation fails, a
+        ValidationError will be raised.
 
         Examples:
             >>> import quivr
@@ -74,24 +84,31 @@ class Table:
             >>> import numpy as np
             >>> MyTable.from_data(a=np.array(["a", "b"]), b=np.array([1, 2]))
             MyTable(size=2)
+
+
         """
         if data is None:
-            return cls.from_kwargs(**kwargs)
-
-        if isinstance(data, pa.Table):
-            return cls(table=data, **kwargs)
-        if isinstance(data, dict):
-            return cls.from_pydict(data, **kwargs)
-        if isinstance(data, list):
+            instance = cls.from_kwargs(**kwargs)
+        elif isinstance(data, pa.Table):
+            instance = cls(table=data, **kwargs)
+        elif isinstance(data, dict):
+            instance = cls.from_pydict(data, **kwargs)
+        elif isinstance(data, list):
             if len(data) == 0:
-                return cls.from_rows(data, **kwargs)
-            if isinstance(data[0], dict):
-                return cls.from_rows(data, **kwargs)
+                instance = cls.from_rows(data, **kwargs)
+            elif isinstance(data[0], dict):
+                instance = cls.from_rows(data, **kwargs)
             elif isinstance(data[0], list):
-                return cls.from_lists(data, **kwargs)
-        if isinstance(data, pd.DataFrame):
-            return cls.from_dataframe(data, **kwargs)
-        raise TypeError(f"Unsupported type: {type(data)}")
+                instance = cls.from_lists(data, **kwargs)
+            else:
+                raise TypeError(f"Unsupported type: {type(data[0])}")
+        elif isinstance(data, pd.DataFrame):
+            instance = cls.from_dataframe(data, **kwargs)
+        else:
+            raise TypeError(f"Unsupported type: {type(data)}")
+        if validate:
+            instance.validate()
+        return instance
 
     @classmethod
     def as_field(cls, nullable: bool = True, metadata: Optional[MetadataDict] = None) -> SubTableField[Self]:
@@ -542,3 +559,16 @@ class Table:
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
         return cls(table=cls._unflatten_table(flat_table), **kwargs)
+
+    def is_valid(self) -> bool:
+        """Validate the table against the schema."""
+        for name, validator in self._field_validators.items():
+            validator.valid(self.table.column(name))
+
+    def validate(self):
+        """Validate the table against the schema, raising an exception if invalid."""
+        for name, validator in self._field_validators.items():
+            try:
+                validator.validate(self.table.column(name))
+            except ValidationError as e:
+                raise ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e

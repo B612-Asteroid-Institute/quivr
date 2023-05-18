@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING, Generic, Optional, TypeAlias, TypeVar, Union
 
 import pyarrow as pa
 
+from . import validators
+
 if TYPE_CHECKING:
     from .tables import Table
 
@@ -14,10 +16,17 @@ class Field:
     A Field is an accessor for data in a Table, and also a descriptor for the Table's structure.
     """
 
-    def __init__(self, dtype: pa.DataType, nullable: bool = True, metadata: Optional[MetadataDict] = None):
+    def __init__(
+        self,
+        dtype: pa.DataType,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
         self.dtype = dtype
         self.nullable = nullable
         self.metadata = metadata
+        self.validator = validator
 
     def __get__(self, obj: "Table", objtype: type):
         return obj.table.column(self.name)
@@ -58,8 +67,13 @@ class Int8Field(Field):
     A field for storing 8-bit integers.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.int8(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        validator: Optional[validators.Validator] = None,
+        metadata: Optional[MetadataDict] = None,
+    ):
+        super().__init__(pa.int8(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Int8Array:
         return obj.table[self.name].combine_chunks()
@@ -70,56 +84,91 @@ class Int16Field(Field):
     A field for storing 16-bit integers.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.int16(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.int16(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Int16Array:
         return obj.table[self.name].combine_chunks()
 
 
 class Int32Field(Field):
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.int32(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.int32(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Int32Array:
         return obj.table[self.name].combine_chunks()
 
 
 class Int64Field(Field):
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.int64(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.int64(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Int64Array:
         return obj.table[self.name].combine_chunks()
 
 
 class UInt8Field(Field):
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.uint8(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.uint8(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt8Array:
         return obj.table[self.name].combine_chunks()
 
 
 class UInt16Field(Field):
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.uint16(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.uint16(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt16Array:
         return obj.table[self.name].combine_chunks()
 
 
 class UInt32Field(Field):
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.uint32(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.uint32(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt32Array:
         return obj.table[self.name].combine_chunks()
 
 
 class UInt64Field(Field):
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.uint64(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.uint64(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt64Array:
         return obj.table[self.name].combine_chunks()
@@ -130,8 +179,13 @@ class Float16Field(Field):
     A field for storing 16-bit floating point numbers.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.float16(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.float16(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.lib.HalfFloatArray:
         return obj.table[self.name].combine_chunks()
@@ -142,8 +196,13 @@ class Float32Field(Field):
     A field for storing 32-bit floating point numbers.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.float32(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.float32(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.lib.FloatArray:
         return obj.table[self.name].combine_chunks()
@@ -151,46 +210,16 @@ class Float32Field(Field):
 
 class Float64Field(Field):
     """
-    A class representing a 64-bit floating-point field in a table.
-
-    Attributes
-    ----------
-    name : str
-        The name of the field.
-    type : pyarrow.float64
-        The data type of the field, which is a 64-bit floating-point number.
-    nullable : bool, optional, default True
-        Whether the field allows null values.
-    metadata : MetadataDict, optional, default None
-        Additional metadata associated with the field.
-
-    Methods
-    -------
-    __init__(nullable: bool = True, metadata: Optional[MetadataDict] = None)
-        Initialize the Float64Field instance.
-    __get__(obj: "Table", objtype: type) -> pa.DoubleArray
-        Get the field's data as a pyarrow.DoubleArray object.
-
-    Examples
-    --------
-    >>> from pyarrow import Table
-    >>> import pandas as pd
-    >>> data = {'float_field': [1.0, 2.0, 3.0]}
-    >>> df = pd.DataFrame(data)
-    >>> table = Table.from_pandas(df)
-    >>> float_field = Float64Field(name='float_field')
-    >>> float_array = float_field.__get__(table, Table)
-    >>> float_array
-    <pyarrow.lib.DoubleArray object at 0x7f8e6f1e19a0>
-    [1.0, 2.0, 3.0]
-    """
-
-    """
     A field for storing 64-bit floating point numbers.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.float64(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.float64(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.lib.DoubleArray:
         return obj.table[self.name].combine_chunks()
@@ -205,8 +234,13 @@ class StringField(Field):
 
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.string(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.string(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.StringArray:
         return obj.table[self.name].combine_chunks()
@@ -218,8 +252,13 @@ class LargeBinaryField(Field):
     variable-length chunks.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.large_binary(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.large_binary(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.LargeBinaryArray:
         return obj.table[self.name].combine_chunks()
@@ -231,8 +270,13 @@ class LargeStringField(Field):
     variable-length chunks.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.large_string(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.large_string(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.LargeStringArray:
         return obj.table[self.name].combine_chunks()
@@ -246,8 +290,13 @@ class Date32Field(Field):
 
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.date32(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.date32(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Date32Array:
         return obj.table[self.name].combine_chunks()
@@ -261,8 +310,13 @@ class Date64Field(Field):
     values are evenly divisible by 86,400,000.
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.date64(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.date64(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Date64Array:
         return obj.table[self.name].combine_chunks()
@@ -291,8 +345,9 @@ class TimestampField(Field):
         tz: Optional[str] = None,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
-        super().__init__(pa.timestamp(unit, tz), nullable=nullable, metadata=metadata)
+        super().__init__(pa.timestamp(unit, tz), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.TimestampArray:
         return obj.table[self.name].combine_chunks()
@@ -309,8 +364,14 @@ class Time32Field(Field):
     Internally, a time32 value is a 32-bit integer which an elapsed time since midnight.
     """
 
-    def __init__(self, unit: str, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.time32(unit), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        unit: str,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.time32(unit), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Time32Array:
         return obj.table[self.name].combine_chunks()
@@ -327,8 +388,14 @@ class Time64Field(Field):
     Internally, a time64 value is a 64-bit integer which an elapsed time since midnight.
     """
 
-    def __init__(self, unit: str, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.time64(unit), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        unit: str,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.time64(unit), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.Time64Array:
         return obj.table[self.name].combine_chunks()
@@ -345,8 +412,14 @@ class DurationField(Field):
     Internall, a duration value is always represented as an 8-byte integer.
     """
 
-    def __init__(self, unit: str, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.duration(unit), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        unit: str,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.duration(unit), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.DurationArray:
         return obj.table[self.name].combine_chunks()
@@ -364,8 +437,15 @@ class MonthDayNanoIntervalField(Field):
 
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.month_day_nano_interval(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(
+            pa.month_day_nano_interval(), nullable=nullable, metadata=metadata, validator=validator
+        )
 
     def __get__(self, obj: "Table", objtype: type) -> pa.MonthDayNanoIntervalArray:
         return obj.table[self.name].combine_chunks()
@@ -383,8 +463,14 @@ class BinaryField(Field):
 
     """
 
-    def __init__(self, length: int = -1, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.binary(length), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        length: int = -1,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.binary(length), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.BinaryArray:
         return obj.table[self.name].combine_chunks()
@@ -449,8 +535,13 @@ class NullField(Field):
 
     """
 
-    def __init__(self, nullable: bool = True, metadata: Optional[MetadataDict] = None):
-        super().__init__(pa.null(), nullable=nullable, metadata=metadata)
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        super().__init__(pa.null(), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.NullArray:
         return obj.table[self.name].combine_chunks()
@@ -477,6 +568,7 @@ class ListField(Field):
         list_size: int = -1,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
         """
         Parameters
@@ -492,10 +584,15 @@ class ListField(Field):
 
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the field.
+
+        validator: Optional[validators.Validator]
+            A validator to run against the field's values.
         """
         if isinstance(value_type, Field):
             value_type = value_type.dtype
-        super().__init__(pa.list_(value_type, list_size), nullable=nullable, metadata=metadata)
+        super().__init__(
+            pa.list_(value_type, list_size), nullable=nullable, metadata=metadata, validator=validator
+        )
 
     def __get__(self, obj: "Table", objtype: type) -> pa.ListArray:
         return obj.table[self.name].combine_chunks()
@@ -518,6 +615,7 @@ class LargeListField(Field):
         value_type: Union[pa.DataType, pa.Field, Field],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
         """
         Parameters
@@ -530,10 +628,13 @@ class LargeListField(Field):
 
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the field.
+
+        validator: Optional[validators.Validator]
+            A validator to run against the field's values.
         """
         if isinstance(value_type, Field):
             value_type = value_type.dtype
-        super().__init__(pa.large_list(value_type), nullable=nullable, metadata=metadata)
+        super().__init__(pa.large_list(value_type), nullable=nullable, metadata=metadata, validator=validator)
 
     def __get__(self, obj: "Table", objtype: type) -> pa.LargeListArray:
         return obj.table[self.name].combine_chunks()
@@ -552,6 +653,7 @@ class MapField(Field):
         item_type: Union[pa.DataType, pa.Field, Field],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
         """
         Parameters
@@ -567,12 +669,17 @@ class MapField(Field):
 
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the field.
+
+        validator: Optional[validators.Validator]
+            A validator to run against the field's values.
         """
         if isinstance(key_type, Field):
             key_type = key_type.dtype
         if isinstance(item_type, Field):
             item_type = item_type.dtype
-        super().__init__(pa.map_(key_type, item_type), nullable=nullable, metadata=metadata)
+        super().__init__(
+            pa.map_(key_type, item_type), nullable=nullable, metadata=metadata, validator=validator
+        )
 
     def __get__(self, obj: "Table", objtype: type) -> pa.MapArray:
         return obj.table[self.name].combine_chunks()
@@ -592,6 +699,7 @@ class DictionaryField(Field):
         ordered: bool = False,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
         """
         Parameters
@@ -610,13 +718,19 @@ class DictionaryField(Field):
 
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the field.
+
+        validator: Optional[validators.Validator]
+            A validator to run against the field's values.
         """
         if isinstance(index_type, Field):
             index_type = index_type.dtype
         if isinstance(value_type, Field):
             value_type = value_type.dtype
         super().__init__(
-            pa.dictionary(index_type, value_type, ordered=ordered), nullable=nullable, metadata=metadata
+            pa.dictionary(index_type, value_type, ordered=ordered),
+            nullable=nullable,
+            metadata=metadata,
+            validator=validator,
         )
 
     def __get__(self, obj: "Table", objtype: type) -> pa.DictionaryArray:
@@ -632,7 +746,11 @@ class StructField(Field):
     """
 
     def __init__(
-        self, fields: list[pa.Field], nullable: bool = True, metadata: Optional[MetadataDict] = None
+        self,
+        fields: list[pa.Field],
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
         """
         Parameters
@@ -645,8 +763,11 @@ class StructField(Field):
 
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the field.
+
+        validator: Optional[validators.Validator]
+            A validator to run against the field's values.
         """
-        super().__init__(pa.struct(fields), nullable=nullable, metadata=metadata)
+        super().__init__(pa.struct(fields), nullable=nullable, metadata=metadata, validator=validator)
 
 
 class RunEndEncodedField(Field):
@@ -672,6 +793,7 @@ class RunEndEncodedField(Field):
         value_type: pa.DataType,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
     ):
         """
         Parameters
@@ -687,5 +809,13 @@ class RunEndEncodedField(Field):
 
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the field.
+
+        validator: Optional[validators.Validator]
+            A validator to run against the field's values.
         """
-        super().__init__(pa.run_end_encoded(run_end_type, value_type), nullable=nullable, metadata=metadata)
+        super().__init__(
+            pa.run_end_encoded(run_end_type, value_type),
+            nullable=nullable,
+            metadata=metadata,
+            validator=validator,
+        )

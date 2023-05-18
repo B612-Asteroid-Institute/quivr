@@ -228,6 +228,44 @@ either override those methods or add additional serialization methods
 of your own, and similarly implement deserializers.
 
 
+### Data Validation
+
+You can validate that the data inside a Table matches constraints you
+define. Only a small number of validators are currently implemented,
+mostly for numeric checks, but as use cases emerge, more will be
+added.
+
+To add data validation, use the `validator=` keyword inside
+fields. For example:
+
+```python
+from quivr import Table, Int64Field, Float64Field, StringField
+from quivr.validators import gt, ge, le, and_, is_in
+
+class Observation(Table):
+    id = Int64Field(validator=gt(0))
+    ra = Float64Field(validator=and_(ge(0), le(360))
+    dataset_id = StringField(validator=is_in(["ztf", "nsc", "skymapper"])))
+    unvalidated = Int64Field()
+```
+
+This `Observation` table has validators that
+- the `id` column's values are greater than 0
+- the `ra` column's values are between 0 and 360, inclusive
+- the `dataset_id` column only has strings in the set `{"ztf", "nsc", "skymapper"}`
+
+When an `Observation` instance is created using the `from_data`
+method, these validation checks will be run, by default. This can be
+disabled by calling `Observation.from_data(..., validate=False)`.
+
+In addition, an instance can be explicitly validated by calling the
+`.validate()` method, which will raise a `quivr.ValidationError` if
+there are any failures.
+
+Also, tables have a `.is_valid()` method which returns a boolean to
+indicate whether they pass validation.
+
+
 ### Filtering
 You can also filter by expressions on the data. See [Arrow
 documentation](https://arrow.apache.org/docs/python/compute.html) for

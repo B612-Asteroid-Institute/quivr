@@ -9,8 +9,10 @@ import pyarrow as pa
 import pytest
 
 from quivr.concat import concatenate
-from quivr.fields import Int64Field, StringField, DictionaryField
+from quivr.errors import ValidationError
+from quivr.fields import DictionaryField, Int8Field, Int64Field, StringField
 from quivr.tables import Table
+from quivr.validators import lt
 
 
 class Pair(Table):
@@ -235,6 +237,7 @@ def test_from_kwargs():
     np.testing.assert_array_equal(l3.z, [7, 8, 9])
     np.testing.assert_array_equal(l3.layer2.y, [4, 5, 6])
     np.testing.assert_array_equal(l3.layer2.layer1.x, [1, 2, 3])
+
 
 def test_from_kwargs_dictionary_type():
     class SomeTable(Table):
@@ -467,3 +470,16 @@ def test_init_subclass_with_attributes_without_withtable():
             def __init__(self, table: pa.Table, attrib: str):
                 self.attrib = attrib
                 super().__init__(table)
+
+
+class TestValidation:
+    def test_int8_bounds(self):
+        class MyTable(Table):
+            x = Int8Field(validator=lt(10))
+
+        with pytest.raises(ValidationError):
+            MyTable.from_data(x=[8, 9, 10], validate=True)
+
+        table = MyTable.from_data(x=[8, 9, 10], validate=False)
+        with pytest.raises(ValidationError):
+            table.validate()

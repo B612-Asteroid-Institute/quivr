@@ -1,4 +1,5 @@
 from .concat import concatenate
+from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .fields import (
     BinaryField,
     Date32Field,
@@ -35,6 +36,7 @@ from .fields import (
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
 from .tables import Table
+from .validators import and_, eq, ge, gt, is_in, le, lt
 
 __all__ = [
     "Table",
@@ -74,4 +76,14 @@ __all__ = [
     "DictionaryField",
     "StructField",
     "RunEndEncodedField",
+    "ValidationError",
+    "TableFragmentedError",
+    "InvariantViolatedError",
+    "lt",
+    "le",
+    "gt",
+    "ge",
+    "eq",
+    "and_",
+    "is_in",
 ]
