@@ -53,7 +53,7 @@ from quivr import Table, Float64Field
 import pyarrow as pa
 
 
-class Coordinates(TableBase):
+class Coordinates(Table):
 	x = Float64Field()
 	y = Float64Field()
 	z = Float64Field()
@@ -94,7 +94,7 @@ You can embed one table's definition within another, and you can make fields nul
 
 ```python
 
-class AsteroidOrbit(TableBase):
+class AsteroidOrbit(Table):
 	designation = StringField()
 	mass = Float64Field(nullable=True)
 	radius = Float64Field(nullable=True)
@@ -150,7 +150,7 @@ can do so like this:
 
 ```python
 
-class AsteroidOrbit(TableBase):
+class AsteroidOrbit(Table):
 	designation = StringField()
 	mass = Float64Field(nullable=True)
 	radius = Float64Field(nullable=True)
@@ -164,7 +164,7 @@ class AsteroidOrbit(TableBase):
 You can also use this to add "meta-fields" which are combinations of other fields. For example:
 
 ```python
-class CoordinateCovariance(TableBase):
+class CoordinateCovariance(Table):
 	matrix_values = ListField(pa.float64(), 36)
 
     @property
@@ -173,7 +173,7 @@ class CoordinateCovariance(TableBase):
         return self.matrix_values.to_numpy().reshape(-1, 6, 6)
 
 
-class AsteroidOrbit(TableBase):
+class AsteroidOrbit(Table):
 	designation = StringField()
 	mass = Float64Field(nullable=True)
 	radius = Float64Field(nullable=True)
