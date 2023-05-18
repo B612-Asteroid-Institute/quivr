@@ -1,3 +1,5 @@
+from .__version__ import __version__
+
 from .concat import concatenate
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .fields import (
@@ -39,6 +41,7 @@ from .tables import Table
 from .validators import and_, eq, ge, gt, is_in, le, lt
 
 __all__ = [
+    "__version__",
     "Table",
     "MatrixArray",
     "MatrixExtensionType",
