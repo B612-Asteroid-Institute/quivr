@@ -572,3 +572,10 @@ class Table:
                 validator.validate(self.table.column(name))
             except ValidationError as e:
                 raise ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e
+
+    @classmethod
+    def empty(cls, **kwargs) -> Self:
+        """Create an empty instance of the table."""
+        data = [[] for _ in range(len(cls.schema))]
+        empty_table = pa.table(data, schema=cls.schema)
+        return cls(table=empty_table, **kwargs)

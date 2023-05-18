@@ -472,6 +472,12 @@ def test_init_subclass_with_attributes_without_withtable():
                 super().__init__(table)
 
 
+def test_empty():
+    have = Pair.empty()
+    assert len(have.x) == 0
+    assert len(have) == 0
+
+
 class TestValidation:
     def test_int8_bounds(self):
         class MyTable(Table):

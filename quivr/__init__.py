@@ -1,5 +1,4 @@
 from .__version__ import __version__
-
 from .concat import concatenate
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .fields import (
