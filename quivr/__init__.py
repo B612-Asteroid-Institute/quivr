@@ -2,6 +2,8 @@ from .__version__ import __version__
 from .concat import concatenate
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .fields import (
+    Field,
+    SubTableField,
     BinaryField,
     Date32Field,
     Date64Field,
@@ -13,6 +15,7 @@ from .fields import (
     Float16Field,
     Float32Field,
     Float64Field,
+    Int8Field,
     Int16Field,
     Int32Field,
     Int64Field,
@@ -47,7 +50,8 @@ __all__ = [
     "concatenate",
     "StringIndex",
     "Field",
-    "SubTableField" "Int8Field",
+    "SubTableField",
+    "Int8Field",
     "Int16Field",
     "Int32Field",
     "Int64Field",
