@@ -24,18 +24,24 @@ class Table:
     def __init_subclass__(cls, **kwargs):
         fields = []
         field_validators = {}
+        subtables = {}
         attributes = {}
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
                 fields.append(field.pyarrow_field())
                 if field.validator is not None:
                     field_validators[name] = field.validator
+                if isinstance(field, SubTableField):
+                    subtables[name] = field
             elif isinstance(field, Attribute):
                 attributes[name] = field
 
         # Generate a pyarrow schema
         schema = pa.schema(fields)
         cls.schema = schema
+
+        # Keep track of subtables
+        cls._quivr_subtables = subtables
 
         # Add attributes
         cls._quivr_attributes = attributes
@@ -579,13 +585,13 @@ class Table:
         """Write the table to a CSV file. Any nested structure is flattened.
 
         if attribute_columns is True (the default), then any Attributes defined
-        for the table are stored in the CSV as columns; they will have the same
-        value repeated for every row. If it is False, then Attribute data will
-        not be stored in the CSV, so it cannot be read back out.
+        for the table (or its subtable fields) are stored in the CSV as columns;
+        they will have the same value repeated for every row. If it is False,
+        then Attribute data will  not be stored in the CSV, so it cannot be read back out.
         """
         table = self.flattened_table()
         if attribute_columns:
-            for name, val in self.attributes().items():
+            for name, val in self._string_attributes().items():
                 table = table.append_column(
                     name,
                     pa.repeat(val, len(table)),
@@ -597,22 +603,27 @@ class Table:
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
 
+        # Gather any attributes from the CSV. We do this by looking for specially named
+        # columns, and grabbing the value from their first row.
         attributes = {}
+        attr_names = cls._attribute_metadata_keys()
         if len(flat_table) > 0:
-            # Gather any attributes from the table
-            for i, name in enumerate(flat_table.column_names):
-                if name in cls._quivr_attributes:
-                    attributes[name] = flat_table.column(name)[0].as_py()
-                    flat_table = flat_table.remove_column(i)
+            to_be_removed = []
+            for name in flat_table.column_names:
+                if name in attr_names:
+                    attributes[name] = str(flat_table.column(name)[0].as_py())
+                    to_be_removed.append(name)
 
-        kwargs = kwargs or {}
-        for k, v in attributes.items():
-            if k in kwargs:
-                warnings.warn(f"Attribute {k} is found in CSV, but is being overridden by constructor")
-            else:
-                kwargs[k] = v
+            if len(to_be_removed) > 0:
+                flat_table = flat_table.drop_columns(to_be_removed)
 
-        return cls(table=cls._unflatten_table(flat_table), **kwargs)
+        attribute_meta = cls._unpack_string_metadata(attributes)
+
+        table = cls._unflatten_table(flat_table)
+        metadata = table.schema.metadata or {}
+        metadata.update(attribute_meta)
+        table = table.replace_schema_metadata(metadata)
+        return cls(table, **kwargs)
 
     def is_valid(self) -> bool:
         """Validate the table against the schema."""
@@ -638,6 +649,41 @@ class Table:
         """Return a dictionary of the table's attributes."""
         return {name: getattr(self, name) for name in self._quivr_attributes}
 
+    def _string_attributes(self) -> dict[str, str]:
+        """Return a dictionary of the table's attributes.
+
+        Attributes are presented in their string form.
+        """
+        d = {}
+        for name, descriptor in self._quivr_attributes.items():
+            value = getattr(self, name)
+            d[name] = descriptor.to_string(value)
+        for name in self._quivr_subtables.keys():
+            subattribs = getattr(self, name)._string_attributes()
+            for subname, subval in subattribs.items():
+                d[f"{name}.{subname}"] = subval
+        return d
+
+    @classmethod
+    def _unpack_string_metadata(cls, metadata: dict[str, str]) -> dict[bytes, bytes]:
+        result = {}
+
+        for k, v in metadata.items():
+            if "." in k:
+                # This is metadata for a subtable; we need to dig into it to find the
+                # descriptor for the attribute.
+                subtable_name, subtable_key = k.split(".", 1)
+                subtable_item = cls._quivr_subtables[subtable_name].table_type._unpack_string_metadata(
+                    {subtable_key: v}
+                )
+                result[k.encode("utf8")] = next(iter(subtable_item.values()))
+            else:
+                descriptor = cls._quivr_attributes.get(k)
+                if descriptor is None:
+                    warnings.warn(f"unexpected missing descriptor with name={k}")
+                result[k.encode("utf8")] = descriptor.to_bytes(descriptor.from_string(v))
+        return result
+
     def _metadata_for_field(self, field_name: str) -> dict[bytes, bytes]:
         """Return a dictionary of metadata associated with a subtable field."""
         result = {}
@@ -647,4 +693,18 @@ class Table:
         for key, value in self.table.schema.metadata.items():
             if key.startswith(field_name_bytes):
                 result[key[len(field_name_bytes) :]] = value
+        return result
+
+    @classmethod
+    def _attribute_metadata_keys(cls) -> set[str]:
+        """Return a set of all subtable attribute names."""
+        result = {attr.name for attr in cls._quivr_attributes.values()}
+        for field in cls._quivr_subtables.values():
+            attr_fields = field.table_type._quivr_attributes
+            for attr in attr_fields.values():
+                result.add(f"{field.name}.{attr.name}")
+
+            children = field.table_type._attribute_metadata_keys()
+            for key in children:
+                result.add(f"{field.name}.{key}")
         return result

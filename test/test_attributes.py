@@ -1,6 +1,5 @@
 import pandas as pd
 import pyarrow as pa
-import pytest
 
 from quivr import FloatAttribute, Int64Field, IntAttribute, StringAttribute, Table
 
@@ -93,7 +92,6 @@ def test_nested_table_shadowing():
     assert table.inner.id == 10
 
 
-@pytest.mark.xfail(reason="nested attributes not working yet for CSVs")
 def test_csv_nested_table(tmp_path):
     class Inner(Table):
         x = Int64Field()
@@ -111,6 +109,7 @@ def test_csv_nested_table(tmp_path):
         ),
     )
     table.to_csv(tmp_path / "test.csv")
+
     table2 = Outer.from_csv(tmp_path / "test.csv")
     assert table2.name == "foo"
     assert table2.inner.id == 10
@@ -273,3 +272,28 @@ class TestFloatAttribute:
         table.to_csv(tmp_path / "test.csv")
         table2 = self.MyTable.from_csv(tmp_path / "test.csv")
         assert table2.id == 1.5
+
+
+def test_attribute_metadata_keys():
+    class Inner1(Table):
+        id = IntAttribute()
+
+    class Inner2(Table):
+        a = StringAttribute()
+        b = StringAttribute()
+
+    class DoubleInner(Table):
+        id = IntAttribute()
+
+    class Middle(Table):
+        c = StringAttribute()
+        inner = DoubleInner.as_field()
+
+    class Outer(Table):
+        inner1 = Inner1.as_field()
+        inner2 = Inner2.as_field()
+        middle = Middle.as_field()
+        id = IntAttribute()
+
+    have = Outer._attribute_metadata_keys()
+    assert have == {"inner1.id", "inner2.a", "inner2.b", "middle.c", "middle.inner.id", "id"}

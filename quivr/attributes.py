@@ -51,6 +51,18 @@ class Attribute:
         """
         raise NotImplementedError
 
+    def to_string(self, value) -> str:
+        """
+        Convert the value to a string. Used for CSV writing.
+        """
+        raise NotImplementedError
+
+    def from_string(self, raw: str):
+        """
+        Convert a string to a value. Used for CSV reading.
+        """
+        raise NotImplementedError
+
 
 class StringAttribute(Attribute):
     def __init__(self, default: Optional[str] = None):
@@ -61,6 +73,12 @@ class StringAttribute(Attribute):
 
     def from_bytes(self, raw: bytes):
         return raw.decode("utf8")
+
+    def to_string(self, value) -> str:
+        return value
+
+    def from_string(self, raw: str):
+        return raw
 
 
 class IntAttribute(Attribute):
@@ -74,6 +92,12 @@ class IntAttribute(Attribute):
 
     def from_bytes(self, raw: bytes) -> int:
         return int.from_bytes(raw, byteorder="little", signed=self.signed)
+
+    def to_string(self, value) -> str:
+        return str(value)
+
+    def from_string(self, raw: str):
+        return int(raw)
 
 
 class FloatAttribute(Attribute):
@@ -93,3 +117,9 @@ class FloatAttribute(Attribute):
 
     def from_bytes(self, raw: bytes) -> float:
         return struct.unpack(self._struct_fmt, raw)[0]
+
+    def to_string(self, value) -> str:
+        return "{:.17g}".format(value)
+
+    def from_string(self, raw: str):
+        return float(raw)
