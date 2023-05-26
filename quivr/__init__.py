@@ -1,9 +1,8 @@
 from .__version__ import __version__
+from .attributes import FloatAttribute, IntAttribute, StringAttribute
 from .concat import concatenate
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .fields import (
-    Field,
-    SubTableField,
     BinaryField,
     Date32Field,
     Date64Field,
@@ -29,6 +28,7 @@ from .fields import (
     RunEndEncodedField,
     StringField,
     StructField,
+    SubTableField,
     Time32Field,
     Time64Field,
     TimestampField,
@@ -92,4 +92,7 @@ __all__ = [
     "eq",
     "and_",
     "is_in",
+    "StringAttribute",
+    "IntAttribute",
+    "FloatAttribute",
 ]

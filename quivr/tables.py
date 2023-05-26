@@ -10,6 +10,7 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
+from .attributes import Attribute
 from .errors import TableFragmentedError, ValidationError
 from .fields import Field, MetadataDict, SubTableField
 from .schemagraph import _walk_schema
@@ -22,15 +23,21 @@ class Table:
     def __init_subclass__(cls, **kwargs):
         fields = []
         field_validators = {}
+        attributes = {}
         for name, field in cls.__dict__.items():
             if isinstance(field, Field):
                 fields.append(field.pyarrow_field())
                 if field.validator is not None:
                     field_validators[name] = field.validator
+            elif isinstance(field, Attribute):
+                attributes[name] = field
 
         # Generate a pyarrow schema
         schema = pa.schema(fields)
         cls.schema = schema
+
+        # Add attributes
+        cls._quivr_attributes = attributes
 
         # Add validators
         cls._field_validators = field_validators
@@ -45,8 +52,13 @@ class Table:
 
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, table: pa.Table):
+    def __init__(self, table: pa.Table, **kwargs):
         self.table = table
+        for name, value in kwargs.items():
+            if name in self._quivr_attributes:
+                setattr(self, name, value)
+            else:
+                raise AttributeError(f"{self.__class__.__name__} has no attribute {name}")
 
     @classmethod
     def from_data(cls, data: Optional[Any] = None, validate: bool = True, **kwargs) -> Self:
