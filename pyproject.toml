@@ -9,12 +9,13 @@ readme = "README.md"
 authors = [
    { name = "Spencer Nelson", email = "spencer@spencerwnelson.com" }
 ]
-requires-python = ">= 3.11"
+requires-python = ">= 3.9"
 dependencies = [
   "pandas",
   "pyarrow",
   "numpy",
   "mmh3",
+  "typing_extensions>=4.0.0"
 ]
 dynamic = [ "version" ]
 
@@ -37,6 +38,20 @@ dependencies = [
   "pytest",
   "pytest-benchmark",
   "ruff",
+]
+
+[tool.hatch.envs.py310]
+python = "3.10"
+dependencies = [
+  "pytest",
+  "pytest-benchmark",
+]
+
+[tool.hatch.envs.py39]
+python = "3.9"
+dependencies = [
+  "pytest",
+  "pytest-benchmark",
 ]
 
 [tool.hatch.envs.default.scripts]

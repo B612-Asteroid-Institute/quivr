@@ -1,7 +1,11 @@
 import io
 import os
 import textwrap
-from typing import Self
+import sys
+if sys.version_info < (3, 11):
+    from typing_extensions import Self
+else:
+    from typing import Self
 
 import numpy as np
 import pandas as pd

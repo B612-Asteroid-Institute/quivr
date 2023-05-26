@@ -1,7 +1,14 @@
 import os
 import warnings
 from io import IOBase
-from typing import Any, ClassVar, Optional, Self, Union
+import sys
+
+if sys.version_info < (3, 11):
+    from typing_extensions import Self
+else:
+    from typing import Self
+
+from typing import Any, ClassVar, Optional, Union
 
 import numpy as np
 import pandas as pd

@@ -1,4 +1,9 @@
-from typing import TYPE_CHECKING, Generic, Optional, TypeAlias, TypeVar, Union
+import sys
+if sys.version_info < (3, 10):
+    from typing_extensions import TypeAlias
+else:
+    from typing import TypeAlias
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
 
 import pyarrow as pa
 
