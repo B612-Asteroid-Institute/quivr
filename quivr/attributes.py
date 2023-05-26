@@ -23,7 +23,10 @@ class Attribute:
     def __get__(self, instance: "Table", owner):
         if instance.table.schema.metadata is None:
             return self.default
-        raw = instance.table.schema.metadata[self.name.encode("utf8")]
+        name = self.name.encode("utf8")
+        if name not in instance.table.schema.metadata:
+            return self.default
+        raw = instance.table.schema.metadata[name]
         return self.from_bytes(raw)
 
     def __set__(self, instance, value):

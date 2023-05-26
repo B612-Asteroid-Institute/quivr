@@ -20,7 +20,38 @@ def test_multiple_attributes():
     }
 
 
-@pytest.mark.xfail(reason="nested attributes not working yet")
+def test_nested_attribute_metadata():
+    class Inner(Table):
+        x = Int64Field()
+        id1 = StringAttribute()
+
+    class Middle(Table):
+        inner = Inner.as_field()
+        id2 = StringAttribute()
+
+    class Outer(Table):
+        middle = Middle.as_field()
+        id3 = StringAttribute()
+
+    inner = Inner.from_kwargs(x=[1, 2, 3], id1="a")
+    middle = Middle.from_kwargs(
+        inner=inner,
+        id2="b",
+    )
+    print(middle.table.schema.metadata)
+    outer = Outer.from_kwargs(
+        middle=middle,
+        id3="c",
+    )
+    print(outer.table.schema.metadata)
+    have = outer.table.schema.metadata
+    assert have == {
+        b"id3": b"c",
+        b"middle.id2": b"b",
+        b"middle.inner.id1": b"a",
+    }
+
+
 def test_nested_table():
     class Inner(Table):
         x = Int64Field()
@@ -41,7 +72,6 @@ def test_nested_table():
     assert table.inner.id == 10
 
 
-@pytest.mark.xfail(reason="nested attributes not working yet")
 def test_nested_table_shadowing():
     # Test that reusing a name at two levels is safe.
     class Inner(Table):
@@ -63,7 +93,7 @@ def test_nested_table_shadowing():
     assert table.inner.id == 10
 
 
-@pytest.mark.xfail(reason="nested attributes not working yet")
+@pytest.mark.xfail(reason="nested attributes not working yet for CSVs")
 def test_csv_nested_table(tmp_path):
     class Inner(Table):
         x = Int64Field()

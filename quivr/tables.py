@@ -146,6 +146,7 @@ class Table:
         # populate them with nulls later.
         empty_columns = []
 
+        metadata = {}
         for i, field in enumerate(cls.schema):
             column_name = field.name
             value = kwargs.pop(column_name, None)
@@ -170,6 +171,11 @@ class Table:
                 )
 
             if isinstance(value, Table):
+                field_meta = value.table.schema.metadata
+                if field_meta is not None:
+                    for key, val in field_meta.items():
+                        key = (field.name + "." + key.decode("utf-8")).encode("utf-8")
+                        metadata[key] = val
                 arrays.append(value.to_structarray())
             elif isinstance(value, pa.Array):
                 arrays.append(value)
@@ -185,21 +191,27 @@ class Table:
 
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
-        return cls.from_arrays(arrays, **kwargs)
+        return cls.from_arrays(arrays, metadata=metadata, **kwargs)
 
     @classmethod
-    def from_arrays(cls, arrays: list[pa.array], **kwargs) -> Self:
+    def from_arrays(
+        cls, arrays: list[pa.array], metadata: Optional[dict[bytes, bytes]] = None, **kwargs
+    ) -> Self:
         """Create a Table object from a list of arrays.
 
         Args:
             arrays: A list of pyarrow.Array objects.
+            metadata: An optional dictionary of metadata to attach to the Table.
             **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
 
         Returns:
             A Table object.
 
         """
-        table = pa.Table.from_arrays(arrays, schema=cls.schema)
+        if metadata is None:
+            metadata = {}
+        schema = cls.schema.with_metadata(metadata)
+        table = pa.Table.from_arrays(arrays, schema=schema)
         return cls(table=table, **kwargs)
 
     @classmethod
@@ -625,3 +637,14 @@ class Table:
     def attributes(self) -> dict[str, Any]:
         """Return a dictionary of the table's attributes."""
         return {name: getattr(self, name) for name in self._quivr_attributes}
+
+    def _metadata_for_field(self, field_name: str) -> dict[bytes, bytes]:
+        """Return a dictionary of metadata associated with a subtable field."""
+        result = {}
+        if self.table.schema.metadata is None:
+            return result
+        field_name_bytes = (field_name + ".").encode("utf8")
+        for key, value in self.table.schema.metadata.items():
+            if key.startswith(field_name_bytes):
+                result[key[len(field_name_bytes) :]] = value
+        return result

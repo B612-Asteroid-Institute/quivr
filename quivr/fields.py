@@ -58,7 +58,15 @@ class SubTableField(Field, Generic[T]):
 
     def __get__(self, obj: "Table", objtype: type) -> T:
         array = obj.table.column(self.name)
-        subtable = pa.Table.from_arrays(array.flatten(), schema=self.schema)
+
+        metadata = self.metadata
+        if metadata is None:
+            metadata = {}
+        metadata.update(obj._metadata_for_field(self.name))
+
+        schema = self.schema.with_metadata(metadata)
+
+        subtable = pa.Table.from_arrays(array.flatten(), schema=schema)
         return self.table_type(subtable)
 
 
