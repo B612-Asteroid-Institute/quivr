@@ -1,4 +1,5 @@
 import os
+import warnings
 from io import IOBase
 from typing import Any, ClassVar, Optional, Self, Union
 
@@ -562,14 +563,43 @@ class Table:
         """Read a table from a Feather file."""
         return cls(table=pyarrow.feather.read_table(path), **kwargs)
 
-    def to_csv(self, path: str):
-        """Write the table to a CSV file. Any nested structure is flattened."""
-        pyarrow.csv.write_csv(self.flattened_table(), path)
+    def to_csv(self, path: str, attribute_columns: bool = True):
+        """Write the table to a CSV file. Any nested structure is flattened.
+
+        if attribute_columns is True (the default), then any Attributes defined
+        for the table are stored in the CSV as columns; they will have the same
+        value repeated for every row. If it is False, then Attribute data will
+        not be stored in the CSV, so it cannot be read back out.
+        """
+        table = self.flattened_table()
+        if attribute_columns:
+            for name, val in self.attributes().items():
+                table = table.append_column(
+                    name,
+                    pa.repeat(val, len(table)),
+                )
+        pyarrow.csv.write_csv(table, path)
 
     @classmethod
     def from_csv(cls, input_file: Union[str, os.PathLike, IOBase], **kwargs):
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
+
+        attributes = {}
+        if len(flat_table) > 0:
+            # Gather any attributes from the table
+            for i, name in enumerate(flat_table.column_names):
+                if name in cls._quivr_attributes:
+                    attributes[name] = flat_table.column(name)[0].as_py()
+                    flat_table = flat_table.remove_column(i)
+
+        kwargs = kwargs or {}
+        for k, v in attributes.items():
+            if k in kwargs:
+                warnings.warn(f"Attribute {k} is found in CSV, but is being overridden by constructor")
+            else:
+                kwargs[k] = v
+
         return cls(table=cls._unflatten_table(flat_table), **kwargs)
 
     def is_valid(self) -> bool:
@@ -591,3 +621,7 @@ class Table:
         data = [[] for _ in range(len(cls.schema))]
         empty_table = pa.table(data, schema=cls.schema)
         return cls(table=empty_table, **kwargs)
+
+    def attributes(self) -> dict[str, Any]:
+        """Return a dictionary of the table's attributes."""
+        return {name: getattr(self, name) for name in self._quivr_attributes}
