@@ -832,3 +832,27 @@ class RunEndEncodedField(Field):
             metadata=metadata,
             validator=validator,
         )
+
+
+class ExtensionField(Field):
+    """
+    A field for storing Pyarrow ExtensionArrays.
+    """
+
+    def __init__(
+        self,
+        extension_type: pa.ExtensionType,
+        nullable: bool = True,
+        validator: Optional[validators.Validator] = None,
+        metadata: Optional[MetadataDict] = None,
+    ):
+        super().__init__(extension_type, nullable=nullable, metadata=metadata, validator=validator)
+
+    def __set__(self, obj: "Table", value):
+        idx = obj.table.schema.get_field_index(self.name)
+        ext_array = pa.ExtensionArray.from_storage(self.dtype, value)
+        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [ext_array])
+        
+    def __get__(self, obj: "Table", objtype: type) -> pa.ExtensionArray:
+        return obj.table[self.name].combine_chunks()
+

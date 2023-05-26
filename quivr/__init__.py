@@ -36,6 +36,7 @@ from .fields import (
     UInt16Field,
     UInt32Field,
     UInt64Field,
+    ExtensionField,
 )
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
@@ -82,6 +83,7 @@ __all__ = [
     "DictionaryField",
     "StructField",
     "RunEndEncodedField",
+    "ExtensionField",
     "ValidationError",
     "TableFragmentedError",
     "InvariantViolatedError",
