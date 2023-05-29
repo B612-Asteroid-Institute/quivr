@@ -1,7 +1,7 @@
 import os
+import sys
 import warnings
 from io import IOBase
-import sys
 
 if sys.version_info < (3, 11):
     from typing_extensions import Self

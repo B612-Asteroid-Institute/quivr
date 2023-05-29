@@ -1,7 +1,8 @@
 import io
 import os
-import textwrap
 import sys
+import textwrap
+
 if sys.version_info < (3, 11):
     from typing_extensions import Self
 else:
