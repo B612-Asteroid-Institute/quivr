@@ -21,6 +21,8 @@ class Attribute:
         self.name = "__ERR_UNSET_NAME"
 
     def __get__(self, instance: "Table", owner):
+        if instance is None:
+            return self
         if instance.table.schema.metadata is None:
             return self.default
         name = self.name.encode("utf8")
