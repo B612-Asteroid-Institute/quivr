@@ -3,7 +3,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
-from quivr import Field, Float64Field, Int64Field, StringField, Table
+from quivr import Column, Float64Column, Int64Column, StringColumn, Table
 
 try:
     import datafusion
@@ -14,9 +14,9 @@ except ImportError:
 
 def new_table(N=1_000_00):
     class MyTable(Table):
-        x = Float64Field()
-        y = StringField()
-        z = Int64Field()
+        x = Float64Column()
+        y = StringColumn()
+        z = Int64Column()
 
     seed = 1234
     np.random.seed(seed)
@@ -102,16 +102,16 @@ def test_sum_if_using_numpy(benchmark):
 
 
 class InnerTable(Table):
-    x = Float64Field()
-    y = StringField()
-    z = Int64Field()
+    x = Float64Column()
+    y = StringColumn()
+    z = Int64Column()
 
 
 class OuterTable(Table):
-    x = Float64Field()
-    y = StringField()
-    z = Int64Field()
-    inner = InnerTable.as_field()
+    x = Float64Column()
+    y = StringColumn()
+    z = Int64Column()
+    inner = InnerTable.as_column()
 
 
 def new_outer_table(N=1_000_000):
@@ -200,11 +200,11 @@ def test_sum_if_nested_using_numpy(benchmark):
     benchmark(sumif_nested_numpy, data)
 
 
-class TableWithListField(Table):
-    x = Float64Field()
-    y = StringField()
-    z = Int64Field()
-    covariance = Field(pa.fixed_shape_tensor(pa.float64(), (3, 3)))
+class TableWithListColumn(Table):
+    x = Float64Column()
+    y = StringColumn()
+    z = Int64Column()
+    covariance = Column(pa.fixed_shape_tensor(pa.float64(), (3, 3)))
 
     def cov_matrix(self):
         return self.covariance.combine_chunks().to_numpy_ndarray()
@@ -213,7 +213,7 @@ class TableWithListField(Table):
         return np.sqrt(np.diagonal(self.cov_matrix(), axis1=1, axis2=2))
 
 
-def new_table_with_list_field(N=1_000_000):
+def new_table_with_list_column(N=1_000_000):
     seed = 1234
     np.random.seed(seed)
     xs = np.random.rand(N)
@@ -221,7 +221,7 @@ def new_table_with_list_field(N=1_000_000):
     zs = np.random.randint(0, 100, N)
     covariances = pa.FixedShapeTensorArray.from_numpy_ndarray(np.random.rand(N, 3, 3))
 
-    data = TableWithListField.from_data(x=xs, y=ys, z=zs, covariance=covariances)
+    data = TableWithListColumn.from_data(x=xs, y=ys, z=zs, covariance=covariances)
     return data
 
 
@@ -237,7 +237,7 @@ def sigmasum_arrow(data):
 
 
 def test_sigmasum():
-    data = new_table_with_list_field()
+    data = new_table_with_list_column()
     want = sigmasum_quivr(data)
 
     got = data.sigmas().sum()
@@ -249,11 +249,11 @@ def test_sigmasum():
 
 @pytest.mark.benchmark(group="sigmasum")
 def test_sigmasum_using_quivr(benchmark):
-    data = new_table_with_list_field()
+    data = new_table_with_list_column()
     benchmark(sigmasum_quivr, data)
 
 
 @pytest.mark.benchmark(group="sigmasum")
 def test_sigmasum_using_arrow(benchmark):
-    data = new_table_with_list_field()
+    data = new_table_with_list_column()
     benchmark(sigmasum_arrow, data)

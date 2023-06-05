@@ -1,19 +1,19 @@
 import pyarrow as pa
 
-from quivr.fields import Field, Float64Field, StringField
+from quivr.columns import Column, Float64Column, StringColumn
 from quivr.matrix import MatrixArray, MatrixExtensionType
 from quivr.tables import Table
 
 
 class Position(Table):
-    x = Float64Field()
-    y = Float64Field()
-    cov = Field(MatrixExtensionType((2, 2), pa.float64()))
+    x = Float64Column()
+    y = Float64Column()
+    cov = Column(MatrixExtensionType((2, 2), pa.float64()))
 
 
 class PositionWrapper(Table):
-    pos = Position.as_field()
-    id = StringField()
+    pos = Position.as_column()
+    id = StringColumn()
 
 
 def test_matrix_from_pydict():

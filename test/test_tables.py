@@ -13,21 +13,21 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
+from quivr.columns import DictionaryColumn, Int8Column, Int64Column, StringColumn
 from quivr.concat import concatenate
 from quivr.errors import ValidationError
-from quivr.fields import DictionaryField, Int8Field, Int64Field, StringField
 from quivr.tables import Table
 from quivr.validators import lt
 
 
 class Pair(Table):
-    x = Int64Field()
-    y = Int64Field()
+    x = Int64Column()
+    y = Int64Column()
 
 
 class Wrapper(Table):
-    pair = Pair.as_field()
-    id = StringField()
+    pair = Pair.as_column()
+    id = StringColumn()
 
 
 def test_create_from_arrays():
@@ -199,17 +199,17 @@ def test_from_pylist():
 
 
 class Layer1(Table):
-    x = Int64Field()
+    x = Int64Column()
 
 
 class Layer2(Table):
-    y = Int64Field()
-    layer1 = Layer1.as_field()
+    y = Int64Column()
+    layer1 = Layer1.as_column()
 
 
 class Layer3(Table):
-    z = Int64Field()
-    layer2 = Layer2.as_field()
+    z = Int64Column()
+    layer2 = Layer2.as_column()
 
 
 def test_unflatten_table():
@@ -246,7 +246,7 @@ def test_from_kwargs():
 
 def test_from_kwargs_dictionary_type():
     class SomeTable(Table):
-        vals = DictionaryField(index_type=pa.int8(), value_type=pa.string())
+        vals = DictionaryColumn(index_type=pa.int8(), value_type=pa.string())
 
     have = SomeTable.from_kwargs(vals=["a", "b", "b"])
     assert have.vals[0].as_py() == "a"
@@ -254,11 +254,11 @@ def test_from_kwargs_dictionary_type():
 
 def test_from_kwargs_with_missing():
     class SomeTable(Table):
-        x = Int64Field(nullable=True)
-        y = Int64Field(nullable=False)
-        z = Int64Field(nullable=True)
+        x = Int64Column(nullable=True)
+        y = Int64Column(nullable=False)
+        z = Int64Column(nullable=True)
 
-    # Eliding nullable fields is OK
+    # Eliding nullable columns is OK
     have = SomeTable.from_kwargs(y=[1, 2, 3])
     assert have.x.null_count == 3
     assert have.y.null_count == 0
@@ -270,7 +270,7 @@ def test_from_kwargs_with_missing():
     with pytest.raises(ValueError, match="Missing non-nullable column y"):
         have = SomeTable.from_kwargs(z=[1, 2, 3])
 
-    # Eliding nullable fields is OK
+    # Eliding nullable columns is OK
     have = SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     assert have.x.null_count == 0
     assert have.y.null_count == 0
@@ -281,11 +281,11 @@ def test_from_kwargs_with_missing():
 
 def test_from_kwargs_with_missing_as_none():
     class SomeTable(Table):
-        x = Int64Field(nullable=True)
-        y = Int64Field(nullable=False)
-        z = Int64Field(nullable=True)
+        x = Int64Column(nullable=True)
+        y = Int64Column(nullable=False)
+        z = Int64Column(nullable=True)
 
-    # Eliding nullable fields is OK
+    # Eliding nullable columns is OK
     have = SomeTable.from_kwargs(x=None, y=[1, 2, 3], z=None)
     assert have.x.null_count == 3
     assert have.y.null_count == 0
@@ -297,7 +297,7 @@ def test_from_kwargs_with_missing_as_none():
     with pytest.raises(ValueError, match="Missing non-nullable column y"):
         have = SomeTable.from_kwargs(z=[1, 2, 3], y=None)
 
-    # Eliding nullable fields is OK
+    # Eliding nullable columns is OK
     have = SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], z=None)
     assert have.x.null_count == 0
     assert have.y.null_count == 0
@@ -308,8 +308,8 @@ def test_from_kwargs_with_missing_as_none():
 
 def test_from_kwargs_raises_mismatched_sizes():
     class SomeTable(Table):
-        x = Int64Field()
-        y = Int64Field()
+        x = Int64Column()
+        y = Int64Column()
 
     with pytest.raises(ValueError, match=r"Column y has wrong length 4 \(first column has length 3\)"):
         SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6, 7])
@@ -350,8 +350,8 @@ def test_from_data_using_positional_dict():
 
 
 class TableWithAttributes(Table):
-    x = Int64Field()
-    y = Int64Field()
+    x = Int64Column()
+    y = Int64Column()
 
     def __init__(self, table: pa.Table, attrib: str):
         self.attrib = attrib
@@ -469,7 +469,7 @@ def test_init_subclass_with_attributes_without_withtable():
     with pytest.raises(TypeError):
 
         class MyTable(Table):
-            x = Int64Field()
+            x = Int64Column()
             attrib: str
 
             def __init__(self, table: pa.Table, attrib: str):
@@ -486,7 +486,7 @@ def test_empty():
 class TestValidation:
     def test_int8_bounds(self):
         class MyTable(Table):
-            x = Int8Field(validator=lt(10))
+            x = Int8Column(validator=lt(10))
 
         with pytest.raises(ValidationError):
             MyTable.from_data(x=[8, 9, 10], validate=True)

@@ -19,8 +19,8 @@ import pyarrow.feather
 import pyarrow.parquet
 
 from .attributes import Attribute
+from .columns import Column, MetadataDict, SubTableColumn
 from .errors import TableFragmentedError, ValidationError
-from .fields import Field, MetadataDict, SubTableField
 from .schemagraph import _walk_schema
 
 
@@ -30,18 +30,18 @@ class Table:
 
     def __init_subclass__(cls, **kwargs):
         fields = []
-        field_validators = {}
+        column_validators = {}
         subtables = {}
         attributes = {}
-        for name, field in cls.__dict__.items():
-            if isinstance(field, Field):
-                fields.append(field.pyarrow_field())
-                if field.validator is not None:
-                    field_validators[name] = field.validator
-                if isinstance(field, SubTableField):
-                    subtables[name] = field
-            elif isinstance(field, Attribute):
-                attributes[name] = field
+        for name, obj in cls.__dict__.items():
+            if isinstance(obj, Column):
+                fields.append(obj.pyarrow_field())
+                if obj.validator is not None:
+                    column_validators[name] = obj.validator
+                if isinstance(obj, SubTableColumn):
+                    subtables[name] = obj
+            elif isinstance(obj, Attribute):
+                attributes[name] = obj
 
         # Generate a pyarrow schema
         schema = pa.schema(fields)
@@ -54,7 +54,7 @@ class Table:
         cls._quivr_attributes = attributes
 
         # Add validators
-        cls._field_validators = field_validators
+        cls._column_validators = column_validators
 
         # If the subclass has an __init__ override, it must have a
         # with_table override as well.
@@ -137,16 +137,18 @@ class Table:
         return instance
 
     @classmethod
-    def as_field(cls, nullable: bool = True, metadata: Optional[MetadataDict] = None) -> SubTableField[Self]:
-        return SubTableField(cls, nullable=nullable, metadata=metadata)
+    def as_column(
+        cls, nullable: bool = True, metadata: Optional[MetadataDict] = None
+    ) -> SubTableColumn[Self]:
+        return SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
     def from_kwargs(cls, **kwargs) -> Self:
         """Create a Table instance from keyword arguments.
 
-        Each keyword argument corresponds to a field in the Table.
+        Each keyword argument corresponds to a column in the Table.
 
-        The keys should correspond to the field names, and the values
+        The keys should correspond to the column names, and the values
         can be a list, numpy array, pyarrow array, or Table instance.
         """
         arrays = []
@@ -247,11 +249,11 @@ class Table:
         Examples:
             >>> import quivr
             >>> class Inner(quivr.Table):
-            ...     a = quivr.StringField()
+            ...     a = quivr.StringColumn()
             ...
             >>> class Outer(quivr.TableBase):
-            ...     z = quivr.StringField()
-            ...     i = Inner.as_field()
+            ...     z = quivr.StringColumn()
+            ...     i = Inner.as_column()
             ...
             >>> data = [{"z": "v1", "i": {"a": "v1_in"}}, {"z": "v2", "i": {"a": "v2_in"}}]
             >>> Outer.from_pylist(data)
@@ -264,8 +266,8 @@ class Table:
     def from_lists(cls, lists: list[list], **kwargs) -> Self:
         """Create a Table object from a list of lists.
 
-        Each inner list corresponds to a field in the Table. They
-        should be specified in the same order as the fields in the
+        Each inner list corresponds to a column in the Table. They
+        should be specified in the same order as the columns in the
         class.
 
         Args:
@@ -290,7 +292,7 @@ class Table:
 
         This function cannot load "flattened" dataframes. This only
         matters for nested Tables which contain other Table
-        definitions as fields. For that use case, either load an
+        definitions as columns. For that use case, either load an
         unflattened DataFrame, or use from_flat_dataframe.
         """
 
@@ -453,8 +455,8 @@ class Table:
     def chunk_counts(self) -> dict[str, int]:
         """Returns the number of discrete memory chunks that make up
         each of the Table's underlying arrays. The keys of the
-        resulting dictionary are the field names, and the values are
-        the number of chunks for that field's data.
+        resulting dictionary are the column names, and the values are
+        the number of chunks for that column's data.
 
         """
         result = {}
@@ -502,9 +504,9 @@ class Table:
             table = self.flattened_table()
         return table.to_pandas()
 
-    def column(self, field_name: str) -> pa.ChunkedArray:
+    def column(self, column_name: str) -> pa.ChunkedArray:
         """Returns the column with the given name as a raw pyarrow ChunkedArray."""
-        return self.table.column(field_name)
+        return self.table.column(column_name)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(size={len(self.table)})"
@@ -592,7 +594,7 @@ class Table:
         """Write the table to a CSV file. Any nested structure is flattened.
 
         if attribute_columns is True (the default), then any Attributes defined
-        for the table (or its subtable fields) are stored in the CSV as columns;
+        for the table (or its subtable columns) are stored in the CSV as columns;
         they will have the same value repeated for every row. If it is False,
         then Attribute data will  not be stored in the CSV, so it cannot be read back out.
         """
@@ -634,12 +636,12 @@ class Table:
 
     def is_valid(self) -> bool:
         """Validate the table against the schema."""
-        for name, validator in self._field_validators.items():
+        for name, validator in self._column_validators.items():
             validator.valid(self.table.column(name))
 
     def validate(self):
         """Validate the table against the schema, raising an exception if invalid."""
-        for name, validator in self._field_validators.items():
+        for name, validator in self._column_validators.items():
             try:
                 validator.validate(self.table.column(name))
             except ValidationError as e:
@@ -691,27 +693,27 @@ class Table:
                 result[k.encode("utf8")] = descriptor.to_bytes(descriptor.from_string(v))
         return result
 
-    def _metadata_for_field(self, field_name: str) -> dict[bytes, bytes]:
-        """Return a dictionary of metadata associated with a subtable field."""
+    def _metadata_for_column(self, column_name: str) -> dict[bytes, bytes]:
+        """Return a dictionary of metadata associated with a subtable column."""
         result = {}
         if self.table.schema.metadata is None:
             return result
-        field_name_bytes = (field_name + ".").encode("utf8")
+        column_name_bytes = (column_name + ".").encode("utf8")
         for key, value in self.table.schema.metadata.items():
-            if key.startswith(field_name_bytes):
-                result[key[len(field_name_bytes) :]] = value
+            if key.startswith(column_name_bytes):
+                result[key[len(column_name_bytes) :]] = value
         return result
 
     @classmethod
     def _attribute_metadata_keys(cls) -> set[str]:
         """Return a set of all subtable attribute names."""
         result = {attr.name for attr in cls._quivr_attributes.values()}
-        for field in cls._quivr_subtables.values():
-            attr_fields = field.table_type._quivr_attributes
+        for column in cls._quivr_subtables.values():
+            attr_fields = column.table_type._quivr_attributes
             for attr in attr_fields.values():
-                result.add(f"{field.name}.{attr.name}")
+                result.add(f"{column.name}.{attr.name}")
 
-            children = field.table_type._attribute_metadata_keys()
+            children = column.table_type._attribute_metadata_keys()
             for key in children:
-                result.add(f"{field.name}.{key}")
+                result.add(f"{column.name}.{key}")
         return result

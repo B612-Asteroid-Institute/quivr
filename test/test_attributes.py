@@ -1,12 +1,12 @@
 import pandas as pd
 import pyarrow as pa
 
-from quivr import FloatAttribute, Int64Field, IntAttribute, StringAttribute, Table
+from quivr import FloatAttribute, Int64Column, IntAttribute, StringAttribute, Table
 
 
 def test_multiple_attributes():
     class MyTable(Table):
-        vals = Int64Field()
+        vals = Int64Column()
         name = StringAttribute()
         id = IntAttribute()
         fval = FloatAttribute()
@@ -21,15 +21,15 @@ def test_multiple_attributes():
 
 def test_nested_attribute_metadata():
     class Inner(Table):
-        x = Int64Field()
+        x = Int64Column()
         id1 = StringAttribute()
 
     class Middle(Table):
-        inner = Inner.as_field()
+        inner = Inner.as_column()
         id2 = StringAttribute()
 
     class Outer(Table):
-        middle = Middle.as_field()
+        middle = Middle.as_column()
         id3 = StringAttribute()
 
     inner = Inner.from_kwargs(x=[1, 2, 3], id1="a")
@@ -53,12 +53,12 @@ def test_nested_attribute_metadata():
 
 def test_nested_table():
     class Inner(Table):
-        x = Int64Field()
+        x = Int64Column()
         id = IntAttribute()
 
     class Outer(Table):
         name = StringAttribute()
-        inner = Inner.as_field()
+        inner = Inner.as_column()
 
     table = Outer.from_data(
         name="foo",
@@ -74,12 +74,12 @@ def test_nested_table():
 def test_nested_table_shadowing():
     # Test that reusing a name at two levels is safe.
     class Inner(Table):
-        x = Int64Field()
+        x = Int64Column()
         id = IntAttribute()
 
     class Outer(Table):
         id = IntAttribute()
-        inner = Inner.as_field()
+        inner = Inner.as_column()
 
     table = Outer.from_data(
         id=1,
@@ -94,12 +94,12 @@ def test_nested_table_shadowing():
 
 def test_csv_nested_table(tmp_path):
     class Inner(Table):
-        x = Int64Field()
+        x = Int64Column()
         id = IntAttribute()
 
     class Outer(Table):
         name = StringAttribute()
-        inner = Inner.as_field()
+        inner = Inner.as_column()
 
     table = Outer.from_data(
         name="foo",
@@ -117,7 +117,7 @@ def test_csv_nested_table(tmp_path):
 
 class TestConstructors:
     class MyTable(Table):
-        vals = Int64Field()
+        vals = Int64Column()
         name = StringAttribute()
 
     def test_from_dataframe(self):
@@ -127,12 +127,12 @@ class TestConstructors:
 
     def test_from_flat_dataframe(self):
         class Inner(Table):
-            x = Int64Field()
+            x = Int64Column()
             id = IntAttribute()
 
         class Outer(Table):
-            y = Int64Field()
-            inner = Inner.as_field()
+            y = Int64Column()
+            inner = Inner.as_column()
             name = StringAttribute()
 
         df = pd.DataFrame({"inner.x": [1, 2, 3], "y": [4, 5, 6]})
@@ -166,7 +166,7 @@ class TestConstructors:
 
 class TestStringAttribute:
     class MyTable(Table):
-        vals = Int64Field()
+        vals = Int64Column()
         name = StringAttribute()
 
     def test_from_data(self):
@@ -206,7 +206,7 @@ class TestStringAttribute:
 
 class TestIntAttribute:
     class MyTable(Table):
-        vals = Int64Field()
+        vals = Int64Column()
         id = IntAttribute()
 
     def test_from_data(self):
@@ -241,7 +241,7 @@ class TestIntAttribute:
 
 class TestFloatAttribute:
     class MyTable(Table):
-        vals = Int64Field()
+        vals = Int64Column()
         id = FloatAttribute()
 
     def test_from_data(self):
@@ -287,12 +287,12 @@ def test_attribute_metadata_keys():
 
     class Middle(Table):
         c = StringAttribute()
-        inner = DoubleInner.as_field()
+        inner = DoubleInner.as_column()
 
     class Outer(Table):
-        inner1 = Inner1.as_field()
-        inner2 = Inner2.as_field()
-        middle = Middle.as_field()
+        inner1 = Inner1.as_column()
+        inner2 = Inner2.as_column()
+        middle = Middle.as_column()
         id = IntAttribute()
 
     have = Outer._attribute_metadata_keys()

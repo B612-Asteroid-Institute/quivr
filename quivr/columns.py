@@ -17,9 +17,9 @@ Byteslike: TypeAlias = Union[bytes, bytearray, memoryview, str]
 MetadataDict: TypeAlias = dict[Byteslike, Byteslike]
 
 
-class Field:
+class Column:
     """
-    A Field is an accessor for data in a Table, and also a descriptor for the Table's structure.
+    A Column is an accessor for data in a Table, and also a descriptor for the Table's structure.
     """
 
     def __init__(
@@ -51,9 +51,9 @@ class Field:
 T = TypeVar("T", bound="Table")
 
 
-class SubTableField(Field, Generic[T]):
+class SubTableColumn(Column, Generic[T]):
     """
-    A field which represents an embedded Quivr table.
+    A column which represents an embedded Quivr table.
     """
 
     def __init__(self, table_type: type[T], nullable: bool = True, metadata: Optional[MetadataDict] = None):
@@ -68,7 +68,7 @@ class SubTableField(Field, Generic[T]):
         metadata = self.metadata
         if metadata is None:
             metadata = {}
-        metadata.update(obj._metadata_for_field(self.name))
+        metadata.update(obj._metadata_for_column(self.name))
 
         schema = self.schema.with_metadata(metadata)
 
@@ -76,9 +76,9 @@ class SubTableField(Field, Generic[T]):
         return self.table_type(subtable)
 
 
-class Int8Field(Field):
+class Int8Column(Column):
     """
-    A field for storing 8-bit integers.
+    A column for storing 8-bit integers.
     """
 
     def __init__(
@@ -93,9 +93,9 @@ class Int8Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Int16Field(Field):
+class Int16Column(Column):
     """
-    A field for storing 16-bit integers.
+    A column for storing 16-bit integers.
     """
 
     def __init__(
@@ -110,7 +110,7 @@ class Int16Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Int32Field(Field):
+class Int32Column(Column):
     def __init__(
         self,
         nullable: bool = True,
@@ -123,7 +123,7 @@ class Int32Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Int64Field(Field):
+class Int64Column(Column):
     def __init__(
         self,
         nullable: bool = True,
@@ -136,7 +136,7 @@ class Int64Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class UInt8Field(Field):
+class UInt8Column(Column):
     def __init__(
         self,
         nullable: bool = True,
@@ -149,7 +149,7 @@ class UInt8Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class UInt16Field(Field):
+class UInt16Column(Column):
     def __init__(
         self,
         nullable: bool = True,
@@ -162,7 +162,7 @@ class UInt16Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class UInt32Field(Field):
+class UInt32Column(Column):
     def __init__(
         self,
         nullable: bool = True,
@@ -175,7 +175,7 @@ class UInt32Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class UInt64Field(Field):
+class UInt64Column(Column):
     def __init__(
         self,
         nullable: bool = True,
@@ -188,9 +188,9 @@ class UInt64Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Float16Field(Field):
+class Float16Column(Column):
     """
-    A field for storing 16-bit floating point numbers.
+    A column for storing 16-bit floating point numbers.
     """
 
     def __init__(
@@ -205,9 +205,9 @@ class Float16Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Float32Field(Field):
+class Float32Column(Column):
     """
-    A field for storing 32-bit floating point numbers.
+    A column for storing 32-bit floating point numbers.
     """
 
     def __init__(
@@ -222,9 +222,9 @@ class Float32Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Float64Field(Field):
+class Float64Column(Column):
     """
-    A field for storing 64-bit floating point numbers.
+    A column for storing 64-bit floating point numbers.
     """
 
     def __init__(
@@ -239,12 +239,12 @@ class Float64Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class StringField(Field):
-    """A field for storing strings.
+class StringColumn(Column):
+    """A column for storing strings.
 
     This can be used to store strings of any length, but it is not
     recommended for storing very long strings (over 2GB, for
-    example). For long strings, use LargeStringField instead.
+    example). For long strings, use LargeStringColumn instead.
 
     """
 
@@ -260,9 +260,9 @@ class StringField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class LargeBinaryField(Field):
+class LargeBinaryColumn(Column):
     """
-    A field for storing large binary objects. Large binary data is stored in
+    A column for storing large binary objects. Large binary data is stored in
     variable-length chunks.
     """
 
@@ -278,9 +278,9 @@ class LargeBinaryField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class LargeStringField(Field):
+class LargeStringColumn(Column):
     """
-    A field for storing large strings. Large string data is stored in
+    A column for storing large strings. Large string data is stored in
     variable-length chunks.
     """
 
@@ -296,10 +296,10 @@ class LargeStringField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Date32Field(Field):
-    """A field for storing dates.
+class Date32Column(Column):
+    """A column for storing dates.
 
-    Internally, this field stores dates as 32-bit integers which
+    Internally, this column stores dates as 32-bit integers which
     represent time since the UNIX epoch.
 
     """
@@ -316,10 +316,10 @@ class Date32Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Date64Field(Field):
-    """A field for storing dates.
+class Date64Column(Column):
+    """A column for storing dates.
 
-    Internally, this field stores dates as 64-bit integers which
+    Internally, this column stores dates as 64-bit integers which
     represent time since the UNIX epoch in milliseconds, where the
     values are evenly divisible by 86,400,000.
     """
@@ -336,8 +336,8 @@ class Date64Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class TimestampField(Field):
-    """A field for storing timestamps.
+class TimestampColumn(Column):
+    """A column for storing timestamps.
 
     Timestamp data can be stored in one of four units:
       - seconds
@@ -367,9 +367,9 @@ class TimestampField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Time32Field(Field):
+class Time32Column(Column):
     """
-    A field for storing time values.
+    A column for storing time values.
 
     Time data can be stored in one of two units for this 32-bit type:
         - seconds
@@ -391,9 +391,9 @@ class Time32Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Time64Field(Field):
+class Time64Column(Column):
     """
-    A field for storing time values with high precision.
+    A column for storing time values with high precision.
 
     Time data can be stored in one of two units for this 64-bit type:
         - microseconds
@@ -415,7 +415,7 @@ class Time64Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class DurationField(Field):
+class DurationColumn(Column):
     """
     An absolute length of time unrelated to any calendar artifacts.
 
@@ -439,8 +439,8 @@ class DurationField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class MonthDayNanoIntervalField(Field):
-    """A field for storing calendar intervals (an elapsed number of months,
+class MonthDayNanoIntervalColumn(Column):
+    """A column for storing calendar intervals (an elapsed number of months,
     days, and nanoseconds).
 
     Internally, a month_day_nano_interval value is a 96-bit
@@ -465,8 +465,8 @@ class MonthDayNanoIntervalField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class BinaryField(Field):
-    """A field for storing opaque binary data.
+class BinaryColumn(Column):
+    """A column for storing opaque binary data.
 
     The data can be either variable-length or fixed-length, depending
     on the 'length' parameter passed in the initializer.
@@ -490,25 +490,25 @@ class BinaryField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Decimal128Field(Field):
-    """A field for storing arbitrary-precision decimal numbers.
+class Decimal128Column(Column):
+    """A column for storing arbitrary-precision decimal numbers.
 
     Arrow decimals are fixed-point decimal numbers encoded as a scaled
     integer. The precision is the number of significant digits that the
     decimal type can represent; the scale is the number of digits after
     the decimal point (note the scale can be negative).
 
-    As an example, Decimal128Field(7, 3) can exactly represent the numbers
+    As an example, Decimal128Column(7, 3) can exactly represent the numbers
     1234.567 and -1234.567 (encoded internally as the 128-bit integers
     1234567 and -1234567, respectively), but neither 12345.67 nor
     123.4567.
 
-    DecimalField(5, -3) can exactly represent the number 12345000
+    DecimalColumn(5, -3) can exactly represent the number 12345000
     (encoded internally as the 128-bit integer 12345), but neither
     123450000 nor 1234500.
 
     If you need a precision higher than 38 significant digits,
-    consider using Decimal256Field.
+    consider using Decimal256Column.
 
     """
 
@@ -521,8 +521,8 @@ class Decimal128Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class Decimal256Field(Field):
-    """A field for storing arbitrary-precision decimal numbers.
+class Decimal256Column(Column):
+    """A column for storing arbitrary-precision decimal numbers.
 
     Arrow decimals are fixed-point decimal numbers encoded as a scaled
     integer. The precision is the number of significant digits that the
@@ -541,8 +541,8 @@ class Decimal256Field(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class NullField(Field):
-    """A field for storing null values.
+class NullColumn(Column):
+    """A column for storing null values.
 
     Nulls are represented as a single bit, and do not take up any
     memory space.
@@ -564,13 +564,13 @@ class NullField(Field):
 # Complex types follow
 
 
-class ListField(Field):
-    """A field for storing lists of values.
+class ListColumn(Column):
+    """A column for storing lists of values.
 
     The values in the list can be of any type.
 
     Note that all quivr Tables are storing lists of values, so this
-    field type is only useful for storing lists of lists.
+    column type is only useful for storing lists of lists.
 
 
 
@@ -578,7 +578,7 @@ class ListField(Field):
 
     def __init__(
         self,
-        value_type: Union[pa.DataType, pa.Field, Field],
+        value_type: Union[pa.DataType, pa.Field, Column],
         list_size: int = -1,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
@@ -587,7 +587,7 @@ class ListField(Field):
         """
         Parameters
         ----------
-        value_type : Union[pa.DataType, pa.Field, Field]
+        value_type : Union[pa.DataType, pa.Field, Column]
             The type of the values in the list.
 
         list_size : int
@@ -597,12 +597,12 @@ class ListField(Field):
             Whether the list can contain null values.
 
         metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the field.
+            A dictionary of metadata to attach to the column.
 
         validator: Optional[validators.Validator]
-            A validator to run against the field's values.
+            A validator to run against the column's values.
         """
-        if isinstance(value_type, Field):
+        if isinstance(value_type, Column):
             value_type = value_type.dtype
         super().__init__(
             pa.list_(value_type, list_size), nullable=nullable, metadata=metadata, validator=validator
@@ -612,21 +612,21 @@ class ListField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class LargeListField(Field):
-    """A field for storing large lists of values.
+class LargeListColumn(Column):
+    """A column for storing large lists of values.
 
     Unless you need to represent data with more than 2**31 elements,
-    prefer ListField.
+    prefer ListColumn.
 
     The values in the list can be of any type.
 
     Note that all quivr Tables are storing lists of values, so this
-    field type is only useful for storing lists of lists.
+    column type is only useful for storing lists of lists.
     """
 
     def __init__(
         self,
-        value_type: Union[pa.DataType, pa.Field, Field],
+        value_type: Union[pa.DataType, pa.Field, Column],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
@@ -634,19 +634,19 @@ class LargeListField(Field):
         """
         Parameters
         ----------
-        value_type : Union[pa.DataType, pa.Field, Field]
+        value_type : Union[pa.DataType, pa.Field, Column]
             The type of the values in the list.
 
         nullable : bool
             Whether the list can contain null values.
 
         metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the field.
+            A dictionary of metadata to attach to the column.
 
         validator: Optional[validators.Validator]
-            A validator to run against the field's values.
+            A validator to run against the column's values.
         """
-        if isinstance(value_type, Field):
+        if isinstance(value_type, Column):
             value_type = value_type.dtype
         super().__init__(pa.large_list(value_type), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -654,8 +654,8 @@ class LargeListField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class MapField(Field):
-    """A field for storing maps of key-value pairs.
+class MapColumn(Column):
+    """A column for storing maps of key-value pairs.
 
     The keys and values can be of any type, as long as the keys are
     hashable and unique.
@@ -663,8 +663,8 @@ class MapField(Field):
 
     def __init__(
         self,
-        key_type: Union[pa.DataType, pa.Field, Field],
-        item_type: Union[pa.DataType, pa.Field, Field],
+        key_type: Union[pa.DataType, pa.Field, Column],
+        item_type: Union[pa.DataType, pa.Field, Column],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
@@ -672,24 +672,24 @@ class MapField(Field):
         """
         Parameters
         ----------
-        key_type : Union[pa.DataType, pa.Field, Field]
+        key_type : Union[pa.DataType, pa.Field, Column]
             The type of the keys in the map.
 
-        item_type : Union[pa.DataType, pa.Field, Field]
+        item_type : Union[pa.DataType, pa.Field, Column]
             The type of the values in the map.
 
         nullable : bool
             Whether the map can contain null values.
 
         metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the field.
+            A dictionary of metadata to attach to the column.
 
         validator: Optional[validators.Validator]
-            A validator to run against the field's values.
+            A validator to run against the column's values.
         """
-        if isinstance(key_type, Field):
+        if isinstance(key_type, Column):
             key_type = key_type.dtype
-        if isinstance(item_type, Field):
+        if isinstance(item_type, Column):
             item_type = item_type.dtype
         super().__init__(
             pa.map_(key_type, item_type), nullable=nullable, metadata=metadata, validator=validator
@@ -699,17 +699,17 @@ class MapField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class DictionaryField(Field):
-    """A field for storing dictionary-encoded values.
+class DictionaryColumn(Column):
+    """A column for storing dictionary-encoded values.
 
-    This is intended for use with categorical data. See MapField for a
+    This is intended for use with categorical data. See MapColumn for a
     more general mapping type.
     """
 
     def __init__(
         self,
         index_type: pa.DataType,
-        value_type: Union[pa.DataType, pa.Field, Field],
+        value_type: Union[pa.DataType, pa.Field, Column],
         ordered: bool = False,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
@@ -721,7 +721,7 @@ class DictionaryField(Field):
         index_type : IntegerDataType
             The type of the dictionary indices. Must be an integer type.
 
-        value_type : Union[pa.DataType, pa.Field, Field]
+        value_type : Union[pa.DataType, pa.Field, Column]
             The type of the values in the dictionary.
 
         ordered : bool
@@ -731,14 +731,14 @@ class DictionaryField(Field):
             Whether the dictionary can contain null values.
 
         metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the field.
+            A dictionary of metadata to attach to the column.
 
         validator: Optional[validators.Validator]
-            A validator to run against the field's values.
+            A validator to run against the column's values.
         """
-        if isinstance(index_type, Field):
+        if isinstance(index_type, Column):
             index_type = index_type.dtype
-        if isinstance(value_type, Field):
+        if isinstance(value_type, Column):
             value_type = value_type.dtype
         super().__init__(
             pa.dictionary(index_type, value_type, ordered=ordered),
@@ -751,11 +751,11 @@ class DictionaryField(Field):
         return obj.table[self.name].combine_chunks()
 
 
-class StructField(Field):
-    """A field for storing structured data.
+class StructColumn(Column):
+    """A column for storing structured data.
 
-    In general, prefer to define Tables and use their as_field method
-    instead of using StructField.
+    In general, prefer to define Tables and use their as_column method
+    instead of using StructColumn.
 
     """
 
@@ -776,18 +776,18 @@ class StructField(Field):
             Whether the struct can contain null values.
 
         metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the field.
+            A dictionary of metadata to attach to the column.
 
         validator: Optional[validators.Validator]
-            A validator to run against the field's values.
+            A validator to run against the column's values.
         """
         super().__init__(pa.struct(fields), nullable=nullable, metadata=metadata, validator=validator)
 
 
-class RunEndEncodedField(Field):
-    """A field for storing run-end encoded data.
+class RunEndEncodedColumn(Column):
+    """A column for storing run-end encoded data.
 
-    This is a special field type that is used to efficiently store
+    This is a special column type that is used to efficiently store
     highly ordered data. Internally, the data is stored as two
     buffers:
 
@@ -822,10 +822,10 @@ class RunEndEncodedField(Field):
             Whether the data can contain null values.
 
         metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the field.
+            A dictionary of metadata to attach to the column.
 
         validator: Optional[validators.Validator]
-            A validator to run against the field's values.
+            A validator to run against the column's values.
         """
         super().__init__(
             pa.run_end_encoded(run_end_type, value_type),

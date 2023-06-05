@@ -45,21 +45,21 @@ Check out this repo, and `pip install` it.
 
 Your main entrypoint to Quivr is through defining classes which
 represent your tables. You write a subclass of quivr.Table, annotating
-it with Fields that describe the data you're working with, and quivr
+it with Columns that describe the data you're working with, and quivr
 will handle the rest.
 
 ```python
-from quivr import Table, Float64Field
+from quivr import Table, Float64Column
 import pyarrow as pa
 
 
 class Coordinates(Table):
-	x = Float64Field()
-	y = Float64Field()
-	z = Float64Field()
-	vx = Float64Field()
-	vy = Float64Field()
-	vz = Float64Field()
+	x = Float64Column()
+	y = Float64Column()
+	z = Float64Column()
+	vx = Float64Column()
+	vy = Float64Column()
+	vz = Float64Column()
 ```
 
 Then, you can construct tables from data:
@@ -88,19 +88,19 @@ xs = coords.x.to_numpy()
 df = coords.to_dataframe()
 ```
 
-### Embedded definitions and nullable fields
+### Embedded definitions and nullable columns
 
-You can embed one table's definition within another, and you can make fields nullable:
+You can embed one table's definition within another, and you can make columns nullable:
 
 ```python
 
 class AsteroidOrbit(Table):
-	designation = StringField()
-	mass = Float64Field(nullable=True)
-	radius = Float64Field(nullable=True)
-	coords = Coordinates.as_field()
+	designation = StringColumn()
+	mass = Float64Column(nullable=True)
+	radius = Float64Column(nullable=True)
+	coords = Coordinates.as_column()
 
-# You can construct embedded fields from Arrow StructArrays, which you can get from
+# You can construct embedded columns from Arrow StructArrays, which you can get from
 # other Quivr tables using the to_structarray() method with zero copy.
 orbits = AsteroidOrbit.from_data(
     designation=np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
@@ -151,21 +151,21 @@ can do so like this:
 ```python
 
 class AsteroidOrbit(Table):
-	designation = StringField()
-	mass = Float64Field(nullable=True)
-	radius = Float64Field(nullable=True)
-	coords = Coordinates.as_field()
+	designation = StringColumn()
+	mass = Float64Column(nullable=True)
+	radius = Float64Column(nullable=True)
+	coords = Coordinates.as_column()
 
     def total_mass(self):
         return pc.sum(self.mass)
 
 ```
 
-You can also use this to add "meta-fields" which are combinations of other fields. For example:
+You can also use this to add "meta-columns" which are combinations of other columns. For example:
 
 ```python
 class CoordinateCovariance(Table):
-	matrix_values = ListField(pa.float64(), 36)
+	matrix_values = ListColumn(pa.float64(), 36)
 
     @property
     def matrix(self):
@@ -174,11 +174,11 @@ class CoordinateCovariance(Table):
 
 
 class AsteroidOrbit(Table):
-	designation = StringField()
-	mass = Float64Field(nullable=True)
-	radius = Float64Field(nullable=True)
-	coords = Coordinates.as_field()
-	covariance = CoordinateCovariance.as_field()
+	designation = StringColumn()
+	mass = Float64Column(nullable=True)
+	radius = Float64Column(nullable=True)
+	coords = Coordinates.as_column()
+	covariance = CoordinateCovariance.as_column()
 
 orbits = load_orbits() # Analogous to the example above
 
@@ -188,7 +188,7 @@ determinants = np.linalg.det(orbits.covariance.matrix)
 
 ### Adding instance attributes
 
-You can also add more attributes (that is, non-Field ones) to your
+You can also add more attributes (that is, non-Column ones) to your
 class and its instances, but doing so requires a bit more attention.
 
 You can override `__init__` to add instance-level attributes. However,
@@ -207,8 +207,8 @@ For example:
 from typing import Self
 
 class AsteroidOrbit(Table):
-    designation = StringField()
-	mass = Float64Field(nullable=True)
+    designation = StringColumn()
+	mass = Float64Column(nullable=True)
 	
 	def __init__(self, table: pa.Table, mu: float):
 	    super().__init__(table)
@@ -236,17 +236,17 @@ mostly for numeric checks, but as use cases emerge, more will be
 added.
 
 To add data validation, use the `validator=` keyword inside
-fields. For example:
+columns. For example:
 
 ```python
-from quivr import Table, Int64Field, Float64Field, StringField
+from quivr import Table, Int64Column, Float64Column, StringColumn
 from quivr.validators import gt, ge, le, and_, is_in
 
 class Observation(Table):
-    id = Int64Field(validator=gt(0))
-    ra = Float64Field(validator=and_(ge(0), le(360))
-    dataset_id = StringField(validator=is_in(["ztf", "nsc", "skymapper"])))
-    unvalidated = Int64Field()
+    id = Int64Column(validator=gt(0))
+    ra = Float64Column(validator=and_(ge(0), le(360))
+    dataset_id = StringColumn(validator=is_in(["ztf", "nsc", "skymapper"])))
+    unvalidated = Int64Column()
 ```
 
 This `Observation` table has validators that

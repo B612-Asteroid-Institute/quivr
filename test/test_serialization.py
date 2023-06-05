@@ -1,16 +1,16 @@
 import pyarrow.compute as pc
 
-from quivr import Int64Field, StringField, Table
+from quivr import Int64Column, StringColumn, Table
 
 
 class Pair(Table):
-    x = Int64Field()
-    y = Int64Field()
+    x = Int64Column()
+    y = Int64Column()
 
 
 class Container(Table):
-    pair = Pair.as_field()
-    name = StringField()
+    pair = Pair.as_column()
+    name = StringColumn()
 
 
 class TestParquetSerialization:
