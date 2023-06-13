@@ -11,6 +11,7 @@ else:
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
 from quivr.attributes import IntAttribute, StringAttribute
@@ -589,3 +590,69 @@ class TestTableEqualityBenchmarks:
         table1 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="foo")
         table2 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="bar")
         benchmark(table1.__eq__, table2)
+
+
+def test_where_filtering():
+    class InnerTable(Table):
+        x = Int8Column()
+
+    class OuterTable(Table):
+        inner = InnerTable.as_column()
+        y = Int8Column()
+        label = StringAttribute()
+
+    table = OuterTable.from_data(
+        inner=InnerTable.from_data(x=[1, 2, 3]),
+        y=[4, 5, 6],
+        label="foo",
+    )
+
+    have = table.where(pc.field("y") > 4)
+    assert len(have) == 2
+    assert have.label == "foo"
+    np.testing.assert_array_equal(have.y, [5, 6])
+
+    have = table.where(pc.field(("inner", "x")) > 2)
+    assert len(have) == 1
+    assert have.label == "foo"
+    np.testing.assert_array_equal(have.y, [6])
+
+
+def test_apply_mask_numpy():
+    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+
+    mask = np.array([True, False, True])
+    have = values.apply_mask(mask)
+    np.testing.assert_array_equal(have.x, [1, 3])
+
+
+def test_apply_mask_pylist():
+    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+
+    mask = [True, False, True]
+    have = values.apply_mask(mask)
+    np.testing.assert_array_equal(have.x, [1, 3])
+
+
+def test_apply_mask_pyarrow():
+    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+
+    mask = pa.array([True, False, True], pa.bool_())
+    have = values.apply_mask(mask)
+    np.testing.assert_array_equal(have.x, [1, 3])
+
+
+def test_apply_mask_wrong_size():
+    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+
+    mask = [True, False]
+    with pytest.raises(ValueError):
+        values.apply_mask(mask)
+
+
+def test_apply_mask_pyarrow_with_nulls():
+    values = Pair.from_data(x=[1, 2, 3], y=[4, None, 6])
+
+    mask = pa.array([True, False, None], pa.bool_())
+    with pytest.raises(ValueError):
+        values.apply_mask(mask)
