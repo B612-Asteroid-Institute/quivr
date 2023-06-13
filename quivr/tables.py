@@ -719,3 +719,42 @@ class Table:
             for key in children:
                 result.add(f"{column.name}.{key}")
         return result
+
+    def apply_mask(self, mask: pa.BooleanArray | np.ndarray | list[bool]) -> Self:
+        """Return a new table with rows filtered to match a boolean mask.
+
+        The mask must have the same length as the table. At each index, if the mask's
+        value is True, the row will be included in the new table; if False, it will be
+        excluded.
+
+        If the mask is a pyarrow BooleanArray, it must not have any null values.
+        """
+        if len(mask) != len(self):
+            raise ValueError("mask must be the same length as the table")
+        if isinstance(mask, pa.BooleanArray):
+            if mask.null_count > 0:
+                raise ValueError("mask must not contain null values")
+        return self.__class__(self.table.filter(mask))
+
+    def where(self, expr: pc.Expression) -> Self:
+        """Return a new table with rows filtered to match an expression.
+
+        The expression must be a pyarrow Expression that evaluates to a boolean array.
+
+        Examples
+        --------
+        >>> from quivr import Table, Int64Column
+        >>> import pyarrow.compute as pc
+        >>> class MyTable(Table):
+        ...     x = Int64Column()
+        ...     y = Int64Column()
+        ...
+        >>> t = MyTable.from_data(x=[1, 2, 3], y=[4, 5, 6])
+        >>> filtered = t.where(pc.field("x") > 1)
+        >>> print(filtered.x.to_pylist())
+        [2, 3]
+        >>> print(filtered.y.to_pylist())
+        [5, 6]
+
+        """
+        return self.__class__(self.table.filter(expr))
