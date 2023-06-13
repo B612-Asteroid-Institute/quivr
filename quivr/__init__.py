@@ -36,6 +36,7 @@ from .columns import (
     UInt64Column,
 )
 from .concat import concatenate
+from .defragment import defragment
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
@@ -95,4 +96,5 @@ __all__ = [
     "StringAttribute",
     "IntAttribute",
     "FloatAttribute",
+    "defragment",
 ]
