@@ -93,3 +93,15 @@ def test_benchmark_eq(benchmark):
     values = pa.array(np.ones(1000), type=pa.int64())
     checker = validators.eq(1)
     benchmark(checker.valid, values)
+
+
+def test_validating_with_nulls():
+    values = pa.array([1, 1, 1, None], type=pa.int64())
+    checker = validators.eq(1)
+    checker.validate(values)
+
+
+def test_validate_all_null():
+    values = pa.array([None, None, None, None], type=pa.int64())
+    checker = validators.eq(1)
+    checker.validate(values)

@@ -26,6 +26,9 @@ class Validator:
         if self.func.kind == "scalar_aggregate":
             return self.evaluate(array).as_py()
         else:
+            results = self.evaluate(array)
+            if results.null_count == len(results):
+                return True
             return pc.all(self.evaluate(array)).as_py()
 
     def validate(self, array) -> None:
