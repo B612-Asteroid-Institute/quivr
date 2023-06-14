@@ -18,6 +18,7 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
+from . import extensiontypes
 from .attributes import Attribute
 from .columns import Column, MetadataDict, SubTableColumn
 from .errors import TableFragmentedError, ValidationError
@@ -197,7 +198,12 @@ class Table:
             elif isinstance(value, np.ndarray):
                 arrays.append(pa.array(value, type=field.type))
             elif isinstance(value, list):
-                arrays.append(pa.array(value, type=field.type))
+                # HACK: special-case support for extensions
+                if isinstance(field.type, extensiontypes.EnumType):
+                    array = extensiontypes.EnumArray.from_pylist(field.type.enum_class, value)
+                else:
+                    array = pa.array(value, type=field.type)
+                arrays.append(array)
             elif isinstance(value, pd.Series):
                 arrays.append(pa.array(value, type=field.type))
             else:

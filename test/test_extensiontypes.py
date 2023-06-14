@@ -46,19 +46,35 @@ def test_enum_extension_type_creation():
         et = extensiontypes.EnumType(MixedEnum)
 
 
-def test_enum_array_strings():
-    values = [Color.RED, Color.GREEN, Color.BLUE, Color.RED, Color.GREEN, Color.BLUE]
-    arr = extensiontypes.EnumArray.from_enum_list(Color, values)
-    assert arr.type == extensiontypes.EnumType(Color)
-    assert arr.to_pylist() == values
-    npt.assert_array_equal(
-        arr.to_numpy(zero_copy_only=False), ["red", "green", "blue", "red", "green", "blue"]
-    )
+class TestEnumArray:
+    def test_from_pylist_string_enum_values(self):
+        values = [Color.RED, Color.GREEN, Color.BLUE, Color.RED, Color.GREEN, Color.BLUE]
+        arr = extensiontypes.EnumArray.from_pylist(Color, values)
+        assert arr.type == extensiontypes.EnumType(Color)
+        assert arr.to_pylist() == values
+        npt.assert_array_equal(
+            arr.to_numpy(zero_copy_only=False), ["red", "green", "blue", "red", "green", "blue"]
+        )
 
+    def test_from_pylist_string_scalar_values(self):
+        values = ["red", "green", "blue", "red", "green", "blue"]
+        arr = extensiontypes.EnumArray.from_pylist(Color, values)
+        assert arr.type == extensiontypes.EnumType(Color)
+        assert arr.to_pylist() == [Color.RED, Color.GREEN, Color.BLUE, Color.RED, Color.GREEN, Color.BLUE]
+        npt.assert_array_equal(
+            arr.to_numpy(zero_copy_only=False), ["red", "green", "blue", "red", "green", "blue"]
+        )
 
-def test_enum_array_ints():
-    values = [IPVersion.IPV4, IPVersion.IPV6, IPVersion.IPV4, IPVersion.IPV6]
-    arr = extensiontypes.EnumArray.from_enum_list(IPVersion, values)
-    assert arr.type == extensiontypes.EnumType(IPVersion)
-    assert arr.to_pylist() == values
-    npt.assert_array_equal(arr.to_numpy(zero_copy_only=False), [4, 6, 4, 6])
+    def test_from_pylist_int_enum_values(self):
+        values = [IPVersion.IPV4, IPVersion.IPV6, IPVersion.IPV4, IPVersion.IPV6]
+        arr = extensiontypes.EnumArray.from_pylist(IPVersion, values)
+        assert arr.type == extensiontypes.EnumType(IPVersion)
+        assert arr.to_pylist() == values
+        npt.assert_array_equal(arr.to_numpy(zero_copy_only=False), [4, 6, 4, 6])
+
+    def test_from_pylist_int_scalar_values(self):
+        values = [4, 6, 4, 6]
+        arr = extensiontypes.EnumArray.from_pylist(IPVersion, values)
+        assert arr.type == extensiontypes.EnumType(IPVersion)
+        assert arr.to_pylist() == [IPVersion.IPV4, IPVersion.IPV6, IPVersion.IPV4, IPVersion.IPV6]
+        npt.assert_array_equal(arr.to_numpy(zero_copy_only=False), [4, 6, 4, 6])

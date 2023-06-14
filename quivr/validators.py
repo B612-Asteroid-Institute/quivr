@@ -1,4 +1,5 @@
-from typing import Any
+import enum
+from typing import Any, Type
 
 import pyarrow
 import pyarrow.compute as pc
@@ -20,6 +21,8 @@ class Validator:
             raise ValueError("Invalid number of arguments")
 
     def evaluate(self, array) -> pyarrow.Array:
+        if isinstance(array, pyarrow.ExtensionArray):
+            array = array.storage
         return self.func.call([array, *self.args])
 
     def valid(self, array) -> bool:
@@ -79,6 +82,14 @@ class IsInValidator(Validator):
             raise ValueError("Invalid number of arguments")
 
     def evaluate(self, array) -> pyarrow.Array:
+        if isinstance(array, pyarrow.ExtensionArray):
+            array = array.storage
+        return self.func.call([array], self.args[0])
+
+
+class EnumValidator(IsInValidator):
+    def evaluate(self, array) -> pyarrow.Array:
+        array = array.cast(array.type.storage_type)
         return self.func.call([array], self.args[0])
 
 
@@ -93,6 +104,8 @@ class AndValidator(Validator):
             raise ValueError("Invalid number of arguments passed to and_")
 
     def evaluate(self, array) -> pyarrow.Array:
+        if isinstance(array, pyarrow.ExtensionArray):
+            array = array.storage
         return pc.and_(*[v.evaluate(array) for v in self.validators])
 
 
@@ -154,6 +167,13 @@ def is_in(val, fail_on_null: bool = False) -> IsInValidator:
         val = pyarrow.array(val)
     val = pc.SetLookupOptions(value_set=val, skip_nulls=fail_on_null)
     return IsInValidator([val], label)
+
+
+def valid_enum(enum_class: Type[enum.Enum], nullable: bool = False) -> EnumValidator:
+    label = f"valid_enum({enum_class})"
+    value_set = pyarrow.array(e.value for e in enum_class)
+    opts = pc.SetLookupOptions(value_set=value_set, skip_nulls=(not nullable))
+    return EnumValidator([opts], label)
 
 
 def and_(*validators) -> Validator:

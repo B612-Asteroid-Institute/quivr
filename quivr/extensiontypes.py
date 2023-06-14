@@ -105,9 +105,12 @@ class EnumType(pyarrow.ExtensionType):
 
 class EnumArray(pyarrow.ExtensionArray):
     @classmethod
-    def from_enum_list(cls, enum_class: Type[enum.Enum], values: list[enum.Enum]):
+    def from_pylist(cls, enum_class: Type[enum.Enum], values: list[enum.Enum]):
         ext_type = EnumType(enum_class)
-        storage = pyarrow.array([value.value for value in values], ext_type.storage_type)
+        # Peek at the first value to determine if they are actual enums
+        if isinstance(values[0], enum.Enum):
+            values = [value.value for value in values]
+        storage = pyarrow.array(values, ext_type.storage_type)
         return cls.from_storage(ext_type, storage)
 
 

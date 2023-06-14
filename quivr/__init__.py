@@ -9,6 +9,7 @@ from .columns import (
     Decimal256Column,
     DictionaryColumn,
     DurationColumn,
+    EnumColumn,
     Float16Column,
     Float32Column,
     Float64Column,
@@ -97,4 +98,5 @@ __all__ = [
     "IntAttribute",
     "FloatAttribute",
     "defragment",
+    "EnumColumn",
 ]
