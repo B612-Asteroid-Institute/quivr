@@ -3,7 +3,7 @@ import numpy.typing as npt
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from quivr import Table, Float64Column, ListColumn, StringColumn
+from quivr import Float64Column, ListColumn, StringColumn, Table
 
 
 class CartesianCoordinates(Table):

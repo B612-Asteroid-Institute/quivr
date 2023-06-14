@@ -61,16 +61,16 @@ check = [
   "test",
 ]
 fix = [
-  "ruff ./quivr ./test --fix"
+  "ruff ./quivr ./test ./examples --fix"
 ]
 lint = [
-  "ruff ./quivr ./test",
-  "black --check ./quivr ./test",
-  "isort --check-only ./quivr ./test"
+  "ruff ./quivr ./test ./examples",
+  "black --check ./quivr ./test ./examples",
+  "isort --check-only ./quivr ./test ./examples"
 ]
 format = [
-  "black ./quivr ./test",
-  "isort ./quivr ./test"
+  "black ./quivr ./test ./examples",
+  "isort ./quivr ./test ./examples"
 ]
 typecheck = [
   "mypy ./quivr",
