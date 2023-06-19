@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterable
 
 import pyarrow
 import pyarrow.compute as pc
@@ -19,16 +19,16 @@ class Validator:
         if not func.arity == (len(args) + 1):
             raise ValueError("Invalid number of arguments")
 
-    def evaluate(self, array) -> pyarrow.Array:
+    def evaluate(self, array: pyarrow.Array) -> pyarrow.Array:
         return self.func.call([array, *self.args])
 
-    def valid(self, array) -> bool:
+    def valid(self, array: pyarrow.Array) -> bool:
         if self.func.kind == "scalar_aggregate":
-            return self.evaluate(array).as_py()
+            return self.evaluate(array).as_py()  # type: ignore
         else:
-            return pc.all(self.evaluate(array)).as_py()
+            return pc.all(self.evaluate(array)).as_py()  # type: ignore
 
-    def validate(self, array) -> None:
+    def validate(self, array: pyarrow.Array) -> None:
         if not self.valid(array):
             if self.func.kind == "scalar_aggregate":
                 raise ValidationError(f"array did not pass validator '{self.label}'")
@@ -48,7 +48,7 @@ class Validator:
                 )
                 raise ValidationError(msg, failures)
 
-    def failures(self, array) -> (pyarrow.Array, pyarrow.Array):
+    def failures(self, array: pyarrow.Array) -> tuple[pyarrow.Array, pyarrow.Array]:
         """
         Returns a tuple of two arrays, the first containing the indices of the invalid values,
         and the second containing the invalid values themselves.
@@ -78,12 +78,12 @@ class IsInValidator(Validator):
         if not len(args) == 1:
             raise ValueError("Invalid number of arguments")
 
-    def evaluate(self, array) -> pyarrow.Array:
+    def evaluate(self, array: pyarrow.Array) -> pyarrow.Array:
         return self.func.call([array], self.args[0])
 
 
 class AndValidator(Validator):
-    def __init__(self, validators, label: str):
+    def __init__(self, validators: list[Validator], label: str):
         self.validators = validators
         func = pc.get_function("and")
         super().__init__(func, validators, label)
@@ -92,11 +92,11 @@ class AndValidator(Validator):
         if not len(args) > 1:
             raise ValueError("Invalid number of arguments passed to and_")
 
-    def evaluate(self, array) -> pyarrow.Array:
+    def evaluate(self, array: pyarrow.Array) -> pyarrow.Array:
         return pc.and_(*[v.evaluate(array) for v in self.validators])
 
 
-def eq(val) -> Validator:
+def eq(val: Any) -> Validator:
     """
     Validator that all data in a column is equal to a given value.
     """
@@ -105,7 +105,7 @@ def eq(val) -> Validator:
     return Validator(func, [val], label)
 
 
-def lt(val) -> Validator:
+def lt(val: Any) -> Validator:
     """
     Validator that all data in a column is less than a given value.
     """
@@ -114,7 +114,7 @@ def lt(val) -> Validator:
     return Validator(func, [val], label)
 
 
-def le(val) -> Validator:
+def le(val: Any) -> Validator:
     """
     Validator that all data in a column is less than or equal to a given value.
     """
@@ -123,7 +123,7 @@ def le(val) -> Validator:
     return Validator(func, [val], label)
 
 
-def gt(val) -> Validator:
+def gt(val: Any) -> Validator:
     """
     Validator that all data in a column is greater than a given value.
     """
@@ -132,7 +132,7 @@ def gt(val) -> Validator:
     return Validator(func, [val], label)
 
 
-def ge(val) -> Validator:
+def ge(val: Any) -> Validator:
     """
     Validator that all data in a column is greater than or equal to a given value.
     """
@@ -141,7 +141,7 @@ def ge(val) -> Validator:
     return Validator(func, [val], label)
 
 
-def is_in(val, fail_on_null: bool = False) -> IsInValidator:
+def is_in(val: Any, fail_on_null: bool = False) -> IsInValidator:
     """Validator that all data in a column is in a given set.
 
     If fail_on_null is true, then nulls always trigger an
@@ -156,9 +156,9 @@ def is_in(val, fail_on_null: bool = False) -> IsInValidator:
     return IsInValidator([val], label)
 
 
-def and_(*validators) -> Validator:
+def and_(*validators: Validator) -> Validator:
     """
     Validator that all data in a column passes all of the given validators.
     """
     label = "and({})".format(", ".join([v.label for v in validators]))
-    return AndValidator(validators, label)
+    return AndValidator(list(validators), label)
