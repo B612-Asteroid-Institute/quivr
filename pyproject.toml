@@ -73,7 +73,7 @@ format = [
   "isort ./quivr ./test"
 ]
 typecheck = [
-  "mypy --strict ./quivr ./examples",
+  "mypy --strict ./quivr ./examples ./test/typing_tests",
 ]
 test = [
   "pytest --benchmark-disable ./test",
