@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import sys
 
 if sys.version_info < (3, 10):
     from typing_extensions import TypeAlias
 else:
     from typing import TypeAlias
-from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
+
+if sys.version_info < (3, 11):
+    from typing_extensions import Self
+else:
+    from typing import Self
+
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union, overload
 
 import pyarrow as pa
 
@@ -34,19 +42,27 @@ class Column:
         self.metadata = metadata
         self.validator = validator
 
-    def __get__(self, obj: "Table", objtype: type):
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: Table, objtype: type) -> pa.Array:
+        ...
+
+    def __get__(self, obj: Union[Table, None], objtype: type) -> Union[Self, pa.Array]:
         if obj is None:
             return self
         return obj.table.column(self.name)
 
-    def __set__(self, obj: "Table", value):
+    def __set__(self, obj: Table, value: pa.Array) -> None:
         idx = obj.table.schema.get_field_index(self.name)
         obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value])
 
-    def __set_name__(self, owner: type, name: str):
+    def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
 
-    def pyarrow_field(self):
+    def pyarrow_field(self) -> pa.Field:
         return pa.field(self.name, self.dtype, self.nullable, self.metadata)
 
 
@@ -64,7 +80,15 @@ class SubTableColumn(Column, Generic[T]):
         dtype = pa.struct(table_type.schema)
         super().__init__(dtype, nullable=nullable, metadata=metadata)
 
-    def __get__(self, obj: "Table", objtype: type) -> T:
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: Table, objtype: type) -> T:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, T]:
         if obj is None:
             return self
         array = obj.table.column(self.name)
@@ -72,7 +96,7 @@ class SubTableColumn(Column, Generic[T]):
         metadata = self.metadata
         if metadata is None:
             metadata = {}
-        metadata.update(obj._metadata_for_column(self.name))
+        metadata.update(obj._metadata_for_column(self.name))  # type: ignore
 
         schema = self.schema.with_metadata(metadata)
 
@@ -93,7 +117,15 @@ class Int8Column(Column):
     ):
         super().__init__(pa.int8(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Int8Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Int8Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -112,7 +144,15 @@ class Int16Column(Column):
     ):
         super().__init__(pa.int16(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Int16Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Int16Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -127,7 +167,15 @@ class Int32Column(Column):
     ):
         super().__init__(pa.int32(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Int32Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Int32Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -142,7 +190,15 @@ class Int64Column(Column):
     ):
         super().__init__(pa.int64(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Int64Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Int64Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -157,7 +213,15 @@ class UInt8Column(Column):
     ):
         super().__init__(pa.uint8(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt8Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.UInt8Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -172,7 +236,15 @@ class UInt16Column(Column):
     ):
         super().__init__(pa.uint16(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt16Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.UInt16Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -187,7 +259,15 @@ class UInt32Column(Column):
     ):
         super().__init__(pa.uint32(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt32Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.UInt32Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -202,7 +282,15 @@ class UInt64Column(Column):
     ):
         super().__init__(pa.uint64(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.UInt64Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.UInt64Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -221,7 +309,15 @@ class Float16Column(Column):
     ):
         super().__init__(pa.float16(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.lib.HalfFloatArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.lib.HalfFloatArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -240,7 +336,15 @@ class Float32Column(Column):
     ):
         super().__init__(pa.float32(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.lib.FloatArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.lib.FloatArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -259,7 +363,15 @@ class Float64Column(Column):
     ):
         super().__init__(pa.float64(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.lib.DoubleArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.lib.DoubleArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -282,7 +394,15 @@ class StringColumn(Column):
     ):
         super().__init__(pa.string(), nullable=nullable, metadata=metadata, validator=validator)
 
-    def __get__(self, obj: "Table", objtype: type) -> pa.StringArray:
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: Table, objtype: type) -> pa.StringArray:
+        ...
+
+    def __get__(self, obj: Optional[Table], objtype: type) -> Union[pa.StringArray, Self]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -302,7 +422,15 @@ class LargeBinaryColumn(Column):
     ):
         super().__init__(pa.large_binary(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.LargeBinaryArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.LargeBinaryArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -322,7 +450,15 @@ class LargeStringColumn(Column):
     ):
         super().__init__(pa.large_string(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.LargeStringArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.LargeStringArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -344,7 +480,15 @@ class Date32Column(Column):
     ):
         super().__init__(pa.date32(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Date32Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Date32Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -366,7 +510,15 @@ class Date64Column(Column):
     ):
         super().__init__(pa.date64(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Date64Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Date64Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -399,7 +551,15 @@ class TimestampColumn(Column):
     ):
         super().__init__(pa.timestamp(unit, tz), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.TimestampArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.TimestampArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -425,7 +585,15 @@ class Time32Column(Column):
     ):
         super().__init__(pa.time32(unit), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Time32Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Time32Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -451,7 +619,15 @@ class Time64Column(Column):
     ):
         super().__init__(pa.time64(unit), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Time64Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Time64Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -477,7 +653,15 @@ class DurationColumn(Column):
     ):
         super().__init__(pa.duration(unit), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.DurationArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.DurationArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -505,7 +689,15 @@ class MonthDayNanoIntervalColumn(Column):
             pa.month_day_nano_interval(), nullable=nullable, metadata=metadata, validator=validator
         )
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.MonthDayNanoIntervalArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.MonthDayNanoIntervalArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -532,7 +724,15 @@ class BinaryColumn(Column):
     ):
         super().__init__(pa.binary(length), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.BinaryArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.BinaryArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -565,7 +765,15 @@ class Decimal128Column(Column):
     ):
         super().__init__(pa.decimal128(precision, scale), nullable=nullable, metadata=metadata)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Decimal128Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Decimal128Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -587,7 +795,15 @@ class Decimal256Column(Column):
     ):
         super().__init__(pa.decimal256(precision, scale), nullable=nullable, metadata=metadata)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.Decimal256Array:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.Decimal256Array]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -609,7 +825,15 @@ class NullColumn(Column):
     ):
         super().__init__(pa.null(), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.NullArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.NullArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -662,7 +886,15 @@ class ListColumn(Column):
             pa.list_(value_type, list_size), nullable=nullable, metadata=metadata, validator=validator
         )
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.ListArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.ListArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -706,7 +938,15 @@ class LargeListColumn(Column):
             value_type = value_type.dtype
         super().__init__(pa.large_list(value_type), nullable=nullable, metadata=metadata, validator=validator)
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.LargeListArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.LargeListArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -753,7 +993,15 @@ class MapColumn(Column):
             pa.map_(key_type, item_type), nullable=nullable, metadata=metadata, validator=validator
         )
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.MapArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.MapArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -807,7 +1055,15 @@ class DictionaryColumn(Column):
             validator=validator,
         )
 
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
     def __get__(self, obj: "Table", objtype: type) -> pa.DictionaryArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.DictionaryArray]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
