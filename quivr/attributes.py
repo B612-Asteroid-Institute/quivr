@@ -1,11 +1,13 @@
 import struct
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar
 
 if TYPE_CHECKING:
-    from .table import Table
+    from .tables import Table
+
+T = TypeVar("T")
 
 
-class Attribute:
+class Attribute(Generic[T]):
     """
     An Attribute is an accessor for scalar data in a table.
 
@@ -16,74 +18,83 @@ class Attribute:
     Attributes are stored as metadata on the underlying Arrow table's schema.
     """
 
-    def __init__(self, default: Any = None):
+    _type: type[T]
+
+    def __init__(
+        self,
+        default: Optional[T] = None,
+    ):
         self.default = default
         self.name = "__ERR_UNSET_NAME"
 
-    def __get__(self, instance: "Table", owner):
+    def __get__(self, instance: "Table", owner: type) -> T:
         if instance is None:
             return self
-        if instance.table.schema.metadata is None:
-            return self.default
         name = self.name.encode("utf8")
-        if name not in instance.table.schema.metadata:
-            return self.default
+        if instance.table.schema.metadata is None or name not in instance.table.schema.metadata:
+            if self.default is not None:
+                return self.default
+            raise AttributeError(f"Attribute {self.name} is not set and has no default")
         raw = instance.table.schema.metadata[name]
         return self.from_bytes(raw)
 
-    def __set__(self, instance, value):
+    def __set__(self, instance: "Table", value: T) -> None:
         metadata = instance.table.schema.metadata
         if metadata is None:
             metadata = {}
         metadata[self.name.encode("utf8")] = self.to_bytes(value)
         instance.table = instance.table.replace_schema_metadata(metadata)
 
-    def __set_name__(self, owner: type, name: str):
+    def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
 
-    def to_bytes(self, value) -> bytes:
+    def to_bytes(self, value: T) -> bytes:
         """
         Convert the value to bytes.
         """
         raise NotImplementedError
 
-    def from_bytes(self, raw: bytes):
+    def from_bytes(self, raw: bytes) -> T:
         """
         Convert the bytes to a value.
         """
         raise NotImplementedError
 
-    def to_string(self, value) -> str:
+    def to_string(self, value: T) -> str:
         """
         Convert the value to a string. Used for CSV writing.
         """
         raise NotImplementedError
 
-    def from_string(self, raw: str):
+    def from_string(self, raw: str) -> T:
         """
         Convert a string to a value. Used for CSV reading.
         """
         raise NotImplementedError
 
 
-class StringAttribute(Attribute):
+class StringAttribute(Attribute[str]):
+    _type = str
+
     def __init__(self, default: Optional[str] = None):
         super().__init__(default=default)
 
-    def to_bytes(self, value) -> bytes:
+    def to_bytes(self, value: str) -> bytes:
         return value.encode("utf8")
 
-    def from_bytes(self, raw: bytes):
+    def from_bytes(self, raw: bytes) -> str:
         return raw.decode("utf8")
 
-    def to_string(self, value) -> str:
+    def to_string(self, value: str) -> str:
         return value
 
-    def from_string(self, raw: str):
+    def from_string(self, raw: str) -> str:
         return raw
 
 
-class IntAttribute(Attribute):
+class IntAttribute(Attribute[int]):
+    _type = int
+
     def __init__(self, default: Optional[int] = None, nbytes: int = 8, signed: bool = True):
         self.nbytes = nbytes
         self.signed = signed
@@ -95,14 +106,16 @@ class IntAttribute(Attribute):
     def from_bytes(self, raw: bytes) -> int:
         return int.from_bytes(raw, byteorder="little", signed=self.signed)
 
-    def to_string(self, value) -> str:
+    def to_string(self, value: int) -> str:
         return str(value)
 
-    def from_string(self, raw: str):
+    def from_string(self, raw: str) -> int:
         return int(raw)
 
 
-class FloatAttribute(Attribute):
+class FloatAttribute(Attribute[float]):
+    _type = float
+
     def __init__(self, default: Optional[float] = None, nbytes: int = 8):
         if nbytes == 8:
             self._struct_fmt = "<d"
@@ -118,10 +131,10 @@ class FloatAttribute(Attribute):
         return struct.pack(self._struct_fmt, value)
 
     def from_bytes(self, raw: bytes) -> float:
-        return struct.unpack(self._struct_fmt, raw)[0]
+        return float(struct.unpack(self._struct_fmt, raw)[0])
 
-    def to_string(self, value) -> str:
+    def to_string(self, value: float) -> str:
         return "{:.17g}".format(value)
 
-    def from_string(self, raw: str):
+    def from_string(self, raw: str) -> float:
         return float(raw)

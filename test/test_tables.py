@@ -4,15 +4,16 @@ import sys
 import textwrap
 
 if sys.version_info < (3, 11):
-    from typing_extensions import Self
+    pass
 else:
-    from typing import Self
+    pass
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
 
+from quivr.attributes import StringAttribute
 from quivr.columns import DictionaryColumn, Int8Column, Int64Column, StringColumn
 from quivr.concat import concatenate
 from quivr.errors import ValidationError
@@ -352,13 +353,7 @@ def test_from_data_using_positional_dict():
 class TableWithAttributes(Table):
     x = Int64Column()
     y = Int64Column()
-
-    def __init__(self, table: pa.Table, attrib: str):
-        self.attrib = attrib
-        super().__init__(table)
-
-    def with_table(self, table: pa.Table) -> Self:
-        return TableWithAttributes(table, attrib=self.attrib)
+    attrib = StringAttribute()
 
 
 class TestTableAttributes:

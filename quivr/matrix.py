@@ -1,7 +1,10 @@
+from typing import Any
+
+import numpy.typing as npt
 import pyarrow as pa
 
 
-class MatrixExtensionType(pa.PyExtensionType):
+class MatrixExtensionType(pa.PyExtensionType):  # type: ignore
     """This is a custom type for embedding multi-dimensional arrays
     into Table schemas.
 
@@ -15,18 +18,18 @@ class MatrixExtensionType(pa.PyExtensionType):
             self.dtype = pa.list_(self.dtype)
         pa.PyExtensionType.__init__(self, self.dtype)
 
-    def __reduce__(self):
+    def __reduce__(self) -> tuple[type, tuple[tuple[int, int], pa.DataType]]:
         return (
             MatrixExtensionType,
             (self.shape, self.element_dtype),
         )
 
-    def __arrow_ext_class__(self):
+    def __arrow_ext_class__(self) -> type:
         return MatrixArray
 
 
-class MatrixArray(pa.ExtensionArray):
-    def to_numpy(self):
+class MatrixArray(pa.ExtensionArray):  # type: ignore
+    def to_numpy(self) -> npt.NDArray[Any]:
         storage = self.storage
         row_size = 1
         for dim in reversed(self.type.shape):
@@ -35,4 +38,5 @@ class MatrixArray(pa.ExtensionArray):
         np_array = storage.to_numpy()
 
         n_row = len(storage) // row_size
-        return np_array.reshape((n_row, *self.type.shape))
+        reshaped: npt.NDArray[Any] = np_array.reshape((n_row, *self.type.shape))
+        return reshaped

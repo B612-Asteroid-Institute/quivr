@@ -18,7 +18,7 @@ class CartesianCoordinates(Table):
     def covariance_matrix(self) -> npt.NDArray[np.float64]:
         raw = self.column("covariance").to_numpy()
         stacked = np.stack(raw)
-        return stacked.reshape((len(stacked), 6, 6))
+        return stacked.reshape((len(stacked), 6, 6))  # type: ignore
 
     def distance(self) -> pa.Array:
         return pc.sqrt(
