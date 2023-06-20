@@ -34,7 +34,7 @@ class StringIndex(Generic[T]):
         self.column = column
         self.idx = self._build_index(size)
 
-    def _build_index(self, size: int):
+    def _build_index(self, size: int) -> pa.Array:
         index_array = [None for _ in range(size)]
         data = self.table.table.column(self.column)
         assert data.type == pa.string()
