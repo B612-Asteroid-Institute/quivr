@@ -12,7 +12,7 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union, overload
 
 import pyarrow as pa
 

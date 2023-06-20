@@ -18,7 +18,12 @@ class Attribute(Generic[T]):
     Attributes are stored as metadata on the underlying Arrow table's schema.
     """
 
-    def __init__(self, default: Optional[T] = None):
+    _type: type[T]
+
+    def __init__(
+        self,
+        default: Optional[T] = None,
+    ):
         self.default = default
         self.name = "__ERR_UNSET_NAME"
 
@@ -69,6 +74,8 @@ class Attribute(Generic[T]):
 
 
 class StringAttribute(Attribute[str]):
+    _type = str
+
     def __init__(self, default: Optional[str] = None):
         super().__init__(default=default)
 
@@ -86,6 +93,8 @@ class StringAttribute(Attribute[str]):
 
 
 class IntAttribute(Attribute[int]):
+    _type = int
+
     def __init__(self, default: Optional[int] = None, nbytes: int = 8, signed: bool = True):
         self.nbytes = nbytes
         self.signed = signed
@@ -105,6 +114,8 @@ class IntAttribute(Attribute[int]):
 
 
 class FloatAttribute(Attribute[float]):
+    _type = float
+
     def __init__(self, default: Optional[float] = None, nbytes: int = 8):
         if nbytes == 8:
             self._struct_fmt = "<d"

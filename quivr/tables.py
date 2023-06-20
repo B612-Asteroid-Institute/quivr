@@ -1,6 +1,5 @@
 import os
 import sys
-import warnings
 from io import IOBase
 
 if sys.version_info < (3, 11):
@@ -8,9 +7,10 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar, Iterator, Optional, Type, TypeAlias, Union
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -22,13 +22,21 @@ from .attributes import Attribute
 from .columns import Column, MetadataDict, SubTableColumn
 from .errors import TableFragmentedError, ValidationError
 from .schemagraph import _walk_schema
+from .validators import Validator
+
+AttributeValueType: TypeAlias = Union[int, float, str]
+DataSourceType: TypeAlias = Union[pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any]]
 
 
 class Table:
     schema: ClassVar[pa.Schema]
     table: pa.Table
 
-    def __init_subclass__(cls, **kwargs):
+    _quivr_subtables: ClassVar[dict[str, SubTableColumn[Any]]]
+    _quivr_attributes: ClassVar[dict[str, Attribute[Any]]]
+    _column_validators: ClassVar[dict[str, Validator]]
+
+    def __init_subclass__(cls: Type["Table"], **kwargs: Any):
         fields = []
         column_validators = {}
         subtables = {}
@@ -66,7 +74,7 @@ class Table:
 
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, table: pa.Table, **kwargs):
+    def __init__(self, table: pa.Table, **kwargs: AttributeValueType):
         self.table = table
         for name, value in kwargs.items():
             if name in self._quivr_attributes:
@@ -75,7 +83,12 @@ class Table:
                 raise AttributeError(f"{self.__class__.__name__} has no attribute {name}")
 
     @classmethod
-    def from_data(cls, data: Optional[Any] = None, validate: bool = True, **kwargs) -> Self:
+    def from_data(
+        cls,
+        data: Union[pa.Table, dict[str, Any], list[Any], pd.DataFrame, None] = None,
+        validate: bool = True,
+        **kwargs: Union[AttributeValueType, DataSourceType],
+    ) -> Self:
         """
         Create an instance of the Table and populate it with data.
 
@@ -115,26 +128,42 @@ class Table:
         """
         if data is None:
             instance = cls.from_kwargs(**kwargs)
-        elif isinstance(data, pa.Table):
-            instance = cls(table=data, **kwargs)
-        elif isinstance(data, dict):
-            instance = cls.from_pydict(data, **kwargs)
-        elif isinstance(data, list):
-            if len(data) == 0:
-                instance = cls.from_rows(data, **kwargs)
-            elif isinstance(data[0], dict):
-                instance = cls.from_rows(data, **kwargs)
-            elif isinstance(data[0], list):
-                instance = cls.from_lists(data, **kwargs)
-            else:
-                raise TypeError(f"Unsupported type: {type(data[0])}")
-        elif isinstance(data, pd.DataFrame):
-            instance = cls.from_dataframe(data, **kwargs)
         else:
-            raise TypeError(f"Unsupported type: {type(data)}")
+            attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
+            if isinstance(data, pa.Table):
+                instance = cls(table=data, **attrib_kwargs)
+            elif isinstance(data, dict):
+                instance = cls.from_pydict(data, **attrib_kwargs)
+            elif isinstance(data, list):
+                if len(data) == 0:
+                    instance = cls.from_rows(data, **attrib_kwargs)
+                elif isinstance(data[0], dict):
+                    instance = cls.from_rows(data, **attrib_kwargs)
+                elif isinstance(data[0], list):
+                    instance = cls.from_lists(data, **attrib_kwargs)
+                else:
+                    raise TypeError(f"Unsupported type: {type(data[0])}")
+            elif isinstance(data, pd.DataFrame):
+                instance = cls.from_dataframe(data, **attrib_kwargs)
+            else:
+                raise TypeError(f"Unsupported type: {type(data)}")
+
         if validate:
             instance.validate()
         return instance
+
+    @classmethod
+    def _attribute_kwargs_from_kwargs(
+        cls, kwargs: dict[str, Union[AttributeValueType, DataSourceType]]
+    ) -> dict[str, AttributeValueType]:
+        attrib_kwargs: dict[str, AttributeValueType] = {}
+        for k, v in kwargs.items():
+            if k not in cls._quivr_attributes:
+                raise TypeError(f"Unexpected keyword argument: {k}")
+            if not isinstance(v, cls._quivr_attributes[k]._type):
+                raise TypeError(f"Expected {cls._quivr_attributes[k]._type}, got {type(v)} for {k}")
+            attrib_kwargs[k] = v
+        return attrib_kwargs
 
     @classmethod
     def as_column(
@@ -143,7 +172,7 @@ class Table:
         return SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
-    def from_kwargs(cls, **kwargs) -> Self:
+    def from_kwargs(cls, **kwargs: Union[DataSourceType, AttributeValueType]) -> Self:
         """Create a Table instance from keyword arguments.
 
         Each keyword argument corresponds to a column in the Table.
@@ -151,7 +180,7 @@ class Table:
         The keys should correspond to the column names, and the values
         can be a list, numpy array, pyarrow array, or Table instance.
         """
-        arrays = []
+        arrays: list[Union[None, pa.Array]] = []
         size = None
 
         # We don't know the size of the table until we've found a
@@ -161,7 +190,7 @@ class Table:
         # populate them with nulls later.
         empty_columns = []
 
-        metadata = {}
+        metadata: dict[bytes, bytes] = {}
         for i, field in enumerate(cls.schema):
             column_name = field.name
             value = kwargs.pop(column_name, None)
@@ -179,7 +208,7 @@ class Table:
                         arrays.append(None)
                     continue
             if size is None:
-                size = len(value)
+                size = len(value)  # type: ignore
             elif len(value) != size:
                 raise ValueError(
                     f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
@@ -208,11 +237,15 @@ class Table:
 
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
-        return cls.from_arrays(arrays, metadata=metadata, **kwargs)
+        attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
+        return cls.from_arrays(arrays, metadata=metadata, **attrib_kwargs)
 
     @classmethod
     def from_arrays(
-        cls, arrays: list[pa.array], metadata: Optional[dict[bytes, bytes]] = None, **kwargs
+        cls,
+        arrays: list[pa.array],
+        metadata: Optional[dict[bytes, bytes]] = None,
+        **kwargs: AttributeValueType,
     ) -> Self:
         """Create a Table object from a list of arrays.
 
@@ -232,12 +265,14 @@ class Table:
         return cls(table=table, **kwargs)
 
     @classmethod
-    def from_pydict(cls, d: dict[str, Union[pa.array, list, np.ndarray]], **kwargs) -> Self:
+    def from_pydict(
+        cls, d: dict[str, Union[pa.array, list[Any], npt.NDArray[Any]]], **kwargs: AttributeValueType
+    ) -> Self:
         table = pa.Table.from_pydict(d, schema=cls.schema)
         return cls(table=table, **kwargs)
 
     @classmethod
-    def from_rows(cls, rows: list[dict], **kwargs) -> Self:
+    def from_rows(cls, rows: list[dict[str, Any]], **kwargs: AttributeValueType) -> Self:
         """
         Create a Table object from a list of dictionaries.
 
@@ -265,7 +300,7 @@ class Table:
         return cls(table=table, **kwargs)
 
     @classmethod
-    def from_lists(cls, lists: list[list], **kwargs) -> Self:
+    def from_lists(cls, lists: list[list[Any]], **kwargs: AttributeValueType) -> Self:
         """Create a Table object from a list of lists.
 
         Each inner list corresponds to a column in the Table. They
@@ -285,7 +320,7 @@ class Table:
         return cls(table=table, **kwargs)
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, **kwargs):
+    def from_dataframe(cls, df: pd.DataFrame, **kwargs: AttributeValueType) -> Self:
         """Load a DataFrame into the Table.
 
         If the DataFrame is missing any of the Table's columns, an
@@ -302,7 +337,7 @@ class Table:
         return cls(table=table, **kwargs)
 
     @classmethod
-    def _unflatten_table(cls, table: pa.Table):
+    def _unflatten_table(cls, table: pa.Table) -> pa.Table:
         """Unflatten a Table.
 
         This is used when loading a flattened CSV into a nested
@@ -319,7 +354,7 @@ class Table:
         # Walk the schema, and build a StructArray for each embedded
         # type.
 
-        def struct_array_for(field: pa.Field, ancestors: list[pa.Field]):
+        def struct_array_for(field: pa.Field, ancestors: list[pa.Field]) -> pa.StructArray:
             prefix = ".".join([f.name for f in ancestors if f.name] + [field.name])
 
             child_arrays = []
@@ -341,7 +376,7 @@ class Table:
         return pa.Table.from_arrays(child_arrays, schema=cls.schema)
 
     @classmethod
-    def from_flat_dataframe(cls, df: pd.DataFrame, **kwargs):
+    def from_flat_dataframe(cls, df: pd.DataFrame, **kwargs: AttributeValueType) -> Self:
         """Load a flattened DataFrame into the Table.
 
         known bug: Doesn't correctly interpret fixed-length lists.
@@ -371,7 +406,7 @@ class Table:
 
         struct_arrays: dict[str, pa.StructArray] = {}
 
-        def visitor(field: pa.Field, ancestors: list[pa.Field]):
+        def visitor(field: pa.Field, ancestors: list[pa.Field]) -> None:
             # Modify the dataframe in place, trimming out the columns we
             # have already processed in depth-first order.
             nonlocal df
@@ -504,47 +539,45 @@ class Table:
         table = self.table
         if flatten:
             table = self.flattened_table()
-        return table.to_pandas()
+        df: pd.DataFrame = table.to_pandas()
+        return df
 
     def column(self, column_name: str) -> pa.ChunkedArray:
         """Returns the column with the given name as a raw pyarrow ChunkedArray."""
         return self.table.column(column_name)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(size={len(self.table)})"
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.table)
 
     def with_table(self, table: pa.Table) -> Self:
         return self.__class__(table)
 
-    def __getitem__(self, idx):
-        # TODO: This comes out a little funky. You get chunked arrays
-        # instead of arrays. Is there a way to flatten them safely?
-
+    def __getitem__(self, idx: Union[int, slice]) -> Self:
         if isinstance(idx, int):
             table = self.table[idx : idx + 1]
         else:
             table = self.table[idx]
         return self.with_table(table)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Self]:
         for i in range(len(self)):
             yield self[i : i + 1]
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Table):
-            return self.table.equals(other.table)
+            return bool(self.table.equals(other.table))
         if isinstance(other, pa.Table):
-            return self.table.equals(other)
+            return bool(self.table.equals(other))
         return False
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
         """Return a new Table with only the rows at the given indices."""
         return self.__class__(self.table.take(row_indices))
 
-    def to_parquet(self, path: str, **kwargs):
+    def to_parquet(self, path: str, **kwargs: Any) -> None:
         """Write the table to a Parquet file."""
         pyarrow.parquet.write_table(self.table, path, **kwargs)
 
@@ -555,8 +588,8 @@ class Table:
         memory_map: bool = False,
         pq_buffer_size: int = 0,
         filters: Optional[pc.Expression] = None,
-        **kwargs,
-    ):
+        **kwargs: AttributeValueType,
+    ) -> Self:
         """Read a table from a Parquet file.
 
         Arguments:
@@ -583,16 +616,16 @@ class Table:
         )
         return cls(table=table, **kwargs)
 
-    def to_feather(self, path: str, **kwargs):
+    def to_feather(self, path: str, **kwargs: Any) -> None:
         """Write the table to a Feather file."""
         pyarrow.feather.write_feather(self.table, path, **kwargs)
 
     @classmethod
-    def from_feather(cls, path: str, **kwargs):
+    def from_feather(cls, path: str, **kwargs: AttributeValueType) -> Self:
         """Read a table from a Feather file."""
         return cls(table=pyarrow.feather.read_table(path), **kwargs)
 
-    def to_csv(self, path: str, attribute_columns: bool = True):
+    def to_csv(self, path: str, attribute_columns: bool = True) -> None:
         """Write the table to a CSV file. Any nested structure is flattened.
 
         if attribute_columns is True (the default), then any Attributes defined
@@ -610,7 +643,9 @@ class Table:
         pyarrow.csv.write_csv(table, path)
 
     @classmethod
-    def from_csv(cls, input_file: Union[str, os.PathLike, IOBase], **kwargs):
+    def from_csv(
+        cls, input_file: Union[str, os.PathLike, IOBase], **kwargs: AttributeValueType  # type: ignore
+    ) -> Self:
         """Read a table from a CSV file."""
         flat_table = pyarrow.csv.read_csv(input_file)
 
@@ -639,9 +674,11 @@ class Table:
     def is_valid(self) -> bool:
         """Validate the table against the schema."""
         for name, validator in self._column_validators.items():
-            validator.valid(self.table.column(name))
+            if not validator.valid(self.table.column(name)):
+                return False
+        return True
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the table against the schema, raising an exception if invalid."""
         for name, validator in self._column_validators.items():
             try:
@@ -650,9 +687,9 @@ class Table:
                 raise ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e
 
     @classmethod
-    def empty(cls, **kwargs) -> Self:
+    def empty(cls, **kwargs: AttributeValueType) -> Self:
         """Create an empty instance of the table."""
-        data = [[] for _ in range(len(cls.schema))]
+        data = [[] for _ in range(len(cls.schema))]  # type: ignore
         empty_table = pa.table(data, schema=cls.schema)
         return cls(table=empty_table, **kwargs)
 
@@ -691,13 +728,13 @@ class Table:
             else:
                 descriptor = cls._quivr_attributes.get(k)
                 if descriptor is None:
-                    warnings.warn(f"unexpected missing descriptor with name={k}")
+                    raise AttributeError(f"unexpected missing descriptor with name={k}")
                 result[k.encode("utf8")] = descriptor.to_bytes(descriptor.from_string(v))
         return result
 
     def _metadata_for_column(self, column_name: str) -> dict[bytes, bytes]:
         """Return a dictionary of metadata associated with a subtable column."""
-        result = {}
+        result: dict[bytes, bytes] = {}
         if self.table.schema.metadata is None:
             return result
         column_name_bytes = (column_name + ".").encode("utf8")

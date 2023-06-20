@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any
 
 import pyarrow
 import pyarrow.compute as pc
