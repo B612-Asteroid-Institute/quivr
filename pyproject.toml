@@ -32,26 +32,13 @@ path = "quivr/__version__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
+  "black",
   "isort",
   "mypy",
   "pandas-stubs",
   "pytest",
   "pytest-benchmark",
   "ruff",
-]
-
-[tool.hatch.envs.py310]
-python = "3.10"
-dependencies = [
-  "pytest",
-  "pytest-benchmark",
-]
-
-[tool.hatch.envs.py39]
-python = "3.9"
-dependencies = [
-  "pytest",
-  "pytest-benchmark",
 ]
 
 [tool.hatch.envs.default.scripts]

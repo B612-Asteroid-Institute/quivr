@@ -1,4 +1,4 @@
-name: Build Lint Test Coverage
+name: Build Lint Test
 
 on:
   push:
@@ -26,14 +26,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip' # caching pip dependencies
-      - name: Build and install
-        run: pip install .
-      # - name: Lint
-      #   run: pre-commit run --all-files
+      - name: Install hatch, the build tool
+        run: pip install hatch
+      - name: Build
+        run: hatch build
+      - name: Lint
+        run: hatch run lint
       - name: Test
-        run: pytest . # --cov --cov-report xml
-      # - name: Coverage
-      #   uses: coverallsapp/github-action@v2.0.0
-      #   with:
-      #     github-token: ${{ secrets.COVERALLS_TOKEN }}
-      #     path-to-lcov: coverage.xml
+        run: hatch run test
