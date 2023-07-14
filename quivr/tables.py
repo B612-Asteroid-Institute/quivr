@@ -568,9 +568,9 @@ class Table:
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Table):
-            return bool(self.table.equals(other.table))
+            return bool(self.table.equals(other.table, check_metadata=True))
         if isinstance(other, pa.Table):
-            return bool(self.table.equals(other))
+            return bool(self.table.equals(other, check_metadata=True))
         return False
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
