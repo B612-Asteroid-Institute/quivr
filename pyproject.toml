@@ -32,6 +32,7 @@ path = "quivr/__version__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
+  "black",
   "isort",
   "mypy",
   "pandas-stubs",
