@@ -13,7 +13,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-from quivr.attributes import StringAttribute, IntAttribute
+from quivr.attributes import IntAttribute, StringAttribute
 from quivr.columns import DictionaryColumn, Int8Column, Int64Column, StringColumn
 from quivr.concat import concatenate
 from quivr.errors import ValidationError
@@ -32,7 +32,6 @@ class Wrapper(Table):
 
 
 def test_table__eq__():
-
     class A(Table):
         x = Int64Column()
         y = StringAttribute()
@@ -41,7 +40,7 @@ def test_table__eq__():
         z = Int64Column()
         a = A.as_column()
         b = IntAttribute()
-    
+
     a_table = A.from_kwargs(
         x=[1],
         y="y",
@@ -552,3 +551,41 @@ class TestValidation:
         table = MyTable.from_data(x=[8, 9, 10], validate=False)
         with pytest.raises(ValidationError):
             table.validate()
+
+
+class TestTableEqualityBenchmarks:
+    @pytest.mark.benchmark(group="table-equality")
+    def test_identical_small_tables(self, benchmark):
+        table1 = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+        table2 = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+        benchmark(table1.__eq__, table2)
+
+    @pytest.mark.benchmark(group="table-equality")
+    def test_identical_large_tables(self, benchmark):
+        table1 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="foo")
+        table2 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="foo")
+        benchmark(table1.__eq__, table2)
+
+    @pytest.mark.benchmark(group="table-equality")
+    def test_different_small_tables(self, benchmark):
+        table1 = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+        table2 = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 7], attrib="foo")
+        benchmark(table1.__eq__, table2)
+
+    @pytest.mark.benchmark(group="table-equality")
+    def test_different_large_tables(self, benchmark):
+        table1 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="foo")
+        table2 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000) + 1, attrib="foo")
+        benchmark(table1.__eq__, table2)
+
+    @pytest.mark.benchmark(group="table-equality")
+    def test_small_tables_different_attributes(self, benchmark):
+        table1 = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
+        table2 = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="bar")
+        benchmark(table1.__eq__, table2)
+
+    @pytest.mark.benchmark(group="table-equality")
+    def test_large_tables_different_attributes(self, benchmark):
+        table1 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="foo")
+        table2 = TableWithAttributes.from_kwargs(x=np.arange(10000), y=np.arange(10000), attrib="bar")
+        benchmark(table1.__eq__, table2)
