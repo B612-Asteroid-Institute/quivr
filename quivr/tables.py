@@ -568,10 +568,22 @@ class Table:
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Table):
-            return bool(self.table.equals(other.table))
+            table_eq = bool(self.table.equals(other.table))
         if isinstance(other, pa.Table):
-            return bool(self.table.equals(other))
-        return False
+            table_eq = bool(self.table.equals(other))
+
+        # Check if the attributes are the same
+        attr_eq = self.attributes() == other.attributes()
+        
+        # Now check if the subtables are the same (these tables
+        # too may have attributes)
+        subtables = self._quivr_subtables
+        other_subtables = other._quivr_subtables
+        subtable_eq = subtables.keys() == other_subtables.keys()
+        for name in subtables.keys():
+            subtable_eq = subtable_eq and getattr(self, name) == getattr(other, name)
+
+        return table_eq and attr_eq and subtable_eq
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
         """Return a new Table with only the rows at the given indices."""

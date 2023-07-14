@@ -13,7 +13,7 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-from quivr.attributes import StringAttribute
+from quivr.attributes import StringAttribute, IntAttribute
 from quivr.columns import DictionaryColumn, Int8Column, Int64Column, StringColumn
 from quivr.concat import concatenate
 from quivr.errors import ValidationError
@@ -29,6 +29,69 @@ class Pair(Table):
 class Wrapper(Table):
     pair = Pair.as_column()
     id = StringColumn()
+
+
+def test_table__eq__():
+
+    class A(Table):
+        x = Int64Column()
+        y = StringAttribute()
+
+    class B(Table):
+        z = Int64Column()
+        a = A.as_column()
+        b = IntAttribute()
+    
+    a_table = A.from_kwargs(
+        x=[1],
+        y="y",
+    )
+    a_table_same = A.from_kwargs(
+        x=[1],
+        y="y",
+    )
+    a_table_attr_diff = A.from_kwargs(
+        x=[1],
+        y="z",
+    )
+    a_table_col_diff = A.from_kwargs(
+        x=[0],
+        y="y",
+    )
+    a_table_attr_col_diff = A.from_kwargs(
+        x=[0],
+        y="z",
+    )
+
+    assert a_table == a_table
+    assert a_table == a_table_same
+    assert a_table != a_table_attr_diff
+    assert a_table != a_table_col_diff
+    assert a_table != a_table_attr_col_diff
+
+    b_table = B.from_kwargs(
+        z=[1],
+        a=a_table,
+        b=1,
+    )
+    b_table_same = B.from_kwargs(
+        z=[1],
+        a=a_table,
+        b=1,
+    )
+    b_table_subattr_diff = B.from_kwargs(
+        z=[1],
+        a=a_table_attr_diff,
+        b=1,
+    )
+    b_table_attr_diff = B.from_kwargs(
+        z=[1],
+        a=a_table,
+        b=2,
+    )
+    assert b_table == b_table_same
+    assert b_table != b_table_subattr_diff
+    assert b_table != b_table_attr_diff
 
 
 def test_create_from_arrays():
