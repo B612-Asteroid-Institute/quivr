@@ -41,20 +41,6 @@ dependencies = [
   "ruff",
 ]
 
-[tool.hatch.envs.py310]
-python = "3.10"
-dependencies = [
-  "pytest",
-  "pytest-benchmark",
-]
-
-[tool.hatch.envs.py39]
-python = "3.9"
-dependencies = [
-  "pytest",
-  "pytest-benchmark",
-]
-
 [tool.hatch.envs.default.scripts]
 check = [
   "lint",
