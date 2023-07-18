@@ -2,8 +2,8 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from quivr import Table, StringColumn, Float64Column, Int64Column
-from quivr.linkage import Linkage
+from quivr import Float64Column, Int64Column, StringColumn, Table
+from quivr.linkage import Linkage, composite_array
 
 
 class Observers(Table):
@@ -38,8 +38,8 @@ def test_linkage_indexing():
     linkage = Linkage(
         left_table=observers,
         right_table=ephems,
-        left_column=Observers.code,
-        right_column=Ephemeris.observer_code,
+        left_keys=observers.code,
+        right_keys=ephems.observer_code,
     )
 
     have_i41 = linkage["I41"]
@@ -77,8 +77,8 @@ def test_linkage_iteration():
     linkage = Linkage(
         left_table=observers,
         right_table=ephems,
-        left_column=Observers.code,
-        right_column=Ephemeris.observer_code,
+        left_keys=observers.code,
+        right_keys=ephems.observer_code,
     )
 
     for obs, eph in linkage:
@@ -86,7 +86,7 @@ def test_linkage_iteration():
         assert len(eph) == 3
         assert pa.compute.all(pa.compute.equal(eph.observer_code, obs.code[0].as_py())).as_py()
 
-        
+
 def test_integer_linkage():
     class LeftSide(Table):
         id = Int64Column(nullable=False)
@@ -104,7 +104,7 @@ def test_integer_linkage():
         id=[1, 2, 3, 4, 5],
         leftside_id=[1, 1, 1, 2, 2],
     )
-    link = Linkage(left, right, LeftSide.id, RightSide.leftside_id)
+    link = Linkage(left, right, left.id, right.leftside_id)
 
     # Bit counterintuitive, but the linkage provides empty RightSide
     # tables for leftside_id=3, 4, 5.
@@ -152,6 +152,43 @@ def test_integer_linkage():
     assert have_right_5 == RightSide.empty()
 
 
+def test_composite_keys():
+    class Pair(Table):
+        x = Int64Column(nullable=False)
+        y = Int64Column(nullable=False)
+
+    class LeftSide(Table):
+        id = Int64Column(nullable=False)
+        pairs = Pair.as_column()
+
+        def keys(self):
+            return composite_array(self.id, self.pairs.x, self.pairs.y)
+
+    class RightSide(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = Int64Column()
+        pairs = Pair.as_column()
+
+        def keys(self):
+            return composite_array(self.leftside_id, self.pairs.x, self.pairs.y)
+
+    left = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
+    )
+    right = RightSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        leftside_id=[1, 1, 1, 2, 2],
+        pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
+    )
+    link = Linkage(left, right, left.keys(), right.keys())
+
+    k1 = left.keys()[0]
+    v = link[k1]
+    assert v[0] == left[0]
+    assert v[1] == right[0]
+
+
 @pytest.mark.benchmark(group="linkage-creation")
 @pytest.mark.parametrize("right_table_size", [100, 1000, 100000], ids=lambda x: f"right={x}")
 @pytest.mark.parametrize("left_table_size", [10, 100, 1000], ids=lambda x: f"left={x}")
@@ -171,7 +208,8 @@ def test_benchmark_linkage_creation(benchmark, left_table_size, right_table_size
         dec=np.ones(right_table_size),
     )
 
-    benchmark(lambda: Linkage(observers, ephems, Observers.code, Ephemeris.observer_code))
+    benchmark(lambda: Linkage(observers, ephems, observers.code, ephems.observer_code))
+
 
 @pytest.mark.benchmark(group="linkage-iteration")
 @pytest.mark.parametrize("right_table_size", [100, 1000, 100000], ids=lambda x: f"right={x}")
@@ -192,12 +230,11 @@ def test_benchmark_linkage_iteration(benchmark, left_table_size, right_table_siz
         dec=np.ones(right_table_size),
     )
 
-    linkage = Linkage(observers, ephems, Observers.code, Ephemeris.observer_code)
+    linkage = Linkage(observers, ephems, observers.code, ephems.observer_code)
 
     benchmark(lambda: _noop_iterate(linkage))
+
 
 def _noop_iterate(iterator):
     for _ in iterator:
         pass
-
-    
