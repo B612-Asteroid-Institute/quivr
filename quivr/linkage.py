@@ -12,12 +12,10 @@ class ArrowArrayIndex:
 
     index: dict[pa.Scalar, pa.UInt64Array]
     values: set[pa.Scalar]
-    unique: bool
 
     def __init__(self, array: pa.Array):
         self.index = {}
         self.values = set()
-        self.unique = True
 
         if array.null_count > 0:
             raise ValueError("Array must not contain null values to be an index")
@@ -27,7 +25,6 @@ class ArrowArrayIndex:
             val = array[i]
             if val in in_progress_index:
                 in_progress_index[val].append(i)
-                self.unique = False
             else:
                 in_progress_index[val] = [i]
             self.values.add(val)
