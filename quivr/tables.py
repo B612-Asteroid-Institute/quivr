@@ -19,13 +19,13 @@ import pyarrow.feather
 import pyarrow.parquet
 
 from .attributes import Attribute
-from .columns import Column, MetadataDict, SubTableColumn
+from .columns import Column, MetadataDict, SubTableColumn, ForeignKeyReference
 from .errors import TableFragmentedError, ValidationError
 from .schemagraph import _walk_schema
 from .validators import Validator
 
 AttributeValueType: TypeAlias = Union[int, float, str]
-DataSourceType: TypeAlias = Union[pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any]]
+DataSourceType: TypeAlias = Union[pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any], ForeignKeyReference]
 
 
 class Table:
@@ -74,8 +74,9 @@ class Table:
 
         super().__init_subclass__(**kwargs)
 
-    def __init__(self, table: pa.Table, **kwargs: AttributeValueType):
+    def __init__(self, table: pa.Table, foreign_keys: Optional[dict[str, ForeignKeyReference]] = None, **kwargs: AttributeValueType):
         self.table = table
+        self._foreign_keys = foreign_keys or {}
         for name, value in kwargs.items():
             if name in self._quivr_attributes:
                 setattr(self, name, value)
@@ -190,6 +191,8 @@ class Table:
         # populate them with nulls later.
         empty_columns = []
 
+        foreign_keys = {}
+
         metadata: dict[bytes, bytes] = {}
         for i, field in enumerate(cls.schema):
             column_name = field.name
@@ -207,6 +210,10 @@ class Table:
                         empty_columns.append(i)
                         arrays.append(None)
                     continue
+
+            if isinstance(value, ForeignKeyReference):
+                foreign_keys[column_name] = value
+                value = value.data
             if size is None:
                 size = len(value)  # type: ignore
             elif len(value) != size:
@@ -238,13 +245,14 @@ class Table:
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
         attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
-        return cls.from_arrays(arrays, metadata=metadata, **attrib_kwargs)
+        return cls.from_arrays(arrays, metadata=metadata, foreign_keys=foreign_keys, **attrib_kwargs)
 
     @classmethod
     def from_arrays(
         cls,
         arrays: list[pa.array],
         metadata: Optional[dict[bytes, bytes]] = None,
+        foreign_keys: Optional[dict[str, ForeignKeyReference]] = None,
         **kwargs: AttributeValueType,
     ) -> Self:
         """Create a Table object from a list of arrays.
@@ -262,7 +270,7 @@ class Table:
             metadata = {}
         schema = cls.schema.with_metadata(metadata)
         table = pa.Table.from_arrays(arrays, schema=schema)
-        return cls(table=table, **kwargs)
+        return cls(table=table, foreign_keys=foreign_keys, **kwargs)
 
     @classmethod
     def from_pydict(

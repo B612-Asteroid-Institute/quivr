@@ -1151,3 +1151,60 @@ class RunEndEncodedColumn(Column):
             metadata=metadata,
             validator=validator,
         )
+
+
+class ForeignKeyColumn(Column, Generic[T]):
+    def __init__(self, table_type: type[T], on: Column):
+        self.on = on
+        self.table_type = table_type
+        super().__init__(
+            pa.list_(on.dtype),
+            nullable=False,
+            metadata=None,
+            validator=None,
+        )
+
+    @overload
+    def __get__(self, obj: None, objtype: type) -> BoundForeignKeyColumn[T]:
+        ...
+
+    @overload
+    def __get__(self, obj: "Table", objtype: type) -> T:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[BoundForeignKeyColumn[T], pa.ListArray]:
+        if obj is None:
+            return self.bound_to(objtype)
+
+        # Resolve the foreign key relationship
+        fk = obj._foreign_keys[self.name]
+        return ForeignKeyReference(fk.other_table, self.on, obj.table[self.name].combine_chunks())
+
+    def bound_to(self, table_type: type[T]) -> BoundForeignKeyColumn[T]:
+        return BoundForeignKeyColumn(self, table_type)
+            
+
+
+class BoundForeignKeyColumn(Column, Generic[T]):
+    def __init__(self, foreign_key_col: ForeignKeyColumn[T], table_type: type[T]):
+        self.foreign_key_col = foreign_key_col
+        self.table_type = table_type
+
+    def reference(self, other: T, data: Any) -> pa.ListArray:
+        return ForeignKeyReference(other, self.foreign_key_col, data)
+
+class ForeignKeyReference(Generic[T]):
+    def __init__(self, other_table: T, other_table_column: Column, data: Any):
+        self.other_table = other_table
+        self.other_table_column = other_table_column
+        self.data = data
+
+    def __iter__(self):
+        for indices in self.data:
+            # ludicrously inefficient, oh well
+            table = self.other_table.table.filter(
+                pa.compute.field(self.other_table_column.name).isin(indices.as_py()),
+            )
+            yield self.other_table.__class__(table)
+
+            
