@@ -69,6 +69,20 @@ benchmark = [
   "pytest --benchmark-only ./test"
 ]
 
+[tool.hatch.envs.docs]
+dependencies = [
+  "sphinx==5.3.0",
+]
+
+[tool.hatch.envs.docs.scripts]
+make-html = [
+  "make -C docs html"
+]
+
+open-docs = [
+  "open docs/build/html/index.html"
+]
+
 [tool.black]
 line-length = 110
 
@@ -78,3 +92,4 @@ profile = "black"
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+
