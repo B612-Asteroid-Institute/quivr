@@ -16,18 +16,34 @@ from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union, overload
 
 import pyarrow as pa
 
-from . import validators
+from .validators import Validator
 
 if TYPE_CHECKING:
     from .tables import Table
 
-Byteslike: TypeAlias = Union[bytes, bytearray, memoryview, str]
+Byteslike: TypeAlias = bytes | str
 MetadataDict: TypeAlias = dict[Byteslike, Byteslike]
 
 
 class Column:
-    """
-    A Column is an accessor for data in a Table, and also a descriptor for the Table's structure.
+    """A Column is an accessor for data in a Table, and also a
+    descriptor for the Table's structure.
+
+    This is a base class for all column types. It is not intended to
+    be used directly; instead, use on of its subclasses.
+
+    Columns implement the descriptor protocol, so they should be used
+    as class attributes on a Table subclass.
+
+    :param dtype: The pyarrow data type of the column.
+    :param nullable: Whether the column can contain null values.
+    :param metadata: A dictionary of metadata to attach to the column.
+    :param validator: A validator to use when setting the column.
+
+    :ivar dtype: The pyarrow data type of the column.
+    :ivar nullable: Whether the column can contain null values.
+    :ivar metadata: A dictionary of metadata to attach to the column.
+    :ivar validator: A validator to use when setting the column.
     """
 
     def __init__(
@@ -35,7 +51,7 @@ class Column:
         dtype: pa.DataType,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         self.dtype = dtype
         self.nullable = nullable
@@ -51,18 +67,38 @@ class Column:
         ...
 
     def __get__(self, obj: Union[Table, None], objtype: type) -> Union[Self, pa.Array]:
+        """
+
+        Gets the Column object from a Table class, or the associated data from a Table instance.
+
+        This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
+
+        """
         if obj is None:
             return self
         return obj.table.column(self.name)
 
     def __set__(self, obj: Table, value: pa.Array) -> None:
+        """
+        Sets the data for this column on a Table instance.
+
+        This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
+        """
         idx = obj.table.schema.get_field_index(self.name)
         obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value])
 
     def __set_name__(self, owner: type, name: str) -> None:
+        """
+        Sets the name of the column.
+
+        This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
+        """
         self.name = name
 
     def pyarrow_field(self) -> pa.Field:
+        """
+        Returns a pyarrow Field object for this column.
+        """
         return pa.field(self.name, self.dtype, self.nullable, self.metadata)
 
 
@@ -75,6 +111,12 @@ class SubTableColumn(Column, Generic[T]):
     """
 
     def __init__(self, table_type: type[T], nullable: bool = True, metadata: Optional[MetadataDict] = None):
+        """
+        :param table_type: The type of the table to embed.
+        :param nullable: Whether the column can contain null values.
+        :param metadata: A dictionary of metadata to attach to the column.
+
+        """
         self.table_type = table_type
         self.schema = table_type.schema
         dtype = pa.struct(table_type.schema)
@@ -112,8 +154,8 @@ class Int8Column(Column):
     def __init__(
         self,
         nullable: bool = True,
-        validator: Optional[validators.Validator] = None,
         metadata: Optional[MetadataDict] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.int8(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -140,7 +182,7 @@ class Int16Column(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.int16(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -159,11 +201,15 @@ class Int16Column(Column):
 
 
 class Int32Column(Column):
+    """
+    A column for storing 32-bit integers.
+    """
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.int32(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -182,11 +228,15 @@ class Int32Column(Column):
 
 
 class Int64Column(Column):
+    """
+    A column for storing 64-bit integers.
+    """
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.int64(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -205,11 +255,15 @@ class Int64Column(Column):
 
 
 class UInt8Column(Column):
+    """
+    A column for storing 8-bit unsigned integers.
+    """
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.uint8(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -228,11 +282,15 @@ class UInt8Column(Column):
 
 
 class UInt16Column(Column):
+    """
+    A column for storing 16-bit unsigned integers.
+    """
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.uint16(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -251,11 +309,15 @@ class UInt16Column(Column):
 
 
 class UInt32Column(Column):
+    """
+    A column for storing 32-bit unsigned integers.
+    """
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.uint32(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -274,11 +336,15 @@ class UInt32Column(Column):
 
 
 class UInt64Column(Column):
+    """
+    A column for storing 64-bit unsigned integers.
+    """
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.uint64(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -305,7 +371,7 @@ class Float16Column(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.float16(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -332,7 +398,7 @@ class Float32Column(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.float32(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -359,7 +425,7 @@ class Float64Column(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.float64(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -372,6 +438,31 @@ class Float64Column(Column):
         ...
 
     def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.lib.DoubleArray]:
+        if obj is None:
+            return self
+        return obj.table[self.name].combine_chunks()
+
+
+class BooleanColumn(Column):
+    """A column for storing booleans."""
+
+    def __init__(
+        self,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[Validator] = None,
+    ):
+        super().__init__(pa.bool_(), nullable=nullable, metadata=metadata, validator=validator)
+
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: Table, objtype: type) -> pa.BooleanArray:
+        ...
+
+    def __get__(self, obj: Optional[Table], objtype: type) -> Union[pa.BooleanArray, Self]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
@@ -390,7 +481,7 @@ class StringColumn(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.string(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -409,8 +500,8 @@ class StringColumn(Column):
 
 
 class LargeBinaryColumn(Column):
-    """
-    A column for storing large binary objects. Large binary data is stored in
+    r"""
+    A column for storing large binary objects (over 2\ :sup:`31` bytes long). Large binary data is stored in
     variable-length chunks.
     """
 
@@ -418,7 +509,7 @@ class LargeBinaryColumn(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.large_binary(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -437,8 +528,8 @@ class LargeBinaryColumn(Column):
 
 
 class LargeStringColumn(Column):
-    """
-    A column for storing large strings. Large string data is stored in
+    r"""
+    A column for storing large strings (over 2\ :sup:`31` bytes long). Large string data is stored in
     variable-length chunks.
     """
 
@@ -446,7 +537,7 @@ class LargeStringColumn(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.large_string(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -476,7 +567,7 @@ class Date32Column(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.date32(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -506,7 +597,7 @@ class Date64Column(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.date64(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -547,7 +638,7 @@ class TimestampColumn(Column):
         tz: Optional[str] = None,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.timestamp(unit, tz), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -581,7 +672,7 @@ class Time32Column(Column):
         unit: str,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.time32(unit), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -615,7 +706,7 @@ class Time64Column(Column):
         unit: str,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.time64(unit), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -635,7 +726,7 @@ class Time64Column(Column):
 
 class DurationColumn(Column):
     """
-    An absolute length of time unrelated to any calendar artifacts.
+    A column which stores an absolute length of time.
 
     The resolution defaults to millisecond, but can be any of the other
     supported time unit values (seconds, milliseconds, microseconds,
@@ -649,7 +740,7 @@ class DurationColumn(Column):
         unit: str,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.duration(unit), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -683,7 +774,7 @@ class MonthDayNanoIntervalColumn(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(
             pa.month_day_nano_interval(), nullable=nullable, metadata=metadata, validator=validator
@@ -704,25 +795,15 @@ class MonthDayNanoIntervalColumn(Column):
 
 
 class BinaryColumn(Column):
-    """A column for storing opaque binary data.
-
-    The data can be either variable-length or fixed-length, depending
-    on the 'length' parameter passed in the initializer.
-
-    If length is -1 (the default) then the data is variable-length. If
-    length is greater than or equal to 0, then the data is
-    fixed-length.
-
-    """
+    """A column for storing opaque binary data."""
 
     def __init__(
         self,
-        length: int = -1,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
-        super().__init__(pa.binary(length), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(pa.binary(-1), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -738,6 +819,36 @@ class BinaryColumn(Column):
         return obj.table[self.name].combine_chunks()
 
 
+class FixedSizeBinaryColumn(Column):
+    """A column for storing opaque fixed-size binary data.
+
+    :ivar byte_width: The number of bytes per value.
+    """
+
+    def __init__(
+        self,
+        byte_width: int,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[Validator] = None,
+    ):
+        self.byte_width = byte_width
+        super().__init__(pa.binary(byte_width), nullable=nullable, metadata=metadata, validator=validator)
+
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: "Table", objtype: type) -> pa.FixedSizeBinaryArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.FixedSizeBinaryArray]:
+        if obj is None:
+            return self
+        return obj.table[self.name].combine_chunks()
+
+
 class Decimal128Column(Column):
     """A column for storing arbitrary-precision decimal numbers.
 
@@ -746,23 +857,29 @@ class Decimal128Column(Column):
     decimal type can represent; the scale is the number of digits after
     the decimal point (note the scale can be negative).
 
-    As an example, Decimal128Column(7, 3) can exactly represent the numbers
+    As an example, ``Decimal128Column(7, 3)`` can exactly represent the numbers
     1234.567 and -1234.567 (encoded internally as the 128-bit integers
     1234567 and -1234567, respectively), but neither 12345.67 nor
     123.4567.
 
-    DecimalColumn(5, -3) can exactly represent the number 12345000
+    ``DecimalColumn(5, -3)`` can exactly represent the number 12345000
     (encoded internally as the 128-bit integer 12345), but neither
     123450000 nor 1234500.
 
     If you need a precision higher than 38 significant digits,
-    consider using Decimal256Column.
+    consider using :class:`Decimal256Column`.
 
     """
 
     def __init__(
         self, precision: int, scale: int, nullable: bool = True, metadata: Optional[MetadataDict] = None
     ):
+        """
+        :param precision: The number of significant digits.
+        :param scale: The number of digits after the decimal point.
+        :param nullable: Whether the column can contain nulls.
+        :param metadata: A dictionary of metadata to attach to the column.
+        """
         super().__init__(pa.decimal128(precision, scale), nullable=nullable, metadata=metadata)
 
     @overload
@@ -793,6 +910,12 @@ class Decimal256Column(Column):
     def __init__(
         self, precision: int, scale: int, nullable: bool = True, metadata: Optional[MetadataDict] = None
     ):
+        """
+        :param precision: The number of significant digits.
+        :param scale: The number of digits after the decimal point.
+        :param nullable: Whether the column can contain nulls.
+        :param metadata: A dictionary of metadata to attach to the column.
+        """
         super().__init__(pa.decimal256(precision, scale), nullable=nullable, metadata=metadata)
 
     @overload
@@ -821,7 +944,7 @@ class NullColumn(Column):
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         super().__init__(pa.null(), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -843,48 +966,30 @@ class NullColumn(Column):
 
 
 class ListColumn(Column):
-    """A column for storing lists of values.
+    """A column for storing variably-sized lists of values.
 
     The values in the list can be of any type.
 
     Note that all quivr Tables are storing lists of values, so this
     column type is only useful for storing lists of lists.
-
-
-
     """
 
     def __init__(
         self,
         value_type: Union[pa.DataType, pa.Field, Column],
-        list_size: int = -1,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         """
-        Parameters
-        ----------
-        value_type : Union[pa.DataType, pa.Field, Column]
-            The type of the values in the list.
-
-        list_size : int
-            The size of the list. If -1, then the list is variable-length.
-
-        nullable : bool
-            Whether the list can contain null values.
-
-        metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the column.
-
-        validator: Optional[validators.Validator]
-            A validator to run against the column's values.
+        :param value_type: The type of the values in the list.
+        :param nullable: Whether the list can contain null values.
+        :param metadata: A dictionary of metadata to attach to the column.
+        :param validator: A validator to run against the column's values.
         """
         if isinstance(value_type, Column):
             value_type = value_type.dtype
-        super().__init__(
-            pa.list_(value_type, list_size), nullable=nullable, metadata=metadata, validator=validator
-        )
+        super().__init__(pa.list_(value_type, -1), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -900,8 +1005,54 @@ class ListColumn(Column):
         return obj.table[self.name].combine_chunks()
 
 
+class FixedSizeListColumn(Column):
+    """A column for storing lists of values of a fixed size.
+
+    The values in the list can be of any type.
+
+    Note that all quivr Tables are storing lists of values, so this
+    column type is only useful for storing lists of lists.
+    """
+
+    def __init__(
+        self,
+        value_type: Union[pa.DataType, pa.Field, Column],
+        list_size: int,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[Validator] = None,
+    ):
+        """
+        :param value_type: The type of the values in the list.
+        :param list_size: The size of the list. Must be greater than 0.
+        :param nullable: Whether the list can contain null values.
+        :param metadata: A dictionary of metadata to attach to the column.
+        :param validator: A validator to run against the column's values.
+        """
+        if list_size <= 0:
+            raise ValueError("list_size must be greater than 0")
+        if isinstance(value_type, Column):
+            value_type = value_type.dtype
+        super().__init__(
+            pa.list_(value_type, list_size), nullable=nullable, metadata=metadata, validator=validator
+        )
+
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: "Table", objtype: type) -> pa.FixedSizeListArray:
+        ...
+
+    def __get__(self, obj: Optional["Table"], objtype: type) -> Union[Self, pa.FixedSizeListArray]:
+        if obj is None:
+            return self
+        return obj.table[self.name].combine_chunks()
+
+
 class LargeListColumn(Column):
-    """A column for storing large lists of values.
+    r"""A column for storing large lists of values (over 2\ :sup:`31` objects).
 
     Unless you need to represent data with more than 2**31 elements,
     prefer ListColumn.
@@ -917,22 +1068,13 @@ class LargeListColumn(Column):
         value_type: Union[pa.DataType, pa.Field, Column],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         """
-        Parameters
-        ----------
-        value_type : Union[pa.DataType, pa.Field, Column]
-            The type of the values in the list.
-
-        nullable : bool
-            Whether the list can contain null values.
-
-        metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the column.
-
-        validator: Optional[validators.Validator]
-            A validator to run against the column's values.
+        :param value_type: The type of the values in the list.
+        :param nullable: Whether the list can contain null values.
+        :param metadata: A dictionary of metadata to attach to the column.
+        :param validator: A validator to run against the column's values.
         """
         if isinstance(value_type, Column):
             value_type = value_type.dtype
@@ -965,25 +1107,14 @@ class MapColumn(Column):
         item_type: Union[pa.DataType, pa.Field, Column],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         """
-        Parameters
-        ----------
-        key_type : Union[pa.DataType, pa.Field, Column]
-            The type of the keys in the map.
-
-        item_type : Union[pa.DataType, pa.Field, Column]
-            The type of the values in the map.
-
-        nullable : bool
-            Whether the map can contain null values.
-
-        metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the column.
-
-        validator: Optional[validators.Validator]
-            A validator to run against the column's values.
+        :param key_type: The type of the keys in the map.
+        :param item_type: The type of the values in the map.
+        :param nullable: Whether the map can contain null key-value pairs.
+        :param metadata: A dictionary of metadata to attach to the column.
+        :param validator: A validator to run against the column's values.
         """
         if isinstance(key_type, Column):
             key_type = key_type.dtype
@@ -1021,28 +1152,15 @@ class DictionaryColumn(Column):
         ordered: bool = False,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         """
-        Parameters
-        ----------
-        index_type : IntegerDataType
-            The type of the dictionary indices. Must be an integer type.
-
-        value_type : Union[pa.DataType, pa.Field, Column]
-            The type of the values in the dictionary.
-
-        ordered : bool
-            Whether the dictionary is ordered.
-
-        nullable : bool
-            Whether the dictionary can contain null values.
-
-        metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the column.
-
-        validator: Optional[validators.Validator]
-            A validator to run against the column's values.
+        :param index_type: The type of the dictionary indices. Must be an integer type.
+        :param value_type: The type of the values in the dictionary.
+        :param ordered: Whether the dictionary is ordered.
+        :param nullable: Whether the dictionary can contain null values.
+        :param metadata: A dictionary of metadata to attach to the column.
+        :param validator: A validator to run against the column's values.
         """
         if isinstance(index_type, Column):
             index_type = index_type.dtype
@@ -1082,22 +1200,13 @@ class StructColumn(Column):
         fields: list[pa.Field],
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         """
-        Parameters
-        ----------
-        fields : List[pa.Field]
-            The fields in the struct.
-
-        nullable : bool
-            Whether the struct can contain null values.
-
-        metadata : Optional[MetadataDict]
-            A dictionary of metadata to attach to the column.
-
-        validator: Optional[validators.Validator]
-            A validator to run against the column's values.
+        :param fields: The fields in the struct.
+        :param nullable: Whether the struct can contain null values.
+        :param metadata: A dictionary of metadata to attach to the column.
+        :param validator: A validator to run against the column's values.
         """
         super().__init__(pa.struct(fields), nullable=nullable, metadata=metadata, validator=validator)
 
@@ -1125,7 +1234,7 @@ class RunEndEncodedColumn(Column):
         value_type: pa.DataType,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
-        validator: Optional[validators.Validator] = None,
+        validator: Optional[Validator] = None,
     ):
         """
         Parameters
@@ -1142,7 +1251,7 @@ class RunEndEncodedColumn(Column):
         metadata : Optional[MetadataDict]
             A dictionary of metadata to attach to the column.
 
-        validator: Optional[validators.Validator]
+        validator: Optional[Validator]
             A validator to run against the column's values.
         """
         super().__init__(

@@ -2,6 +2,7 @@ from .__version__ import __version__
 from .attributes import FloatAttribute, IntAttribute, StringAttribute
 from .columns import (
     BinaryColumn,
+    BooleanColumn,
     Column,
     Date32Column,
     Date64Column,
@@ -9,6 +10,8 @@ from .columns import (
     Decimal256Column,
     DictionaryColumn,
     DurationColumn,
+    FixedSizeBinaryColumn,
+    FixedSizeListColumn,
     Float16Column,
     Float32Column,
     Float64Column,
@@ -41,7 +44,7 @@ from .errors import InvariantViolatedError, TableFragmentedError, ValidationErro
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
 from .tables import Table
-from .validators import and_, eq, ge, gt, is_in, le, lt
+from .validators import Validator, and_, eq, ge, gt, is_in, le, lt
 
 __all__ = [
     "__version__",
@@ -60,9 +63,12 @@ __all__ = [
     "UInt16Column",
     "UInt32Column",
     "UInt64Column",
+    "FixedSizeBinaryColumn",
+    "FixedSizeListColumn",
     "Float16Column",
     "Float32Column",
     "Float64Column",
+    "BooleanColumn",
     "StringColumn",
     "LargeBinaryColumn",
     "LargeStringColumn",
@@ -93,6 +99,7 @@ __all__ = [
     "eq",
     "and_",
     "is_in",
+    "Validator",
     "StringAttribute",
     "IntAttribute",
     "FloatAttribute",

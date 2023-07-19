@@ -47,6 +47,9 @@ class Table:
 
     :cvar schema: The pyarrow schema for this table.
     :vartype schema: pyarrow.Schema
+
+    :ivar table: The underlying :class:`pyarrow.Table` for this Table instance.
+    :vartype table: pyarrow.Table
     """
 
     schema: ClassVar[pa.Schema]
@@ -188,6 +191,19 @@ class Table:
     def as_column(
         cls, nullable: bool = True, metadata: Optional[MetadataDict] = None
     ) -> SubTableColumn[Self]:
+        """Embed the Table as a column in another Table.
+
+        This method is the primary way to achieve composition of Tables with quivr.
+
+        :param nullable: Whether the column can contain nulls. Note
+            that this refers to whether an entire row - all columns -
+            can be null, not whether a single value in one column of
+            this table can be null. That is controlled entirely by
+            this Table class's columns.
+
+        :param metadata: Metadata to attach to the column.
+
+        """
         return SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
@@ -271,7 +287,7 @@ class Table:
 
         :param arrays: A list of pyarrow.Array objects.
         :param metadata: An optional dictionary of metadata to attach to the Table.
-        :param \**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
         :return: A Table object.
         """
         if metadata is None:
@@ -293,7 +309,7 @@ class Table:
         Create a Table object from a list of dictionaries.
 
         :param rows: A list of values. Each value corresponds to a row in the table.
-        :param \**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
         :returns: A Table object.
 
         Examples:
@@ -321,7 +337,7 @@ class Table:
         class.
 
         :param lists: A list of lists. Each inner list corresponds to a column in the table.
-        :param \**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
         :returns: A Table object.
 
         """
@@ -523,6 +539,8 @@ class Table:
 
         This only works if self is not fragmented. Call table =
         defragment(table) if table.fragmented() is True.
+
+        :raises TableFragmentedError: if the table is fragmented.
         """
         if self.fragmented():
             raise TableFragmentedError(
@@ -603,7 +621,7 @@ class Table:
 
         :param path: The path to the Parquet file.
         :param memory_map: If True, memory-map the file, otherwise read it into memory.
-        
+
         :param pq_buffer_size: If positive, perform read buffering
                 when deserializing individual column
                 chunks. Otherwise, IO calls are unbuffered.
@@ -612,7 +630,7 @@ class Table:
                 removed from scanned data. For more information, see
                 the PyArrow documentation on
                 pyarrow.parquet.read_table and its filter parameter.
-        :param \**kwargs: Additional keyword arguments to pass to Self's __init__ method.
+        :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
 
         """
         table = pyarrow.parquet.read_table(

@@ -7,7 +7,22 @@ from .errors import ValidationError
 
 
 class Validator:
+    """A Validator is a tool to validate that data in a
+    :class:`pyarrow.Array` matches a predicate expression.
+
+    :ivar func: The predicate function to use for validation. This
+        must be a scalar or scalar aggregate function.
+    :ivar args: The arguments to pass to the predicate function.
+    :ivar label: A label to use when reporting validation errors.
+    """
+
     def __init__(self, func: pc.Function, args: list[Any], label: str):
+        """
+        :param func: The predicate function to use for validation. This
+            must be a scalar or scalar aggregate function.
+        :param args: The arguments to pass to the predicate function.
+        :param label: A label to use when reporting validation errors.
+        """
         self._check_arity(func, args)
         if func.kind not in {"scalar_aggregate", "scalar"}:
             raise ValueError(f"Invalid function type {func.kind}, must be scalar or scalar_aggregate")
@@ -20,9 +35,19 @@ class Validator:
             raise ValueError("Invalid number of arguments")
 
     def evaluate(self, array: pyarrow.Array) -> pyarrow.Array:
+        """
+        Evaluates the predicate function on the given array.
+
+        :param array: The array to evaluate.
+        """
         return self.func.call([array, *self.args])
 
     def valid(self, array: pyarrow.Array) -> bool:
+        """
+        Returns True if the given array is valid, False otherwise.
+
+        :param array: The array to validate.
+        """
         if self.func.kind == "scalar_aggregate":
             return self.evaluate(array).as_py()  # type: ignore
         else:
@@ -32,6 +57,11 @@ class Validator:
             return pc.all(self.evaluate(array)).as_py()  # type: ignore
 
     def validate(self, array: pyarrow.Array) -> None:
+        """
+        Raises a :class:`ValidationError` if the given array is not valid.
+
+        :param array: The array to validate.
+        """
         if not self.valid(array):
             if self.func.kind == "scalar_aggregate":
                 raise ValidationError(f"array did not pass validator '{self.label}'")
@@ -144,13 +174,16 @@ def ge(val: Any) -> Validator:
     return Validator(func, [val], label)
 
 
-def is_in(val: Any, fail_on_null: bool = False) -> IsInValidator:
+def is_in(val: Any, fail_on_null: bool = False) -> Validator:
     """Validator that all data in a column is in a given set.
 
-    If fail_on_null is true, then nulls always trigger an
-    error. Otherwise, they are matched to the value set, just like
-    regular values.
+    :param val: The set of values to check against. This can be a
+        list, tuple, or pyarrow.Array. If it is a list or tuple, it
+        will be converted to a pyarrow.Array.
 
+    :param fail_on_null: If True, then nulls always trigger an
+      error. Otherwise, they are matched to the value set, just like
+      regular values.
     """
     label = f"is_in({val})"
     if not isinstance(val, pyarrow.Array):

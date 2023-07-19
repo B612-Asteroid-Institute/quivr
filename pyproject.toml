@@ -85,6 +85,15 @@ open-docs = [
   "open docs/build/html/index.html"
 ]
 
+clean-html = [
+  "make -C docs clean"
+]
+
+rebuild-html = [
+  "make -C docs clean",
+  "make -C docs html"
+]
+
 [tool.black]
 line-length = 110
 

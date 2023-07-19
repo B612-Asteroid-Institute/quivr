@@ -5,6 +5,7 @@ import pyarrow as pa
 from .defragment import defragment
 from .tables import Table
 
+#: Type variable for a Table subclass
 T = TypeVar("T", bound=Table)
 
 
@@ -17,9 +18,12 @@ def concatenate(values: Iterator[T], defrag: bool = True) -> T:
     By default, results are compacted to be contiguous in memory,
     which involves a copy. In a tight loop, this can be very
     inefficient, so you can set the 'defrag' parameter to False to
-    skip this compaction step, and instead call quiver.defragment on
+    skip this compaction step, and instead call :func:`defragment` on
     the result after the loop is complete.
 
+    :param values: An iterator of :class:`Table` instances to concatenate.
+    :param defrag: Whether to compact the result to be contiguous in
+        memory. Defaults to True.
     """
     batches = []
     first = True

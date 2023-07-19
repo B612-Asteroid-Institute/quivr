@@ -9,25 +9,33 @@
 project = 'quivr'
 copyright = '2023, Spencer Nelson'
 author = 'Spencer Nelson'
-release = 'v0.4.3'
+
+import quivr
+version = quivr.__version__
+release = quivr.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.autosummary",
+    "sphinx_autodoc_typehints",
 ]
 
 templates_path = ['_templates']
 exclude_patterns = []
 
+autodoc_type_aliases = {
+    "MetadataDict": "quivr.columns.MetadataDict",
+}
 autodoc_member_order = 'bysource'
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pyarrow": ("https://arrow.apache.org/docs/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -35,3 +43,13 @@ intersphinx_mapping = {
 
 html_theme = 'furo'
 html_static_path = ['_static']
+
+nitpicky = True
+nitpick_ignore = {
+    ("py:mod", "quivr.columns"),
+    ("py:mod", "quivr.tables"),
+    # see: https://github.com/apache/arrow/issues/35413, should be fixed in 13.0.0
+    ("py:class", "pyarrow.FloatArray"),
+    ("py:class", "pyarrow.HalfFloatArray"),
+    ("py:class", "pyarrow.DoubleArray"),        
+}
