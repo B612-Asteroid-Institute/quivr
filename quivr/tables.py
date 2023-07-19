@@ -29,6 +29,29 @@ DataSourceType: TypeAlias = Union[pa.Array, list[Any], "Table", pd.Series, npt.N
 
 
 class Table:
+    """Table is the primary data structure in quivr.
+
+    Tables are used to represent tabular data with a fixed schema. The
+    schema is defined by subclassing Table, providing Column objects
+    as class attributes. The Table class will then generate a pyarrow
+    schema from those columns.
+
+    Table instances can then be created from data, either by passing
+    in a pyarrow Table, or by passing in data in a variety of other
+    formats. The data will be validated against the schema, and
+    converted to a pyarrow Table.
+
+    Table instances are immutable, but can be sliced, filtered,
+    sorted, or otherwise manipulated, resulting in new Table
+    instances.
+
+    :cvar schema: The pyarrow schema for this table.
+    :vartype schema: pyarrow.Schema
+
+    :ivar table: The underlying :class:`pyarrow.Table` for this Table instance.
+    :vartype table: pyarrow.Table
+    """
+
     schema: ClassVar[pa.Schema]
     table: pa.Table
 
@@ -101,9 +124,9 @@ class Table:
 
         If the validate argument is True, the data will be validated
         against the table's schema. If validation fails, a
-        ValidationError will be raised.
+        :class:`ValidationError` will be raised.
 
-        Examples:
+        For example:
             >>> import quivr
             >>> class MyTable(quivr.TableBase):
             ...     schema = pyarrow.schema([
@@ -123,7 +146,6 @@ class Table:
             >>> import numpy as np
             >>> MyTable.from_data(a=np.array(["a", "b"]), b=np.array([1, 2]))
             MyTable(size=2)
-
 
         """
         if data is None:
@@ -169,6 +191,19 @@ class Table:
     def as_column(
         cls, nullable: bool = True, metadata: Optional[MetadataDict] = None
     ) -> SubTableColumn[Self]:
+        """Embed the Table as a column in another Table.
+
+        This method is the primary way to achieve composition of Tables with quivr.
+
+        :param nullable: Whether the column can contain nulls. Note
+            that this refers to whether an entire row - all columns -
+            can be null, not whether a single value in one column of
+            this table can be null. That is controlled entirely by
+            this Table class's columns.
+
+        :param metadata: Metadata to attach to the column.
+
+        """
         return SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
@@ -243,20 +278,17 @@ class Table:
     @classmethod
     def from_arrays(
         cls,
-        arrays: list[pa.array],
+        arrays: list[pa.Array],
         metadata: Optional[dict[bytes, bytes]] = None,
         **kwargs: AttributeValueType,
     ) -> Self:
-        """Create a Table object from a list of arrays.
+        """
+        Create a Table object from a list of arrays.
 
-        Args:
-            arrays: A list of pyarrow.Array objects.
-            metadata: An optional dictionary of metadata to attach to the Table.
-            **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
-
-        Returns:
-            A Table object.
-
+        :param arrays: A list of pyarrow.Array objects.
+        :param metadata: An optional dictionary of metadata to attach to the Table.
+        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :return: A Table object.
         """
         if metadata is None:
             metadata = {}
@@ -276,12 +308,9 @@ class Table:
         """
         Create a Table object from a list of dictionaries.
 
-        Args:
-            rows: A list of values. Each value corresponds to a row in the table.
-            **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
-
-        Returns:
-            A Table object.
+        :param rows: A list of values. Each value corresponds to a row in the table.
+        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :returns: A Table object.
 
         Examples:
             >>> import quivr
@@ -307,13 +336,9 @@ class Table:
         should be specified in the same order as the columns in the
         class.
 
-        Args:
-            lists: A list of lists. Each inner list corresponds to a column in the table.
-            **kwargs: Additional keyword arguments to pass to the Table's __init__ method.
-
-
-        Returns:
-            A TableBase object.
+        :param lists: A list of lists. Each inner list corresponds to a column in the table.
+        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :returns: A Table object.
 
         """
         table = pa.Table.from_arrays(list(map(pa.array, lists)), schema=cls.schema)
@@ -514,6 +539,8 @@ class Table:
 
         This only works if self is not fragmented. Call table =
         defragment(table) if table.fragmented() is True.
+
+        :raises TableFragmentedError: if the table is fragmented.
         """
         if self.fragmented():
             raise TableFragmentedError(
@@ -592,19 +619,18 @@ class Table:
     ) -> Self:
         """Read a table from a Parquet file.
 
-        Arguments:
-            path: The path to the Parquet file.
-            memory_map: If True, memory-map the file, otherwise read it into memory.
-            pq_buffer_size: If positive, perform read buffering when
-                deserializing individual column chunks. Otherwise, IO
-                calls are unbuffered.
-            filters: An optional filter predicate to apply to the
+        :param path: The path to the Parquet file.
+        :param memory_map: If True, memory-map the file, otherwise read it into memory.
+
+        :param pq_buffer_size: If positive, perform read buffering
+                when deserializing individual column
+                chunks. Otherwise, IO calls are unbuffered.
+        :param filters: An optional filter predicate to apply to the
                 data. Rows which do not match the predicate will be
                 removed from scanned data. For more information, see
                 the PyArrow documentation on
                 pyarrow.parquet.read_table and its filter parameter.
-            **kwargs: Additional keyword arguments to pass to the __init__ method.
-
+        :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
 
         """
         table = pyarrow.parquet.read_table(
@@ -758,13 +784,16 @@ class Table:
         return result
 
     def apply_mask(self, mask: pa.BooleanArray | np.ndarray | list[bool]) -> Self:
-        """Return a new table with rows filtered to match a boolean mask.
+        """
+        Return a new table with rows filtered to match a boolean mask.
 
         The mask must have the same length as the table. At each index, if the mask's
         value is True, the row will be included in the new table; if False, it will be
         excluded.
 
         If the mask is a pyarrow BooleanArray, it must not have any null values.
+
+        :param mask: A boolean mask to apply to the table.
         """
         if len(mask) != len(self):
             raise ValueError("mask must be the same length as the table")

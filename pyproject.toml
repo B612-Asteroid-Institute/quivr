@@ -19,6 +19,13 @@ dependencies = [
 ]
 dynamic = [ "version" ]
 
+[project.optional-dependencies]
+docs = [
+  "sphinx==7.0.1",
+  "sphinx-autodoc-typehints",
+  "furo",
+]
+
 [project.urls]
 Source = "https://github.com/spenczar/quivr"
 
@@ -69,6 +76,31 @@ benchmark = [
   "pytest --benchmark-only ./test"
 ]
 
+[tool.hatch.envs.docs]
+dependencies = [
+  "sphinx==7.0.1",
+  "sphinx-autodoc-typehints",
+  "furo",
+]
+
+[tool.hatch.envs.docs.scripts]
+make-html = [
+  "make -C docs html"
+]
+
+open-docs = [
+  "open docs/build/html/index.html"
+]
+
+clean-html = [
+  "make -C docs clean"
+]
+
+rebuild-html = [
+  "make -C docs clean",
+  "make -C docs html"
+]
+
 [tool.black]
 line-length = 110
 
@@ -78,3 +110,4 @@ profile = "black"
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+

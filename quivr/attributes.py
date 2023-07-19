@@ -74,6 +74,13 @@ class Attribute(Generic[T]):
 
 
 class StringAttribute(Attribute[str]):
+    """StringAttribute represents a string which is stored as UTF-8
+    bytes in Table metadata.
+
+    :param default: The default value for this attribute. If no default is provided,
+        then the attribute must be set whenever constructing a table that uses it.
+    """
+
     _type = str
 
     def __init__(self, default: Optional[str] = None):
@@ -93,6 +100,18 @@ class StringAttribute(Attribute[str]):
 
 
 class IntAttribute(Attribute[int]):
+    """IntAttribute represents an integer which is stored as little-endian
+    bytes in Table metadata.
+
+    The number of bytes used to store the integer must be specified
+    up-front, as well as whether it is signed.
+
+    :param default: The default value for this attribute. If no default is provided,
+        then the attribute must be set whenever constructing a table that uses it.
+    :param nbytes: The number of bytes to use to store the integer. Must be 1, 2, 4 or 8.
+    :param signed: Whether the integer is signed or unsigned.
+    """
+
     _type = int
 
     def __init__(self, default: Optional[int] = None, nbytes: int = 8, signed: bool = True):
@@ -114,6 +133,18 @@ class IntAttribute(Attribute[int]):
 
 
 class FloatAttribute(Attribute[float]):
+    """
+    FloatAttribute represents a floating-point number which is stored as little-endian
+    bytes in Table metadata.
+
+    The number of bytes used to store the float must be specified
+    up-front.
+
+    :param default: The default value for this attribute. If no default is provided,
+        then the attribute must be set whenever constructing a table that uses it.
+    :param nbytes: The number of bytes to use to store the float. Must be 2, 4 or 8.
+    """
+
     _type = float
 
     def __init__(self, default: Optional[float] = None, nbytes: int = 8):
