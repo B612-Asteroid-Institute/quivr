@@ -19,6 +19,13 @@ dependencies = [
 ]
 dynamic = [ "version" ]
 
+[project.optional-dependencies]
+docs = [
+  "sphinx==7.0.1",
+  "sphinx-autodoc-typehints",
+  "furo",
+]
+
 [project.urls]
 Source = "https://github.com/spenczar/quivr"
 

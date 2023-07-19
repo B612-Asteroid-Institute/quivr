@@ -51,5 +51,7 @@ nitpick_ignore = {
     # see: https://github.com/apache/arrow/issues/35413, should be fixed in 13.0.0
     ("py:class", "pyarrow.FloatArray"),
     ("py:class", "pyarrow.HalfFloatArray"),
-    ("py:class", "pyarrow.DoubleArray"),        
+    ("py:class", "pyarrow.DoubleArray"),
+
+    ("py:mod", "pyarrow.comput"),
 }
