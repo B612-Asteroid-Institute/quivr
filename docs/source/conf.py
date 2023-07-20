@@ -21,6 +21,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
+    "sphinx_copybutton",
     "sphinx_autodoc_typehints",
 ]
 
@@ -53,5 +54,5 @@ nitpick_ignore = {
     ("py:class", "pyarrow.HalfFloatArray"),
     ("py:class", "pyarrow.DoubleArray"),
 
-    ("py:mod", "pyarrow.comput"),
+    ("py:mod", "pyarrow.compute"),
 }

@@ -6,11 +6,23 @@
 quivr: data-oriented objects
 ============================
 
+.. currentmodule:: quivr
+		   
+``quivr`` is a library for working with data-oriented objects in
+Python.
+
+The central object in ``quivr`` is the :class:`Table`: a precise
+description of the schema for arrays of data, combined with namespaced
+methods to keep your code well-structured.
+
+Quivr's tables are :ref:`composable <composition>`.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Guides
 
-   usage
+   installation
+   basics
+   guides/index
    api/overview
 	     
 
