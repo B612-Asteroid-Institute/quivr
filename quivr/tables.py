@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import sys
 from io import IOBase
@@ -7,7 +9,7 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
-from typing import Any, ClassVar, Iterator, Optional, Type, TypeAlias, Union
+from typing import Any, ClassVar, Iterator, Optional, Type, TypeAlias, TypeVar, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -18,14 +20,15 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
+from . import columns
 from .attributes import Attribute
-from .columns import Column, MetadataDict, SubTableColumn
 from .errors import TableFragmentedError, ValidationError
 from .schemagraph import _walk_schema
 from .validators import Validator
 
 AttributeValueType: TypeAlias = Union[int, float, str]
 DataSourceType: TypeAlias = Union[pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any]]
+AnyTable = TypeVar("AnyTable", bound="Table")
 
 
 class Table:
@@ -55,7 +58,7 @@ class Table:
     schema: ClassVar[pa.Schema]
     table: pa.Table
 
-    _quivr_subtables: ClassVar[dict[str, SubTableColumn[Any]]]
+    _quivr_subtables: ClassVar[dict[str, columns.SubTableColumn[Any]]]
     _quivr_attributes: ClassVar[dict[str, Attribute[Any]]]
     _column_validators: ClassVar[dict[str, Validator]]
 
@@ -65,11 +68,11 @@ class Table:
         subtables = {}
         attributes = {}
         for name, obj in cls.__dict__.items():
-            if isinstance(obj, Column):
+            if isinstance(obj, columns.Column):
                 fields.append(obj.pyarrow_field())
                 if obj.validator is not None:
                     column_validators[name] = obj.validator
-                if isinstance(obj, SubTableColumn):
+                if isinstance(obj, columns.SubTableColumn):
                     subtables[name] = obj
             elif isinstance(obj, Attribute):
                 attributes[name] = obj
@@ -112,8 +115,7 @@ class Table:
         validate: bool = True,
         **kwargs: Union[AttributeValueType, DataSourceType],
     ) -> Self:
-        """
-        Create an instance of the Table and populate it with data.
+        """Create an instance of the Table and populate it with data.
 
         This is a convenience method which tries to infer the right
         underlying constructors to use based on the type of data. It
@@ -127,6 +129,7 @@ class Table:
         :class:`ValidationError` will be raised.
 
         For example:
+
             >>> import quivr
             >>> class MyTable(quivr.TableBase):
             ...     schema = pyarrow.schema([
@@ -146,6 +149,13 @@ class Table:
             >>> import numpy as np
             >>> MyTable.from_data(a=np.array(["a", "b"]), b=np.array([1, 2]))
             MyTable(size=2)
+
+        :param data: The data to populate the table with.
+        :param validate: Whether to validate the data against the table's schema.
+        :param \\**kwargs: More data in keyword argument form. The keys
+          can be column names or attribute names. The values should be
+          arrays, lists, or pyarrow Arrays.
+        :type \\**kwargs: Union[:obj:`AttributeValueType`, :obj:`DataSourceType`]
 
         """
         if data is None:
@@ -189,8 +199,8 @@ class Table:
 
     @classmethod
     def as_column(
-        cls, nullable: bool = True, metadata: Optional[MetadataDict] = None
-    ) -> SubTableColumn[Self]:
+        cls, nullable: bool = True, metadata: Optional[columns.MetadataDict] = None
+    ) -> columns.SubTableColumn[Self]:
         """Embed the Table as a column in another Table.
 
         This method is the primary way to achieve composition of Tables with quivr.
@@ -204,7 +214,7 @@ class Table:
         :param metadata: Metadata to attach to the column.
 
         """
-        return SubTableColumn(cls, nullable=nullable, metadata=metadata)
+        return columns.SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
     def from_kwargs(cls, **kwargs: Union[DataSourceType, AttributeValueType]) -> Self:
@@ -212,8 +222,15 @@ class Table:
 
         Each keyword argument corresponds to a column in the Table.
 
-        The keys should correspond to the column names, and the values
-        can be a list, numpy array, pyarrow array, or Table instance.
+        The keys should correspond to column names or attribute names.
+
+        For columns, the values should be arrays, lists, or pyarrow Arrays.
+
+        For attributes, the values should be the appropriate type for that attribute.
+
+        :param \\**kwargs: The data to populate the table with.
+        :type \\**kwargs: Union[:obj:`AttributeValueType`, :obj:`DataSourceType`]
+
         """
         arrays: list[Union[None, pa.Array]] = []
         size = None
@@ -287,7 +304,8 @@ class Table:
 
         :param arrays: A list of pyarrow.Array objects.
         :param metadata: An optional dictionary of metadata to attach to the Table.
-        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :param \\**kwargs: Additional keyword arguments for any Table attributes.
+        :type \\**kwargs: :obj:`AttributeValueType`
         :return: A Table object.
         """
         if metadata is None:
@@ -309,7 +327,8 @@ class Table:
         Create a Table object from a list of dictionaries.
 
         :param rows: A list of values. Each value corresponds to a row in the table.
-        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :param \\**kwargs: Additional keyword arguments for any Table attributes.
+        :type \\**kwargs: :obj:`AttributeValueType`
         :returns: A Table object.
 
         Examples:
@@ -337,7 +356,8 @@ class Table:
         class.
 
         :param lists: A list of lists. Each inner list corresponds to a column in the table.
-        :param \\**kwargs: Additional keyword arguments to pass to the Table's __init__ method.
+        :param \\**kwargs: Additional keyword arguments for any Table attributes.
+        :type \\**kwargs: :obj:`AttributeValueType`
         :returns: A Table object.
 
         """
@@ -356,6 +376,10 @@ class Table:
         matters for nested Tables which contain other Table
         definitions as columns. For that use case, either load an
         unflattened DataFrame, or use from_flat_dataframe.
+
+        :param df: A pandas DataFrame containing the data to load.
+        :param \\**kwargs: Additional keyword arguments for any Table attributes.
+        :type \\**kwargs: :obj:`AttributeValueType`
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
@@ -368,7 +392,6 @@ class Table:
         This is used when loading a flattened CSV into a nested
         Table. It takes a Table with a flat schema, and returns a
         Table with a nested schema.
-
         """
         struct_fields = []
 
@@ -404,7 +427,13 @@ class Table:
     def from_flat_dataframe(cls, df: pd.DataFrame, **kwargs: AttributeValueType) -> Self:
         """Load a flattened DataFrame into the Table.
 
-        known bug: Doesn't correctly interpret fixed-length lists.
+        .. caution::
+          Known bug: Doesn't correctly interpret fixed-length lists.
+
+        :param df: A pandas DataFrame containing the data to load.
+        :param \\**kwargs: Additional keyword arguments for any Table attributes.
+        :type \\**kwargs: :obj:`AttributeValueType`
+
         """
         struct_fields = []
         for field in cls.schema:
@@ -498,6 +527,8 @@ class Table:
         Table which only contains rows for which the value in
         column_name equals value.
 
+        :param column_name: The name of the column to select on.
+        :param value: The value to match.
         """
         table = self.table.filter(pc.field(column_name) == value)
         return self.__class__(table)
@@ -510,6 +541,7 @@ class Table:
         by should be a column name to sort by, or a list of (column,
         order) tuples, where order can be "ascending" or "descending".
 
+        :param by: The column name or list of (column, order) tuples to sort by.
         """
         table = self.table.sort_by(by)
         return self.__class__(table)
@@ -519,7 +551,6 @@ class Table:
         each of the Table's underlying arrays. The keys of the
         resulting dictionary are the column names, and the values are
         the number of chunks for that column's data.
-
         """
         result = {}
         for i, field in enumerate(self.schema):
@@ -562,6 +593,7 @@ class Table:
         "foo" column, and the values will of the column will be
         dictionaries representing the struct values.
 
+        :param flatten: Whether to flatten the table's structure.
         """
         table = self.table
         if flatten:
@@ -570,19 +602,31 @@ class Table:
         return df
 
     def column(self, column_name: str) -> pa.ChunkedArray:
-        """Returns the column with the given name as a raw pyarrow ChunkedArray."""
+        """
+        Returns the column with the given name as a raw pyarrow ChunkedArray.
+
+        :param column_name: The name of the column to return.
+        """
         return self.table.column(column_name)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(size={len(self.table)})"
 
     def __len__(self) -> int:
+        """
+        Returns the number of rows in the Table.
+        """
         return len(self.table)
 
     def with_table(self, table: pa.Table) -> Self:
         return self.__class__(table)
 
     def __getitem__(self, idx: Union[int, slice]) -> Self:
+        """
+        Returns a new Table containing the given row or rows.
+
+        :param idx: The row index or slice to return.
+        """
         if isinstance(idx, int):
             table = self.table[idx : idx + 1]
         else:
@@ -590,10 +634,21 @@ class Table:
         return self.with_table(table)
 
     def __iter__(self) -> Iterator[Self]:
+        """
+        Iterates over the rows of the Table, returning a new Table
+        containing each row.
+        """
         for i in range(len(self)):
             yield self[i : i + 1]
 
     def __eq__(self, other: Any) -> bool:
+        """Returns true if the two Tables are equal. They are
+        considered equal if they have the same data in their tables,
+        and identical attributes and attribute values.
+
+        :param other: The other Table to compare to.
+
+        """
         if isinstance(other, Table):
             if not bool(self.table.equals(other.table, check_metadata=False)):
                 return False
@@ -625,11 +680,20 @@ class Table:
         return True
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
-        """Return a new Table with only the rows at the given indices."""
+        """
+        Return a new Table with only the rows at the given indices.
+
+        :param row_indices: The indices of the rows to return.
+        """
         return self.__class__(self.table.take(row_indices))
 
     def to_parquet(self, path: str, **kwargs: Any) -> None:
-        """Write the table to a Parquet file."""
+        """
+        Write the table to a Parquet file.
+
+        :param path: The path to write the Parquet file to.
+        :param kwargs: Additional arguments to pass to pyarrow.parquet.write_table.
+        """
         pyarrow.parquet.write_table(self.table, path, **kwargs)
 
     @classmethod
@@ -707,21 +771,30 @@ class Table:
         return table
 
     def to_feather(self, path: str, **kwargs: Any) -> None:
-        """Write the table to a Feather file."""
+        """
+        Write the table to a Feather file.
+
+        :param path: The path to write the Feather file to.
+        :param kwargs: Additional arguments to pass to pyarrow.feather.write_feather.
+        """
         pyarrow.feather.write_feather(self.table, path, **kwargs)
 
     @classmethod
     def from_feather(cls, path: str, **kwargs: AttributeValueType) -> Self:
-        """Read a table from a Feather file."""
+        """Read a table from a Feather file.
+
+        :param path: The path to the Feather file.
+        :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
+        """
         return cls(table=pyarrow.feather.read_table(path), **kwargs)
 
     def to_csv(self, path: str, attribute_columns: bool = True) -> None:
         """Write the table to a CSV file. Any nested structure is flattened.
 
-        if attribute_columns is True (the default), then any Attributes defined
-        for the table (or its subtable columns) are stored in the CSV as columns;
-        they will have the same value repeated for every row. If it is False,
-        then Attribute data will  not be stored in the CSV, so it cannot be read back out.
+        :param path: The path to write the CSV file to.
+        :param attribute_columns: If True, store any Attributes defined for the table
+            (or its subtable columns) as columns in the CSV file. If False, do not store
+            any Attribute data in the CSV file.
         """
         table = self.flattened_table()
         if attribute_columns:
@@ -736,7 +809,12 @@ class Table:
     def from_csv(
         cls, input_file: Union[str, os.PathLike, IOBase], **kwargs: AttributeValueType  # type: ignore
     ) -> Self:
-        """Read a table from a CSV file."""
+        """
+        Read a table from a CSV file.
+
+        :param input_file: The path to the CSV file, or a file-like object.
+        :param \\**kwargs: Additional keyword arguments to set the Table's attributes.
+        """
         flat_table = pyarrow.csv.read_csv(input_file)
 
         # Gather any attributes from the CSV. We do this by looking for specially named
@@ -778,7 +856,10 @@ class Table:
 
     @classmethod
     def empty(cls, **kwargs: AttributeValueType) -> Self:
-        """Create an empty instance of the table."""
+        """Create an empty instance of the table.
+
+        :param \\**kwargs: Additional keyword arguments to set the Table's attributes.
+        """
         data = [[] for _ in range(len(cls.schema))]  # type: ignore
         empty_table = pa.table(data, schema=cls.schema)
         return cls(table=empty_table, **kwargs)
@@ -847,7 +928,7 @@ class Table:
                 result.add(f"{column.name}.{key}")
         return result
 
-    def apply_mask(self, mask: pa.BooleanArray | np.ndarray | list[bool]) -> Self:
+    def apply_mask(self, mask: pa.BooleanArray | np.ndarray[bool, Any] | list[bool]) -> Self:
         """
         Return a new table with rows filtered to match a boolean mask.
 
@@ -867,24 +948,24 @@ class Table:
         return self.__class__(self.table.filter(mask))
 
     def where(self, expr: pc.Expression) -> Self:
-        """Return a new table with rows filtered to match an expression.
+        """
+        Return a new table with rows filtered to match an expression.
 
         The expression must be a pyarrow Expression that evaluates to a boolean array.
 
-        Examples
-        --------
-        >>> from quivr import Table, Int64Column
-        >>> import pyarrow.compute as pc
-        >>> class MyTable(Table):
-        ...     x = Int64Column()
-        ...     y = Int64Column()
-        ...
-        >>> t = MyTable.from_data(x=[1, 2, 3], y=[4, 5, 6])
-        >>> filtered = t.where(pc.field("x") > 1)
-        >>> print(filtered.x.to_pylist())
-        [2, 3]
-        >>> print(filtered.y.to_pylist())
-        [5, 6]
+        :param expr: A pyarrow Expression to apply to the table.
 
+        Examples:
+            >>> from quivr import Table, Int64Column
+            >>> import pyarrow.compute as pc
+            >>> class MyTable(Table):
+            ...     x = Int64Column()
+            ...     y = Int64Column()
+            >>> t = MyTable.from_data(x=[1, 2, 3], y=[4, 5, 6])
+            >>> filtered = t.where(pc.field("x") > 1)
+            >>> print(filtered.x.to_pylist())
+            [2, 3]
+            >>> print(filtered.y.to_pylist())
+            [5, 6]
         """
         return self.__class__(self.table.filter(expr))

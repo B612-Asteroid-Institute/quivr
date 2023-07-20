@@ -86,3 +86,20 @@ Utility Functions
 .. autofunction:: concatenate
 
 .. autofunction:: defragment
+
+
+Type Information Helpers
+++++++++++++++++++++++++
+
+.. autotypevar:: quivr.tables.AnyTable
+   :no-type:
+   
+
+.. autodata:: DataSourceType
+
+   Represents the permitted set of types that can be used to initialize a Table instance's data columns.
+
+.. autodata:: AttributeValueType
+
+   Represents the permitted set of values to be passed in when setting a Table attribute value.
+

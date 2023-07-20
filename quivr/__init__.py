@@ -3,6 +3,7 @@ from .attributes import FloatAttribute, IntAttribute, StringAttribute
 from .columns import (
     BinaryColumn,
     BooleanColumn,
+    Byteslike,
     Column,
     Date32Column,
     Date64Column,
@@ -24,6 +25,7 @@ from .columns import (
     LargeStringColumn,
     ListColumn,
     MapColumn,
+    MetadataDict,
     MonthDayNanoIntervalColumn,
     NullColumn,
     RunEndEncodedColumn,
@@ -43,7 +45,7 @@ from .defragment import defragment
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
-from .tables import Table
+from .tables import AnyTable, AttributeValueType, DataSourceType, Table
 from .validators import Validator, and_, eq, ge, gt, is_in, le, lt
 
 __all__ = [
@@ -104,4 +106,9 @@ __all__ = [
     "IntAttribute",
     "FloatAttribute",
     "defragment",
+    "AttributeValueType",
+    "DataSourceType",
+    "AnyTable",
+    "MetadataDict",
+    "Byteslike",
 ]

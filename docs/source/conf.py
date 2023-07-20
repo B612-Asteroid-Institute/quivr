@@ -22,14 +22,21 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx_copybutton",
-    "sphinx_autodoc_typehints",
+    "sphinx_toolbox.more_autodoc.typehints",
+    "sphinx_toolbox.more_autodoc.typevars",
+    'sphinx_toolbox.more_autodoc.overloads'
 ]
+
+# From sphinx_toolbox.more_autodoc.typehints
+hide_none_rtype = True
 
 templates_path = ['_templates']
 exclude_patterns = []
 
 autodoc_type_aliases = {
-    "MetadataDict": "quivr.columns.MetadataDict",
+    "MetadataDict": "MetadataDict",
+    "quivr.MetadataDict": "MetadataDict",
+    "quivr.columns.MetadataDict": "MetadataDict",        
 }
 autodoc_member_order = 'bysource'
 intersphinx_mapping = {

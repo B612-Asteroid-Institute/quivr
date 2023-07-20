@@ -82,6 +82,7 @@ dependencies = [
   "sphinx==7.0.1",
   "sphinx-autodoc-typehints",
   "sphinx-copybutton",
+  "sphinx-toolbox",
   "furo",
 ]
 

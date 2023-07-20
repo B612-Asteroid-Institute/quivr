@@ -1,12 +1,9 @@
-from typing import TypeVar
+from __future__ import annotations
 
-from .tables import Table
-
-#: Type hint for a generic table.
-GenericTable = TypeVar("GenericTable", bound=Table)
+from . import tables
 
 
-def defragment(table: GenericTable) -> GenericTable:
+def defragment(table: tables.AnyTable) -> tables.AnyTable:
     """Condense the underlying memory which backs the table to make
     it all contiguous. This makes many operations more efficient after
     defragmentation is complete.

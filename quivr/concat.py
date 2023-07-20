@@ -1,15 +1,12 @@
-from typing import Iterator, TypeVar
+from typing import Iterator
 
 import pyarrow as pa
 
+from . import tables
 from .defragment import defragment
-from .tables import Table
-
-#: Type variable for a Table subclass
-T = TypeVar("T", bound=Table)
 
 
-def concatenate(values: Iterator[T], defrag: bool = True) -> T:
+def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
     """Concatenate a collection of Tables into a single Table.
 
     All input Tables must have the same schema (typically, this will

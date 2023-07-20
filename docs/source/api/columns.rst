@@ -185,7 +185,6 @@ use :class:`FixedSizeBinaryColumn` to save some overhead.
       
 .. autoclass:: FixedSizeBinaryColumn
    :members:
-   :special-members: __init__      
 
 Decimals
 --------
@@ -198,11 +197,9 @@ up, you provide the "precision" and "scale" to be used.
 
 .. autoclass:: Decimal128Column
    :members:
-   :special-members: __init__
       
 .. autoclass:: Decimal256Column
    :members:
-   :special-members: __init__
 
 
 Time-Related Types
@@ -241,27 +238,21 @@ row of the column is, itself, a list.
       
 .. autoclass:: ListColumn
    :members:
-   :special-members: __init__
 
 .. autoclass:: FixedSizeListColumn
    :members:
-   :special-members: __init__
 	       
 .. autoclass:: LargeListColumn
    :members:
-   :special-members: __init__
             
 .. autoclass:: MapColumn
    :members:
-   :special-members: __init__
 		     
 .. autoclass:: StructColumn
    :members:
-   :special-members: __init__
       
 .. autoclass:: SubTableColumn
    :members:
-   :special-members: __init__
 		     
    SubTableColumns are generally created through
    :meth:`Table.as_column`, and are not created directly.
@@ -271,11 +262,9 @@ Types For Encoding Efficiency
       
 .. autoclass:: DictionaryColumn
    :members:
-   :special-members: __init__      
       
 .. autoclass:: RunEndEncodedColumn
    :members:
-   :special-members: __init__      
       
    
 Base Class
@@ -288,3 +277,13 @@ directly. Instead, use one of the appropriate subclasses.
 .. autoclass:: Column
    :members:
    :special-members: __get__, __set__, __set_name__
+
+Typing Helpers
+--------------
+
+.. autotypevar:: quivr.columns.T
+
+.. autodata:: MetadataDict
+
+.. autodata:: Byteslike
+

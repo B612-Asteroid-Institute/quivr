@@ -9,9 +9,7 @@
 
 .. autoexception:: TableFragmentedError
    :members:
-   :inherited-members:
 
 .. autoexception:: InvariantViolatedError
    :members:
-   :inherited-members:
       
