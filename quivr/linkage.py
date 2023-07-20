@@ -1,4 +1,4 @@
-from typing import Any, Iterator, Optional
+from typing import Any, Generic, Iterator, Optional, TypeVar
 
 import pyarrow as pa
 
@@ -20,7 +20,7 @@ class ArrowArrayIndex:
         if array.null_count > 0:
             raise ValueError("Array must not contain null values to be an index")
 
-        in_progress_index = {}
+        in_progress_index: dict[pa.Scalar, list[pa.Scalar]] = {}
         for i in range(len(array)):
             val = array[i]
             if val in in_progress_index:
@@ -36,7 +36,11 @@ class ArrowArrayIndex:
         return self.index.get(val, None)
 
 
-class Linkage:
+LeftTable = TypeVar("LeftTable", bound=tables.Table)
+RightTable = TypeVar("RightTable", bound=tables.Table)
+
+
+class Linkage(Generic[LeftTable, RightTable]):
     """
     A Linkage is a mapping of rows across two Tables.
 
@@ -48,8 +52,8 @@ class Linkage:
     particular value.
     """
 
-    left_table: tables.Table
-    right_table: tables.Table
+    left_table: LeftTable
+    right_table: RightTable
 
     left_index: ArrowArrayIndex
     right_index: ArrowArrayIndex
@@ -58,8 +62,8 @@ class Linkage:
 
     def __init__(
         self,
-        left_table: tables.Table,
-        right_table: tables.Table,
+        left_table: LeftTable,
+        right_table: RightTable,
         left_keys: pa.Array,
         right_keys: pa.Array,
     ):
@@ -90,7 +94,7 @@ class Linkage:
 
         self.all_unique_values = self.left_index.values.union(self.right_index.values)
 
-    def select_left(self, val: Any) -> tables.Table:
+    def select_left(self, val: Any) -> LeftTable:
         """
         Select the rows from the left table that match the given value.
 
@@ -101,14 +105,14 @@ class Linkage:
             val = pa.scalar(val)
         return self._select_left(val)
 
-    def _select_left(self, val: pa.Scalar) -> tables.Table:
+    def _select_left(self, val: pa.Scalar) -> LeftTable:
         left_indices = self.left_index.get(val)
         if left_indices is None:
             return self.left_table.empty()
         else:
             return self.left_table.take(left_indices)
 
-    def select_right(self, val: Any) -> tables.Table:
+    def select_right(self, val: Any) -> RightTable:
         """
         Select the rows from the right table that match the given value.
 
@@ -119,14 +123,14 @@ class Linkage:
             val = pa.scalar(val)
         return self._select_right(val)
 
-    def _select_right(self, val: pa.Scalar) -> tables.Table:
+    def _select_right(self, val: pa.Scalar) -> RightTable:
         right_indices = self.right_index.get(val)
         if right_indices is None:
             return self.right_table.empty()
         else:
             return self.right_table.take(right_indices)
 
-    def select(self, val: Any) -> tuple[tables.Table, tables.Table]:
+    def select(self, val: Any) -> tuple[LeftTable, RightTable]:
         """
         Select the rows from both tables that match the given value.
 
@@ -137,10 +141,10 @@ class Linkage:
             val = pa.scalar(val)
         return self._select_left(val), self._select_right(val)
 
-    def __getitem__(self, val: Any):
+    def __getitem__(self, val: Any) -> tuple[LeftTable, RightTable]:
         return self.select(val)
 
-    def iterate(self) -> Iterator[tuple[pa.Scalar, tables.Table, tables.Table]]:
+    def iterate(self) -> Iterator[tuple[pa.Scalar, LeftTable, RightTable]]:
         """
         Returns an iterator over all the unique values in the linkage, and the rows from
         each table that match that value.
@@ -148,10 +152,10 @@ class Linkage:
         for val in self.all_unique_values:
             yield val, self._select_left(val), self._select_right(val)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple[pa.Scalar, LeftTable, RightTable]]:
         return self.iterate()
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the number of unique values in the linkage."""
         return len(self.all_unique_values)
 
@@ -160,5 +164,5 @@ def composite_array(*keys: list[pa.Array]) -> pa.Array:
     """
     Create a composite array from a list of arrays.
     """
-    fields = [pa.field(f"key_{i}", k.type) for i, k in enumerate(keys)]
+    fields = [pa.field(f"key_{i}", k.type) for i, k in enumerate(keys)]  # type: ignore
     return pa.StructArray.from_arrays(keys, fields=fields)
