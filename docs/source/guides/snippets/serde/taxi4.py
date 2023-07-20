@@ -18,7 +18,7 @@ class TaxiData(Table):
         }
         return super().from_parquet(
             path,
-            column_name_mapping=column_name_mapping,
+            column_name_map=column_name_mapping,
         )
 
 taxi_data = TaxiData.from_parquet("./yellow__tripdata_2023-01.parquet")

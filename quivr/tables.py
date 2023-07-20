@@ -131,15 +131,11 @@ class Table:
         For example:
 
             >>> import quivr
-            >>> class MyTable(quivr.TableBase):
-            ...     schema = pyarrow.schema([
-            ...         pyarrow.field("a", pyarrow.string()),
-            ...         pyarrow.field("b", pyarrow.int64()),
-            ...     ])
+            >>> class MyTable(quivr.Table):
+            ...     a = quivr.StringColumn()
+            ...     b = quivr.Int64Column()
             ...
             >>> # All of these are equivalent:
-            >>> MyTable.from_data([["a", 1], ["b", 2]])
-            MyTable(size=2)
             >>> MyTable.from_data({"a": ["a", "b"], "b": [1, 2]})
             MyTable(size=2)
             >>> MyTable.from_data([{"a": "a", "b": 1}, {"a": "b", "b": 2}])
@@ -336,12 +332,12 @@ class Table:
             >>> class Inner(quivr.Table):
             ...     a = quivr.StringColumn()
             ...
-            >>> class Outer(quivr.TableBase):
+            >>> class Outer(quivr.Table):
             ...     z = quivr.StringColumn()
             ...     i = Inner.as_column()
             ...
             >>> data = [{"z": "v1", "i": {"a": "v1_in"}}, {"z": "v2", "i": {"a": "v2_in"}}]
-            >>> Outer.from_pylist(data)
+            >>> Outer.from_rows(data)
             Outer(size=2)
         """
         table = pa.Table.from_pylist(rows, schema=cls.schema)

@@ -50,6 +50,11 @@ class Linkage(Generic[LeftTable, RightTable]):
     The Linkage can be used to iterate over all the unique values in the
     linkage columns, and to select the rows from each table that match a
     particular value.
+
+    :param left_table: The left table in the linkage.
+    :param right_table: The right table in the linkage.
+    :param left_keys: The array of keys from the left table.
+    :param right_keys: The array of keys from the right table.
     """
 
     left_table: LeftTable
@@ -172,7 +177,48 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
       - have no null values
       - be the same length as the associated table
 
-    :raises ValueError: If the keys do not match the above requirements.
+    Example:
+        >>> from quivr import *
+        >>> class Positions(Table):
+        ...     x = Float32Column()
+        ...     y = Float32Column()
+        ...     time = TimestampColumn(unit="s")
+        ...     id = UInt32Column()
+        ...
+        >>> class Velocities(tables.Table):
+        ...     vx = Float32Column()
+        ...     vy = Float32Column()
+        ...     time = TimestampColumn(unit="s")
+        ...     id = UInt32Column()
+        ...
+        >>> positions = Positions.from_data(
+        ...     x=[0.0, 1.0, 2.0, 3.0, 4.0],
+        ...     y=[0.0, 1.0, 2.0, 3.0, 4.0],
+        ...     time=[0, 1, 2, 3, 4],
+        ...     id=[0, 1, 1, 2, 2],
+        ... )
+        >>> velocities = Velocities.from_data(
+        ...     vx=[0.0, 1.0, 2.0, 3.0, 4.0],
+        ...     vy=[0.0, 1.0, 2.0, 3.0, 4.0],
+        ...     time=[0, 1, 2, 3, 4],
+        ...     id=[0, 1, 1, 2, 2],
+        ... )
+        >>> linkage = MultiKeyLinkage(
+        ...     positions,
+        ...     velocities,
+        ...     {"id": positions.id, "time": positions.time},
+        ...     {"id": velocities.id, "time": velocities.time},
+        ... )
+        >>> for val, left, right in linkage:
+        ...     print(val, left, right)
+        [('id', 0), ('time', datetime.datetime(1970, 1, 1, 0, 0))] Positions(size=1) Velocities(size=1)
+        [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 4))] Positions(size=1) Velocities(size=1)
+        [('id', 1), ('time', datetime.datetime(1970, 1, 1, 0, 0, 1))] Positions(size=1) Velocities(size=1)
+        [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 3))] Positions(size=1) Velocities(size=1)
+        [('id', 1), ('time', datetime.datetime(1970, 1, 1, 0, 0, 2))] Positions(size=1) Velocities(size=1)
+
+
+
 
     :param left_table: The left table to link.
     :param right_table: The right table to link.
@@ -183,9 +229,8 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         arrays must be the same length as the right table, and must not contain
         null values. The key names must be the same as the left keys.
 
-    :ivar dtype: A dictionary of key names to the Arrow data type of the
-        associated key.
-    :type dtype: dict[str, pyarrow.DataType]
+    :raises ValueError: If the keys do not match the requirements above.
+
     """
 
     def __init__(
@@ -241,18 +286,42 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         Returns a composite key scalar for the given values.
 
         Example:
-
-            >>> linkage = MultiKeyLinkage(
-            ...     left_table,
-            ...     right_table,
-            ...     {"a": left_table["a"], "b": left_table["b"]},
-            ...     {"a": right_table["a"], "b": right_table["b"]},
+            >>> from quivr import *
+            >>> class Positions(Table):
+            ...     x = Float32Column()
+            ...     y = Float32Column()
+            ...     time = TimestampColumn(unit="s")
+            ...     id = UInt32Column()
+            ...
+            >>> class Velocities(tables.Table):
+            ...     vx = Float32Column()
+            ...     vy = Float32Column()
+            ...     time = TimestampColumn(unit="s")
+            ...     id = UInt32Column()
+            ...
+            >>> positions = Positions.from_data(
+            ...     x=[0.0, 1.0, 2.0, 3.0, 4.0],
+            ...     y=[0.0, 1.0, 2.0, 3.0, 4.0],
+            ...     time=[0, 1, 2, 3, 4],
+            ...     id=[0, 1, 1, 2, 2],
             ... )
-            >>> key = linkage.key(a=1, b=2)
+            >>> velocities = Velocities.from_data(
+            ...     vx=[0.0, 1.0, 2.0, 3.0, 4.0],
+            ...     vy=[0.0, 1.0, 2.0, 3.0, 4.0],
+            ...     time=[0, 1, 2, 3, 4],
+            ...     id=[0, 1, 1, 2, 2],
+            ... )
+            >>> linkage = MultiKeyLinkage(
+            ...     positions,
+            ...     velocities,
+            ...     {"time": positions.time, "id": positions.id},
+            ...     {"time": velocities.time, "id": velocities.id},
+            ... )
+            >>> key = linkage.key(time=1, id=1)
             >>> key
-            <pyarrow.StructScalar: [('a', 1), ('b', 2)]>
+            <pyarrow.StructScalar: [('time', datetime.datetime(1970, 1, 1, 0, 0, 1)), ('id', 1)]>
             >>> linkage[key]
-            (MyTable(size=1), MyTable(size=1))
+            (Positions(size=1), Velocities(size=1))
 
 
         :param kwargs: The values for the composite key.

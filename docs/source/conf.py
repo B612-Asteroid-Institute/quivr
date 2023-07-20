@@ -36,8 +36,9 @@ exclude_patterns = []
 autodoc_type_aliases = {
     "MetadataDict": "MetadataDict",
     "quivr.MetadataDict": "MetadataDict",
-    "quivr.columns.MetadataDict": "MetadataDict",        
+    "quivr.columns.MetadataDict": "MetadataDict",
 }
+
 autodoc_member_order = 'bysource'
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

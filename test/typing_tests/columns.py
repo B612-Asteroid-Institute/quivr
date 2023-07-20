@@ -23,7 +23,7 @@ assert_type(instance, MyTable)
 # Instance attributes should return pyarrow types
 assert_type(instance.string_col, pyarrow.StringArray)
 assert_type(instance.int8_col, pyarrow.Int8Array)
-assert_type(instance.float64_col, pyarrow.Float64Array)
+assert_type(instance.float64_col, pyarrow.lib.DoubleArray)
 
 # Class-level attributes should be the columns themselves
 assert_type(MyTable.string_col, quivr.StringColumn)

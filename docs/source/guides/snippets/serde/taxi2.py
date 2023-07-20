@@ -18,7 +18,7 @@ column_name_mapping = {
 
 data = TaxiData.from_parquet(
     "yellow__tripdata_2023-01.parquet",
-    column_name_mapping=column_name_mapping,
+    column_name_map=column_name_mapping,
 )
 print(data)
 # TaxiData(size=3066766)

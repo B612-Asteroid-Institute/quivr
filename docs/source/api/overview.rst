@@ -17,7 +17,9 @@ Table of Contents
    columns
    column_validators
    attributes
+   linkages
    errors
+
    
 .. module:: quivr
 
@@ -29,6 +31,7 @@ Primary API Objects
 
    Table
    Column
+   Linkage
 
 Column Types
 ------------
