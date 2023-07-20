@@ -1,8 +1,8 @@
-from typing import Any, Optional, Iterator
+from typing import Any, Iterator, Optional
 
 import pyarrow as pa
 
-from . import columns, tables
+from . import tables
 
 
 class ArrowArrayIndex:

@@ -81,10 +81,11 @@ def test_linkage_iteration():
         right_keys=ephems.observer_code,
     )
 
-    for obs, eph in linkage:
+    for key, obs, eph in linkage:
         assert len(obs) == 1
         assert len(eph) == 3
-        assert pa.compute.all(pa.compute.equal(eph.observer_code, obs.code[0].as_py())).as_py()
+        assert pa.compute.all(pa.compute.equal(eph.observer_code, key)).as_py()
+        assert pa.compute.all(pa.compute.equal(obs.code, key)).as_py()
 
 
 def test_integer_linkage():
