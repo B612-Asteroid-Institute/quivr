@@ -46,6 +46,7 @@ from .errors import InvariantViolatedError, TableFragmentedError, ValidationErro
 from .indexing import StringIndex
 from .matrix import MatrixArray, MatrixExtensionType
 from .tables import AnyTable, AttributeValueType, DataSourceType, Table
+from .linkage import Linkage
 from .validators import Validator, and_, eq, ge, gt, is_in, le, lt
 
 __all__ = [
@@ -111,4 +112,5 @@ __all__ = [
     "AnyTable",
     "MetadataDict",
     "Byteslike",
+    "Linkage",
 ]
