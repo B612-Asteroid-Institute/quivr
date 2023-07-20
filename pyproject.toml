@@ -23,6 +23,7 @@ dynamic = [ "version" ]
 docs = [
   "sphinx==7.0.1",
   "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
   "furo",
 ]
 
@@ -80,6 +81,7 @@ benchmark = [
 dependencies = [
   "sphinx==7.0.1",
   "sphinx-autodoc-typehints",
+  "sphinx-copybutton",
   "furo",
 ]
 
