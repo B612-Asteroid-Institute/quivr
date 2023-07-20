@@ -595,10 +595,34 @@ class Table:
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Table):
-            return bool(self.table.equals(other.table, check_metadata=True))
+            if not bool(self.table.equals(other.table, check_metadata=False)):
+                return False
+            if not self._attr_equal(other):
+                return False
+            return True
         if isinstance(other, pa.Table):
             return bool(self.table.equals(other, check_metadata=True))
+
         return False
+
+    def _attr_equal(self, other: Self) -> bool:
+        """
+        Check if the attributes of two tables are equal. Recurs into subtables.
+        """
+        if not isinstance(other, self.__class__):
+            return False
+
+        if self.attributes() != other.attributes():
+            return False
+
+        for subtable_name in self._quivr_subtables.keys():
+            self_subtable = getattr(self, subtable_name)
+            other_subtable = getattr(other, subtable_name)
+            if other_subtable is None:
+                return False
+            if not self_subtable._attr_equal(other_subtable):
+                return False
+        return True
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:
         """Return a new Table with only the rows at the given indices."""
@@ -615,6 +639,7 @@ class Table:
         memory_map: bool = False,
         pq_buffer_size: int = 0,
         filters: Optional[pc.Expression] = None,
+        column_name_map: Optional[dict[str, str]] = None,
         **kwargs: AttributeValueType,
     ) -> Self:
         """Read a table from a Parquet file.
@@ -630,17 +655,56 @@ class Table:
                 removed from scanned data. For more information, see
                 the PyArrow documentation on
                 pyarrow.parquet.read_table and its filter parameter.
+        :param column_name_map: An optional dictionary mapping column names in the Parquet file to
+                column names in the resulting Table. This is useful if the Parquet file contains
+                column names that are not valid Python identifiers, or if you want to rename
+                columns for any other reason.
         :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
 
         """
+        table = cls._load_parquet_table(
+            path=path,
+            memory_map=memory_map,
+            pq_buffer_size=pq_buffer_size,
+            filters=filters,
+            column_name_map=column_name_map,
+        )
+        return cls(table=table, **kwargs)
+
+    @classmethod
+    def _load_parquet_table(
+        cls,
+        path: str,
+        memory_map: bool,
+        pq_buffer_size: int,
+        filters: Optional[pc.Expression],
+        column_name_map: Optional[dict[str, str]],
+    ) -> pa.Table:
+        if column_name_map is not None:
+            inverted_map = {v: k for k, v in column_name_map.items()} if column_name_map else {}
+            column_names = [inverted_map.get(field.name, field.name) for field in cls.schema]
+            schema = pa.schema(
+                [pa.field(inverted_map.get(field.name, field.name), field.type) for field in cls.schema]
+            )
+        else:
+            column_names = [field.name for field in cls.schema]
+            schema = cls.schema
+
         table = pyarrow.parquet.read_table(
             source=path,
-            columns=[field.name for field in cls.schema],
+            columns=column_names,
             memory_map=memory_map,
             buffer_size=pq_buffer_size,
             filters=filters,
+            schema=schema,
         )
-        return cls(table=table, **kwargs)
+        md = pyarrow.parquet.read_metadata(path, memory_map=memory_map)
+        table = table.replace_schema_metadata(md.metadata)
+
+        if column_name_map is not None:
+            table = table.rename_columns([field.name for field in cls.schema])
+
+        return table
 
     def to_feather(self, path: str, **kwargs: Any) -> None:
         """Write the table to a Feather file."""

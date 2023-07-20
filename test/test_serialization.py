@@ -23,6 +23,7 @@ class TestParquetSerialization:
         assert path.stat().st_size > 0
 
         have = Container.from_parquet(path)
+
         assert have == container
 
     def test_mmap(self, tmp_path):
@@ -49,3 +50,16 @@ class TestParquetSerialization:
         filter2 = pc.equal(pc.field("pair", "x"), 1)
         have = Container.from_parquet(path, filters=filter2)
         assert have == container[0]
+
+    def test_column_renaming(self, tmp_path):
+        path = tmp_path / "test.parquet"
+        pair = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+        pair.to_parquet(path)
+
+        class Pair2(Table):
+            a = Int64Column()
+            b = Int64Column()
+
+        have = Pair2.from_parquet(path, column_name_map={"x": "a", "y": "b"})
+        want = Pair2.from_data(a=[1, 2, 3], b=[4, 5, 6])
+        assert have == want
