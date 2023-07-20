@@ -160,9 +160,116 @@ class Linkage(Generic[LeftTable, RightTable]):
         return len(self.all_unique_values)
 
 
-def composite_array(*keys: list[pa.Array]) -> pa.Array:
+class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
+    """A MultiKeyLinkage links two tables using multiple arrays for
+    composite key relationships.
+
+    The linkage is defined by a pair of dictionaries, one for each
+    table, which define the composite keys.
+
+    The dictionaries must have the same keys, and the arrays must:
+      - be identically typed under the same keys
+      - have no null values
+      - be the same length as the associated table
+
+    :raises ValueError: If the keys do not match the above requirements.
+
+    :param left_table: The left table to link.
+    :param right_table: The right table to link.
+    :param left_keys: A dictionary of key names to arrays of values. The arrays
+        must be the same length as the left table, and must not contain null
+        values. The key names must be the same as the right keys.
+    :param right_keys: A dictionary of key names to arrays of values. The
+        arrays must be the same length as the right table, and must not contain
+        null values. The key names must be the same as the left keys.
+
+    :ivar dtype: A dictionary of key names to the Arrow data type of the
+        associated key.
+    :type dtype: dict[str, pyarrow.DataType]
+    """
+
+    def __init__(
+        self,
+        left_table: LeftTable,
+        right_table: RightTable,
+        left_keys: dict[str, pa.Array],
+        right_keys: dict[str, pa.Array],
+    ):
+        if set(left_keys.keys()) != set(right_keys.keys()):
+            raise ValueError("Left and right key dictionaries must have the same keys")
+
+        if len(left_keys) == 0:
+            raise ValueError("Left and right key dictionaries must not be empty")
+
+        self.dtypes = {}
+
+        for k in left_keys.keys():
+            left_array = left_keys[k]
+            right_array = right_keys[k]
+            if not isinstance(left_array, pa.Array):
+                raise TypeError(f"Left key {k} must be an Arrow array")
+            if not isinstance(right_array, pa.Array):
+                raise TypeError(f"Right key {k} must be an Arrow array")
+
+            if left_array.type != right_array.type:
+                raise TypeError(
+                    f"Left key {k} and right key {k} must have the same type; "
+                    f"left={left_array.type}, right={right_array.type}"
+                )
+
+            if left_array.null_count > 0:
+                raise ValueError(f"Left key {k} must not contain null values")
+            if right_array.null_count > 0:
+                raise ValueError(f"Right key {k} must not contain null values")
+
+            if len(left_array) != len(left_table):
+                raise ValueError(f"Left key {k} must have the same length as the left table")
+            if len(right_array) != len(right_table):
+                raise ValueError(f"Right key {k} must have the same length as the right table")
+
+            self.dtypes[k] = left_array.type
+
+        self.scalar_type = pa.struct(self.dtypes)
+
+        left_structarray = _build_struct_array(left_keys)
+        right_structarray = _build_struct_array(right_keys)
+
+        super().__init__(left_table, right_table, left_structarray, right_structarray)
+
+    def key(self, **kwargs: Any) -> pa.Scalar:
+        """
+        Returns a composite key scalar for the given values.
+
+        Example:
+
+            >>> linkage = MultiKeyLinkage(
+            ...     left_table,
+            ...     right_table,
+            ...     {"a": left_table["a"], "b": left_table["b"]},
+            ...     {"a": right_table["a"], "b": right_table["b"]},
+            ... )
+            >>> key = linkage.key(a=1, b=2)
+            >>> key
+            <pyarrow.StructScalar: [('a', 1), ('b', 2)]>
+            >>> linkage[key]
+            (MyTable(size=1), MyTable(size=1))
+
+
+        :param kwargs: The values for the composite key.
+        :raises ValueError: If the keys do not match the linkage keys.
+        """
+        if set(kwargs.keys()) != set(self.dtypes.keys()):
+            raise ValueError(f"Keys must match the linkage keys ({self.dtypes.keys()})")
+        return pa.scalar(kwargs, type=self.scalar_type)
+
+
+def _build_struct_array(keys: dict[str, pa.Array]) -> pa.Array:
     """
     Create a composite array from a list of arrays.
     """
-    fields = [pa.field(f"key_{i}", k.type) for i, k in enumerate(keys)]  # type: ignore
-    return pa.StructArray.from_arrays(keys, fields=fields)
+    fields = []
+    arrays = []
+    for k, v in keys.items():
+        fields.append(pa.field(k, v.type))
+        arrays.append(v)
+    return pa.StructArray.from_arrays(arrays, fields=fields)

@@ -3,7 +3,7 @@ import pyarrow as pa
 import pytest
 
 from quivr import Float64Column, Int64Column, StringColumn, Table
-from quivr.linkage import Linkage, composite_array
+from quivr.linkage import Linkage, MultiKeyLinkage
 
 
 class Observers(Table):
@@ -153,41 +153,130 @@ def test_integer_linkage():
     assert have_right_5 == RightSide.empty()
 
 
-def test_composite_keys():
-    class Pair(Table):
-        x = Int64Column(nullable=False)
-        y = Int64Column(nullable=False)
+class Pair(Table):
+    x = Int64Column(nullable=False)
+    y = Int64Column(nullable=False)
 
-    class LeftSide(Table):
-        id = Int64Column(nullable=False)
-        pairs = Pair.as_column()
 
-        def keys(self):
-            return composite_array(self.id, self.pairs.x, self.pairs.y)
+class LeftSide(Table):
+    id = Int64Column(nullable=False)
+    pairs = Pair.as_column()
 
-    class RightSide(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
-        pairs = Pair.as_column()
 
-        def keys(self):
-            return composite_array(self.leftside_id, self.pairs.x, self.pairs.y)
+class RightSide(Table):
+    id = StringColumn(nullable=False)
+    leftside_id = Int64Column()
+    pairs = Pair.as_column()
 
+
+class TestMultiKeyLinkages:
     left = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
         pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
     )
     right = RightSide.from_kwargs(
-        id=[1, 2, 3, 4, 5],
+        id=["a", "b", "c", "d", "e"],
         leftside_id=[1, 1, 1, 2, 2],
         pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
     )
-    link = Linkage(left, right, left.keys(), right.keys())
 
-    k1 = left.keys()[0]
-    v = link[k1]
-    assert v[0] == left[0]
-    assert v[1] == right[0]
+    def test_link_composite_key(self):
+        left, right = self.left, self.right
+        link = MultiKeyLinkage(
+            left_table=left,
+            right_table=right,
+            left_keys={"id": left.id, "x": left.pairs.x},
+            right_keys={"id": right.leftside_id, "x": right.pairs.x},
+        )
+
+        k1 = link.key(id=1, x=1)
+        v = link[k1]
+        assert v[0] == left[0]
+        assert v[1] == right[0]
+
+    def test_create_scalar_not_present(self):
+        left, right = self.left, self.right
+        link = MultiKeyLinkage(
+            left_table=left,
+            right_table=right,
+            left_keys={"id": left.id, "x": left.pairs.x},
+            right_keys={"id": right.leftside_id, "x": right.pairs.x},
+        )
+
+        # Should be OK to create a scalar with values that don't exist
+        k1 = link.key(id=-1, x=-1)
+        v = link[k1]
+        assert v[0] == left.empty()
+        assert v[1] == right.empty()
+
+    def test_create_scalar_key_invalid(self):
+        left, right = self.left, self.right
+        link = MultiKeyLinkage(
+            left_table=left,
+            right_table=right,
+            left_keys={"id": left.id, "x": left.pairs.x},
+            right_keys={"id": right.leftside_id, "x": right.pairs.x},
+        )
+
+        # Can't make one with a key that doesn't exist
+        with pytest.raises(ValueError):
+            link.key(id=1, x=2, z=2)
+
+        # Can't make one without setting all keys
+        with pytest.raises(ValueError):
+            link.key(id=1)
+
+        # Can't make one with wrong dtypes
+        with pytest.raises(pa.ArrowInvalid):
+            link.key(id=1, x="1")
+
+    def test_create_linkage_error_cases(self):
+        left, right = self.left, self.right
+
+        # Can't make a linkage with empty key sets
+        with pytest.raises(ValueError, match="Left and right key dictionaries must not be empty"):
+            MultiKeyLinkage(left, right, {}, {})
+
+        # Can't make a linkage with different keys
+        with pytest.raises(ValueError, match="Left and right key dictionaries must have the same keys"):
+            MultiKeyLinkage(left, right, {"id": left.id}, {"foo": right.id})
+
+        # Can't make a linkage with different key dtypes
+        with pytest.raises(TypeError, match="Left key id and right key id must have the same type"):
+            MultiKeyLinkage(
+                left,
+                right,
+                left_keys={"id": left.id, "x": left.pairs.x},
+                right_keys={"id": right.id, "x": right.pairs.x},
+            )
+
+        # Can't make a linkage with nulls in the key
+        with pytest.raises(ValueError, match="Right key x must not contain null values"):
+            x_with_null = pa.array([1, 2, 3, 4, None], type=pa.int64())
+            MultiKeyLinkage(
+                left,
+                right,
+                left_keys={"id": left.id, "x": left.pairs.x},
+                right_keys={"id": right.leftside_id, "x": x_with_null},
+            )
+
+        # Can't make a linkage with different key lengths
+        with pytest.raises(ValueError, match="Left key x must have the same length as the left table"):
+            x_short = pa.array([1, 2, 3, 4], type=pa.int64())
+            MultiKeyLinkage(
+                left,
+                right,
+                left_keys={"id": left.id, "x": x_short},
+                right_keys={"id": right.leftside_id, "x": right.pairs.x},
+            )
+        with pytest.raises(ValueError, match="Right key x must have the same length as the right table"):
+            x_short = pa.array([1, 2, 3, 4], type=pa.int64())
+            MultiKeyLinkage(
+                left,
+                right,
+                left_keys={"id": left.id, "x": left.pairs.x},
+                right_keys={"id": right.leftside_id, "x": x_short},
+            )
 
 
 @pytest.mark.benchmark(group="linkage-creation")

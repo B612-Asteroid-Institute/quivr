@@ -44,7 +44,7 @@ from .concat import concatenate
 from .defragment import defragment
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
 from .indexing import StringIndex
-from .linkage import Linkage
+from .linkage import Linkage, MultiKeyLinkage
 from .matrix import MatrixArray, MatrixExtensionType
 from .tables import AnyTable, AttributeValueType, DataSourceType, Table
 from .validators import Validator, and_, eq, ge, gt, is_in, le, lt
@@ -113,4 +113,5 @@ __all__ = [
     "MetadataDict",
     "Byteslike",
     "Linkage",
+    "MultiKeyLinkage",
 ]
