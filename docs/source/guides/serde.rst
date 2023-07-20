@@ -6,15 +6,18 @@ Serialization and Deserialization
 ``quivr`` Tables can be loaded from Parquet files, Feather files, and CSVs.
 
 
+Parquet
++++++++
+
+
 Renaming Columns
 ----------------
 
-When you're loading a file, it might not be one you created, so you
+When you're loading a Parquet file, it might not be one you created, so you
 might not have control over its schema. If it has column names that
 are not valid Python identifiers, or just if you'd prefer they be
 something different, you can supply a column name mapping to the
-deserialization functions (:meth:`Table.from_parquet`, :meth:`Table.from_csv`, and
-:meth:`Table.from_feather`).
+deserialization functions (:meth:`Table.from_parquet`).
 
 For example, here is the 2022 schema for the famous `New York City taxi data <https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page>`_:
 
