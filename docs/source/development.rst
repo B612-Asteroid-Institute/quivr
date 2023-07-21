@@ -13,7 +13,7 @@ Development tasks
 
 Hatch manages local dependency state and can run tasks. These are
 defined in `pyproject.toml
-<https://github.com/spenczar/quivr/blob/main/pyproject.toml>_`.
+<https://github.com/spenczar/quivr/blob/main/pyproject.toml>`_.
 
 .. list-table:: Development Tasks
    :widths: 40 60
