@@ -74,8 +74,17 @@ typecheck = [
 test = [
   "pytest --benchmark-disable ./test",
 ]
+doctest = [
+  "pytest --doctest-modules ./quivr"
+]
 benchmark = [
   "pytest --benchmark-only ./test"
+]
+gauntlet = [
+   "hatch run lint",
+   "hatch run typecheck",
+   "hatch run test",
+   "hatch run doctest",
 ]
 
 [tool.hatch.envs.docs]

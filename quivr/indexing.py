@@ -14,14 +14,6 @@ class StringIndex(Generic[T]):
     list of row indices. It can be used for fast lookups of sub-slices
     of a Table based on string values.
 
-    Example usage:
-
-    >>> from indexing import StringIndex
-    >>> from examples.coordinates import create_example_orbits
-    >>> orbits = create_example_orbits(1000)
-    >>> index = StringIndex(orbits, 'object_id')
-    >>> index.lookup('id990')
-    Orbit(size=1)
 
     This is equivalent to calling table.select("object_id", "id990"),
     but it is about 5x faster. The tradeoff is that building the
