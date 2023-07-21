@@ -2,7 +2,7 @@ Linkages: Working with Multiple Tables
 ======================================
 
 .. currentmodule:: quivr
-		   
+
 .. note::
 
    See also: :ref:`linkage-example` for a worked example of using
@@ -97,6 +97,49 @@ over it in order of increasing ID, you can do this:
        left, right = lnk.select(k)
        # do something with the left and right tables
 
+If you happen to know that the keys are already unique, or already
+sorted, you might be able to skip some of those calls, or you might
+even be able to only use one of the key arrays.
+
+
+Slicing and Filtering
+---------------------
+
+The simplest way to do slicing and filtering is to slice and filter
+the original table. This works if you're providing one of the Table's
+columns directly as the key array, which is the most common case.
+
+For example, if I have a linkage ``link``, keyed by the ``id`` column
+of its left table, and its left table has a field named ``value`` that
+I'd like to filter on, I could use :meth:`Table.where`:
+
+.. code-block:: python
+
+   import pyarrow as pa
+   import pyarrow.compute as pc
+
+   # Filter the left table to positive value
+   left_positive = lnk.left_table.where(pc.field("value") > 0)
+
+   for id in left_positive.id:
+       left, right = lnk.select(id)
+       # do something with the left and right tables
+
+Similarly, to slice (for example, to get the first 10 rows), you can
+use slicing syntax on the table:
+
+.. code-block:: python
+
+   left_first_10 = lnk.left_table[:10]
+
+   for id in left_first_10.id:
+       left, right = lnk.select(id)
+       # do something with the left and right tables
+
+If you're using a key array that isn't a column on the table, then
+you'll need to do some more sophisticated bookkeeping, but the basic
+idea should be the same: generate an iterable of the keys you want,
+and then use the linkage to select the rows that match.
 
 
 Linking on multiple arrays
@@ -117,5 +160,3 @@ Lookups get a bit trickier with multiple keys, since you'll need to
 construct a composite key with just the right shape to match the
 linkage. The :meth:`MultiKeyLinkage.key` method is provided to help
 with this.
-
-
