@@ -71,6 +71,8 @@ class Linkage(Generic[LeftTable, RightTable]):
 
     left_keys: pa.Array
     right_keys: pa.Array
+
+    key_type: pa.DataType
     all_unique_values: set[pa.Scalar]
 
     def __init__(
@@ -99,6 +101,10 @@ class Linkage(Generic[LeftTable, RightTable]):
         if len(right_keys) != len(right_table):
             raise ValueError("Right keys must have the same length as the right table")
 
+        if left_keys.type != right_keys.type:
+            raise ValueError("Left and right keys must have the same data type")
+        self.key_type = left_keys.type
+
         self.left_table = left_table
         self.right_table = right_table
 
@@ -118,7 +124,7 @@ class Linkage(Generic[LeftTable, RightTable]):
         returned.
         """
         if not isinstance(val, pa.Scalar):
-            val = pa.scalar(val)
+            val = pa.scalar(val, self.key_type)
         return self._select_left(val)
 
     def _select_left(self, val: pa.Scalar) -> LeftTable:
@@ -136,7 +142,7 @@ class Linkage(Generic[LeftTable, RightTable]):
         returned.
         """
         if not isinstance(val, pa.Scalar):
-            val = pa.scalar(val)
+            val = pa.scalar(val, self.key_type)
         return self._select_right(val)
 
     def _select_right(self, val: pa.Scalar) -> RightTable:
@@ -154,7 +160,7 @@ class Linkage(Generic[LeftTable, RightTable]):
         returned for that table.
         """
         if not isinstance(val, pa.Scalar):
-            val = pa.scalar(val)
+            val = pa.scalar(val, self.key_type)
         return self._select_left(val), self._select_right(val)
 
     def __getitem__(self, val: Any) -> tuple[LeftTable, RightTable]:

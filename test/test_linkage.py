@@ -2,7 +2,7 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from quivr import Float64Column, Int64Column, StringColumn, Table
+from quivr import Float64Column, Int64Column, StringColumn, Table, UInt32Column
 from quivr.linkage import Linkage, MultiKeyLinkage
 
 
@@ -352,3 +352,31 @@ def test_access_keys_via_linkage():
     assert link.left_keys == left.id
     assert link.right_keys == right.leftside_id
     assert link.left_keys != link.right_keys
+
+
+def test_linkage_uses_correct_dtypes_in_select():
+    class LeftSide(Table):
+        id = UInt32Column(nullable=False)
+        x = Float64Column()
+
+    class RightSide(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = UInt32Column()
+
+    left = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        x=[1, 2, 3, 4, 5],
+    )
+    right = RightSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        leftside_id=[1, 1, 1, 2, 2],
+    )
+    link = Linkage(left, right, left.id, right.leftside_id)
+
+    assert link.left_keys.type == pa.uint32()
+    assert link.right_keys.type == pa.uint32()
+
+    # Using a Python literal should work
+    have_left, have_right = link.select(1)
+    assert len(have_left) == 1
+    assert len(have_right) == 3
