@@ -328,3 +328,27 @@ def test_benchmark_linkage_iteration(benchmark, left_table_size, right_table_siz
 def _noop_iterate(iterator):
     for _ in iterator:
         pass
+
+
+def test_access_keys_via_linkage():
+    class LeftSide(Table):
+        id = Int64Column(nullable=False)
+        x = Float64Column()
+
+    class RightSide(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = Int64Column()
+
+    left = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        x=[1, 2, 3, 4, 5],
+    )
+    right = RightSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        leftside_id=[1, 1, 1, 2, 2],
+    )
+    link = Linkage(left, right, left.id, right.leftside_id)
+
+    assert link.left_keys == left.id
+    assert link.right_keys == right.leftside_id
+    assert link.left_keys != link.right_keys

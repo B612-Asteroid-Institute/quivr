@@ -55,6 +55,12 @@ class Linkage(Generic[LeftTable, RightTable]):
     :param right_table: The right table in the linkage.
     :param left_keys: The array of keys from the left table.
     :param right_keys: The array of keys from the right table.
+
+    :ivar Table left_table: The left table in the linkage.
+    :ivar Table right_table: The right table in the linkage.
+    :ivar pyarrow.Array left_keys: The array of keys for the left table.
+    :ivar pyarrow.Array right_keys: The array of keys for the right table.
+
     """
 
     left_table: LeftTable
@@ -63,6 +69,8 @@ class Linkage(Generic[LeftTable, RightTable]):
     left_index: ArrowArrayIndex
     right_index: ArrowArrayIndex
 
+    left_keys: pa.Array
+    right_keys: pa.Array
     all_unique_values: set[pa.Scalar]
 
     def __init__(
@@ -96,6 +104,9 @@ class Linkage(Generic[LeftTable, RightTable]):
 
         self.left_index = ArrowArrayIndex(left_keys)
         self.right_index = ArrowArrayIndex(right_keys)
+
+        self.left_keys = left_keys
+        self.right_keys = right_keys
 
         self.all_unique_values = self.left_index.values.union(self.right_index.values)
 
