@@ -25,6 +25,7 @@ Quivr's tables are :ref:`composable <composition>`.
    guides/index
    examples/index
    api/overview
+   development
 	     
 
 
