@@ -40,6 +40,11 @@ def test_concatenate_nested():
     np.testing.assert_array_equal(have.id, ["v1", "v2", "v3", "v4", "v5", "v6"])
 
 
+def test_concatenate_empty():
+    with pytest.raises(ValueError, match="No values to concatenate"):
+        concatenate([])
+
+
 @pytest.mark.benchmark(group="ops")
 def test_benchmark_concatenate_100(benchmark):
     xs1 = pa.array([1, 2, 3], pa.int64())

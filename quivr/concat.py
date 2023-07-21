@@ -29,6 +29,8 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
         if first:
             cls = v.__class__
             first = False
+    if len(batches) == 0:
+        raise ValueError("No values to concatenate")
     table = pa.Table.from_batches(batches)
     result = cls(table=table)
     if defrag:
