@@ -90,14 +90,6 @@ class Table:
         # Add validators
         cls._column_validators = column_validators
 
-        # If the subclass has an __init__ override, it must have a
-        # with_table override as well.
-        if "__init__" in cls.__dict__ and "with_table" not in cls.__dict__:
-            raise TypeError(
-                f"{cls.__name__} has an __init__ override, but does not have a with_table "
-                + "override. You must implement both or neither."
-            )
-
         super().__init_subclass__(**kwargs)
 
     def __init__(self, table: pa.Table, **kwargs: AttributeValueType):
@@ -107,6 +99,44 @@ class Table:
                 setattr(self, name, value)
             else:
                 raise AttributeError(f"{self.__class__.__name__} has no attribute {name}")
+        for name in self._quivr_attributes:
+            # Ensure all attributes are set or have a default
+            getattr(self, name)
+
+    @classmethod
+    def from_pyarrow(
+        cls,
+        table: pa.Table,
+        validate: bool = True,
+        **kwargs: AttributeValueType,
+    ) -> Self:
+        """Create a new table from a pyarrow Table.
+
+        This is a convenience method which can be used to create a
+        Table from a pyarrow Table. It can also accept keyword-style
+        arguments to set attributes on the table.
+
+        When serializing to pyarrow, the table's schema metadata
+        encodes the value of attributes. This method will use that
+        metadata to set the attributes on the table if it is
+        available. If any attributes are provided as keyword
+        arguments, they override any values in the metadata.
+
+        :param table: The pyarrow Table to create the table from.
+        :param validate: Whether to validate the table against the
+            schema, and run any column validators.
+        :param \\**kwargs: Keyword arguments to set attributes on the
+            table.
+        :type \\**kwargs: :obj:`AttributeValueType`
+        :return: A new Table instance.
+        """
+
+        schema = cls.schema.with_metadata(table.schema.metadata)
+        table = table.cast(schema)
+        instance = cls(table, **kwargs)
+        if validate:
+            instance.validate()
+        return instance
 
     @classmethod
     def from_data(

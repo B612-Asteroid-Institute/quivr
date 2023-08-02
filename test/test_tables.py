@@ -523,18 +523,6 @@ class TestTableAttributes:
         assert indexed.attrib == "foo"
 
 
-def test_init_subclass_with_attributes_without_withtable():
-    with pytest.raises(TypeError):
-
-        class MyTable(Table):
-            x = Int64Column()
-            attrib: str
-
-            def __init__(self, table: pa.Table, attrib: str):
-                self.attrib = attrib
-                super().__init__(table)
-
-
 def test_empty():
     have = Pair.empty()
     assert len(have.x) == 0
@@ -656,3 +644,109 @@ def test_apply_mask_pyarrow_with_nulls():
     mask = pa.array([True, False, None], pa.bool_())
     with pytest.raises(ValueError):
         values.apply_mask(mask)
+
+
+def test_from_pyarrow_table():
+    table = pa.table({"x": [1, 2, 3], "y": [4, 5, 6]})
+    have = Pair.from_pyarrow(table)
+    assert isinstance(have, Pair)
+    assert have.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert have.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+
+def test_from_pyarrow_table_missing_column():
+    table = pa.table({"x": [1, 2, 3]})
+    with pytest.raises(ValueError):
+        Pair.from_pyarrow(table)
+
+
+def test_from_pyarrow_table_wrong_type():
+    table = pa.table({"x": ["a", "b", "c"], "y": [4, 5, 6]})
+    with pytest.raises(pa.ArrowInvalid):
+        Pair.from_pyarrow(table)
+
+
+def test_from_pyarrow_int_type_conversions():
+    class Int8Pair(Table):
+        x = Int8Column()
+        y = Int8Column()
+
+    table = pa.table({"x": pa.array([1, 2, 3], pa.int32()), "y": pa.array([4, 5, 6], pa.int64())})
+    have = Int8Pair.from_pyarrow(table)
+    assert isinstance(have, Int8Pair)
+    assert have.x.equals(pa.array([1, 2, 3], pa.int8()))
+    assert have.y.equals(pa.array([4, 5, 6], pa.int8()))
+
+
+def test_from_pyarrow_int_overflow():
+    class Int8Pair(Table):
+        x = Int8Column()
+        y = Int8Column()
+
+    table = pa.table({"x": pa.array([1, 2, 3], pa.int32()), "y": pa.array([4, 5, 1000], pa.int64())})
+    with pytest.raises(ValueError):
+        Int8Pair.from_pyarrow(table)
+
+
+def test_from_pyarrow_empty_table():
+    table = pa.table({"x": pa.array([], pa.int64()), "y": pa.array([], pa.int64())})
+    have = Pair.from_pyarrow(table)
+    assert isinstance(have, Pair)
+    assert have.x.equals(pa.array([], pa.int64()))
+    assert have.y.equals(pa.array([], pa.int64()))
+
+
+def test_from_pyarrow_nested_table():
+    table = pa.table({"pair": [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}], "id": ["a", "b", "c"]})
+
+    have = Wrapper.from_pyarrow(table)
+    assert isinstance(have, Wrapper)
+    assert have.id.equals(pa.array(["a", "b", "c"], pa.string()))
+
+    assert isinstance(have.pair, Pair)
+    assert have.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert have.pair.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+
+def test_from_pyarrow_missing_attribute():
+    table = pa.table({"x": [1, 2, 3], "y": [4, 5, 6]})
+    with pytest.raises(AttributeError):
+        TableWithAttributes.from_pyarrow(table)
+
+
+def test_from_pyarrow_explicit_attribute():
+    table = pa.table({"x": [1, 2, 3], "y": [4, 5, 6]})
+    have = TableWithAttributes.from_pyarrow(table, attrib="foo")
+    assert have.attrib == "foo"
+
+
+def test_from_pyarrow_preserves_attributes():
+    table = pa.table(
+        {"x": [1, 2, 3], "y": [4, 5, 6]},
+        schema=pa.schema([("x", pa.int64()), ("y", pa.int64())], metadata={"attrib": "bar"}),
+    )
+    have = TableWithAttributes.from_pyarrow(table)
+    assert have.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert have.y.equals(pa.array([4, 5, 6], pa.int64()))
+    assert have.attrib == "bar"
+
+
+def test_from_pyarrow_preserves_nested_attributes():
+    class NestedAttributeWrapper(Table):
+        inner = TableWithAttributes.as_column()
+        name = StringAttribute()
+
+    table = pa.table(
+        {
+            "inner": [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}],
+        },
+        schema=pa.schema(
+            [("inner", pa.struct([("x", pa.int64()), ("y", pa.int64())]))],
+            metadata={"name": "foo", "inner.attrib": "bar"},
+        ),
+    )
+    have = NestedAttributeWrapper.from_pyarrow(table)
+    assert have.name == "foo"
+    assert have.inner.attrib == "bar"
+    assert have.inner.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert have.inner.y.equals(pa.array([4, 5, 6], pa.int64()))
