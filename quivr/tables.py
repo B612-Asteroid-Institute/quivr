@@ -189,7 +189,7 @@ class Table:
         else:
             attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
             if isinstance(data, pa.Table):
-                instance = cls(table=data, **attrib_kwargs)
+                instance = cls.from_pyarrow(table=data, **attrib_kwargs)
             elif isinstance(data, dict):
                 instance = cls.from_pydict(data, **attrib_kwargs)
             elif isinstance(data, list):
