@@ -189,7 +189,7 @@ class Table:
         else:
             attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
             if isinstance(data, pa.Table):
-                instance = cls.from_pyarrow(table=data, **attrib_kwargs)
+                instance = cls.from_pyarrow(data, False, **attrib_kwargs)
             elif isinstance(data, dict):
                 instance = cls.from_pydict(data, **attrib_kwargs)
             elif isinstance(data, list):
@@ -338,14 +338,14 @@ class Table:
             metadata = {}
         schema = cls.schema.with_metadata(metadata)
         table = pa.Table.from_arrays(arrays, schema=schema)
-        return cls(table=table, **kwargs)
+        return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
     @classmethod
     def from_pydict(
         cls, d: dict[str, Union[pa.array, list[Any], npt.NDArray[Any]]], **kwargs: AttributeValueType
     ) -> Self:
         table = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls(table=table, **kwargs)
+        return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
     @classmethod
     def from_rows(cls, rows: list[dict[str, Any]], **kwargs: AttributeValueType) -> Self:
@@ -409,7 +409,7 @@ class Table:
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
-        return cls(table=table, **kwargs)
+        return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
     @classmethod
     def _unflatten_table(cls, table: pa.Table) -> pa.Table:
@@ -759,7 +759,7 @@ class Table:
             filters=filters,
             column_name_map=column_name_map,
         )
-        return cls(table=table, **kwargs)
+        return cls.from_pyarrow(table=table, validate=True, **kwargs)
 
     @classmethod
     def _load_parquet_table(
