@@ -39,7 +39,7 @@ include = [
 [tool.hatch.version]
 path = "quivr/__version__.py"
 
-[tool.hatch.envs.default]
+[tool.hatch.envs.dev]
 dependencies = [
   "black",
   "isort",
@@ -50,7 +50,7 @@ dependencies = [
   "ruff",
 ]
 
-[tool.hatch.envs.default.scripts]
+[tool.hatch.envs.dev.scripts]
 check = [
   "lint",
   "typecheck",
@@ -80,11 +80,34 @@ doctest = [
 benchmark = [
   "pytest --benchmark-only ./test"
 ]
-gauntlet = [
-   "hatch run lint",
-   "hatch run typecheck",
-   "hatch run test",
-   "hatch run doctest",
+
+[tool.hatch.envs.test]
+dependencies = [
+  "black",
+  "isort",
+  "mypy",
+  "pandas-stubs",
+  "pytest",
+  "pytest-benchmark",
+  "ruff",
+]
+type = "container"
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12.0b4"]
+
+[tool.hatch.envs.test.scripts]
+all = [
+  "ruff ./quivr ./test",
+  "black --check ./quivr ./test",
+  "isort --check-only ./quivr ./test",
+  "mypy --strict ./quivr ./examples ./test/typing_tests",
+  "pytest --benchmark-disable ./test",
+  "pytest --doctest-modules ./quivr",  
+]
+
+benchmark = [
+  "pytest --benchmark-only ./test"
 ]
 
 [tool.hatch.envs.docs]
@@ -97,19 +120,19 @@ dependencies = [
 ]
 
 [tool.hatch.envs.docs.scripts]
-make-html = [
+make = [
   "make -C docs html"
 ]
 
-open-docs = [
+open = [
   "open docs/build/html/index.html"
 ]
 
-clean-html = [
+clean = [
   "make -C docs clean"
 ]
 
-rebuild-html = [
+rebuild = [
   "make -C docs clean",
   "make -C docs html"
 ]
