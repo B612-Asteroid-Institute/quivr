@@ -275,16 +275,19 @@ class Table:
 
             if value is None:
                 if not field.nullable:
-                    raise ValueError(f"Missing non-nullable column {column_name}")
+                    column = getattr(cls, column_name)
+                    if column.default is None:
+                        raise ValueError(f"Missing non-nullable column {column_name}")
+                if size is not None:
+                    value = pa.nulls(size, type=cls.schema[i].type)
+                    arrays.append(value)
                 else:
-                    if size is not None:
-                        arrays.append(pa.nulls(size, type=cls.schema[i].type))
-                    else:
-                        # We'll have to wait until we get to a non-None column
-                        # to figure out the size.
-                        empty_columns.append(i)
-                        arrays.append(None)
-                    continue
+                    # We'll have to wait until we get to a non-None column
+                    # to figure out the size.
+                    empty_columns.append(i)
+                    arrays.append(None)
+                continue
+
             if size is None:
                 size = len(value)  # type: ignore
             elif len(value) != size:
@@ -315,6 +318,12 @@ class Table:
 
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
+
+        for i, array in enumerate(arrays):
+            if array.null_count > 0:
+                column = getattr(cls, cls.schema[i].name)
+                arrays[i] = column.fill_default(array)
+
         attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
         return cls.from_arrays(arrays, metadata=metadata, **attrib_kwargs)
 

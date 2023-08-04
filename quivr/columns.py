@@ -49,11 +49,13 @@ class Column:
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], Any], Any] = None,
     ):
         self.dtype = dtype
         self.nullable = nullable
         self.metadata = metadata
         self.validator = validator
+        self.default = default
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -82,6 +84,7 @@ class Column:
         This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
         """
         idx = obj.table.schema.get_field_index(self.name)
+        value = self.fill_default(value)
         obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value])
 
     def __set_name__(self, owner: type, name: str) -> None:
@@ -91,6 +94,21 @@ class Column:
         This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
         """
         self.name = name
+
+    def fill_default(self, array: pa.Array) -> pa.Array:
+        """
+        Fills null values in the array with the Column's default value.
+        """
+        if self.default is None or array.null_count == 0:
+            return array
+        if callable(self.default):
+            null_count = array.null_count
+            fill_values = [self.default() for _ in range(null_count)]
+
+            null_mask = pa.compute.is_null(array)
+            return pa.compute.replace_with_mask(array, null_mask, fill_values)
+        else:
+            return array.fill_null(self.default)
 
     def pyarrow_field(self) -> pa.Field:
         """
@@ -477,8 +495,9 @@ class StringColumn(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, str, Callable[[], str]] = None,
     ):
-        super().__init__(pa.string(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(pa.string(), nullable=nullable, metadata=metadata, validator=validator, default=default)
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
