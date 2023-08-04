@@ -52,3 +52,11 @@ class InvalidColumnDefault(Exception):
         self.default_value = default_value
         self.dtype = dtype
         self.column_name = column_name
+
+
+class TablesNotCompatibleError(InvariantViolatedError):
+    """Exception raised when two tables are not compatible for some
+    operation like concatenation.
+    """
+
+    ...

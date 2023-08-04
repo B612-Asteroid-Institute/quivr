@@ -2,15 +2,15 @@ from typing import Iterator
 
 import pyarrow as pa
 
-from . import tables
+from . import errors, tables
 from .defragment import defragment
 
 
 def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
     """Concatenate a collection of Tables into a single Table.
 
-    All input Tables must have the same schema (typically, this will
-    be from being the same class).
+    All input Tables be of the same class, and have the same attribute
+    values (if any).
 
     By default, results are compacted to be contiguous in memory,
     which involves a copy. In a tight loop, this can be very
@@ -21,18 +21,28 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
     :param values: An iterator of :class:`Table` instances to concatenate.
     :param defrag: Whether to compact the result to be contiguous in
         memory. Defaults to True.
+
     """
     batches = []
     first = True
     for v in values:
         batches += v.table.to_batches()
         if first:
-            cls = v.__class__
+            first_cls = v.__class__
+            first_val = v
             first = False
+        else:
+            if v.__class__ != first_cls:
+                raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")
+            if not first_val._attr_equal(v):
+                raise errors.TablesNotCompatibleError(
+                    "All tables must have the same attribute values to concatenate"
+                )
+
     if len(batches) == 0:
         raise ValueError("No values to concatenate")
     table = pa.Table.from_batches(batches)
-    result = cls(table=table)
+    result = first_cls.from_pyarrow(table=table)
     if defrag:
         result = defragment(result)
     return result

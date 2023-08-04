@@ -2,9 +2,10 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
+from quivr import errors
 from quivr.concat import concatenate
 
-from .test_tables import Pair, Wrapper
+from .test_tables import Pair, TableWithAttributes, Wrapper
 
 
 def test_concatenate():
@@ -56,3 +57,27 @@ def test_benchmark_concatenate_100(benchmark):
     pair2 = Pair.from_arrays([xs2, ys2])
 
     benchmark(concatenate, [pair1, pair2] * 50)
+
+
+def test_concatenate_different_types():
+    with pytest.raises(
+        errors.TablesNotCompatibleError, match="All tables must be the same class to concatenate"
+    ):
+        concatenate([Pair.empty(), Wrapper.empty()])
+
+
+def test_concatenate_different_attrs():
+    t1 = TableWithAttributes.from_data(x=[1], y=[2], attrib="foo")
+    t2 = TableWithAttributes.from_data(x=[3], y=[4], attrib="bar")
+
+    with pytest.raises(
+        errors.TablesNotCompatibleError, match="All tables must have the same attribute values to concatenate"
+    ):
+        concatenate([t1, t2])
+
+
+def test_concatenate_same_attrs():
+    t1 = TableWithAttributes.from_data(x=[1], y=[2], attrib="foo")
+    t2 = TableWithAttributes.from_data(x=[3], y=[4], attrib="foo")
+    have = concatenate([t1, t2])
+    assert have.attrib == "foo"
