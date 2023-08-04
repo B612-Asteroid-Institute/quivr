@@ -91,7 +91,6 @@ dependencies = [
   "pytest-benchmark",
   "ruff",
 ]
-type = "container"
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.10", "3.11", "3.12.0b4"]
@@ -120,11 +119,11 @@ dependencies = [
 ]
 
 [tool.hatch.envs.docs.scripts]
-make = [
+make-html = [
   "make -C docs html"
 ]
 
-open = [
+open-html = [
   "open docs/build/html/index.html"
 ]
 
