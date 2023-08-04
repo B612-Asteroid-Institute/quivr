@@ -226,13 +226,13 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         ...     {"id": positions.id, "time": positions.time},
         ...     {"id": velocities.id, "time": velocities.time},
         ... )
-        >>> for val, left, right in linkage:
+        >>> for val, left, right in sorted(linkage, key=lambda x: (x[0][1].as_py())):
         ...     print(val, left, right)
         [('id', 0), ('time', datetime.datetime(1970, 1, 1, 0, 0))] Positions(size=1) Velocities(size=1)
-        [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 4))] Positions(size=1) Velocities(size=1)
         [('id', 1), ('time', datetime.datetime(1970, 1, 1, 0, 0, 1))] Positions(size=1) Velocities(size=1)
-        [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 3))] Positions(size=1) Velocities(size=1)
         [('id', 1), ('time', datetime.datetime(1970, 1, 1, 0, 0, 2))] Positions(size=1) Velocities(size=1)
+        [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 3))] Positions(size=1) Velocities(size=1)
+        [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 4))] Positions(size=1) Velocities(size=1)
 
 
 
