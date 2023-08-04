@@ -1,3 +1,5 @@
+.. _attributes:
+
 Table Attributes
 ================
 

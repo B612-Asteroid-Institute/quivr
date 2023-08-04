@@ -74,6 +74,9 @@ typecheck = [
 test = [
   "pytest --benchmark-disable ./test",
 ]
+test_pdb = [
+  "pytest --benchmark-disable ./test --pdb",
+]
 doctest = [
   "pytest --doctest-modules ./quivr"
 ]

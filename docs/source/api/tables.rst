@@ -11,14 +11,19 @@ The Table Class
 Constructors
 ------------
 
-  Table instances should generally be built out of the
-  constructors. The :meth:`Table.__init__` method only accepts a "raw"
-  :class:`pyarrow.Table`.
+.. warning::
 
-  See also: :ref:`serde`.
+  Table instances should only be instantiated using the
+  constructors. The ``Table.__init__`` method only accepts a "raw"
+  :class:`pyarrow.Table`, does not validate its arguments (not even to
+  check that the table has appropriate columns), and does not allow
+  setting :ref:`Attributes`.
+
+See also: :ref:`serde`.
 
 .. automethod:: Table.from_data
 .. automethod:: Table.from_kwargs
+.. automethod:: Table.from_pyarrow
 .. automethod:: Table.from_arrays
 .. automethod:: Table.from_pydict
 .. automethod:: Table.from_rows
@@ -27,16 +32,16 @@ Constructors
 .. automethod:: Table.from_flat_dataframe
 .. automethod:: Table.empty
 .. automethod:: Table.with_table
-.. automethod:: Table.__init__
-		  
+
+
 .. _serde:
-  
+
 Serialization/Deserialization
 -----------------------------
 
 These methods handle serializing the Table to and from other
 formats, most often for writing to or reading from disk.
-  
+
 .. automethod:: Table.from_parquet
 .. automethod:: Table.from_feather
 .. automethod:: Table.from_csv
@@ -48,7 +53,7 @@ Validation
 ----------
 .. automethod:: Table.validate
 .. automethod:: Table.is_valid
-		  
+
 Interoperability
 ----------------
 
@@ -93,7 +98,7 @@ Type Information Helpers
 
 .. autotypevar:: quivr.tables.AnyTable
    :no-type:
-   
+
 
 .. autodata:: DataSourceType
 
@@ -102,4 +107,3 @@ Type Information Helpers
 .. autodata:: AttributeValueType
 
    Represents the permitted set of values to be passed in when setting a Table attribute value.
-
