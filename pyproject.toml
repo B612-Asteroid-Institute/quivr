@@ -72,16 +72,13 @@ typecheck = [
   "mypy --strict ./quivr ./examples ./test/typing_tests",
 ]
 test = [
-  "pytest --benchmark-disable ./test",
-]
-test_pdb = [
-  "pytest --benchmark-disable ./test --pdb",
+  "pytest --benchmark-disable ./test {args}",
 ]
 doctest = [
-  "pytest --doctest-modules ./quivr"
+  "pytest --doctest-modules ./quivr {args}"
 ]
 benchmark = [
-  "pytest --benchmark-only ./test"
+  "pytest --benchmark-only ./test {args}"
 ]
 
 [tool.hatch.envs.test]
@@ -104,7 +101,7 @@ all = [
   "black --check ./quivr ./test",
   "isort --check-only ./quivr ./test",
   "mypy --strict ./quivr ./examples ./test/typing_tests",
-  "pytest --benchmark-disable ./test",
+  "pytest --benchmark-disable ./test {args}",
   "pytest --doctest-modules ./quivr",  
 ]
 

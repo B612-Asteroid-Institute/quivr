@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 import pyarrow
 
 
@@ -31,3 +33,22 @@ class ValidationError(Exception):
     def __init__(self, message: str, failures: pyarrow.Array = None):
         super().__init__(message)
         self.failures = failures
+
+
+class InvalidColumnDefault(Exception):
+    """
+    Exception raised when a column default is invalid.
+
+    :ivar default_value: The invalid default value.
+    :ivar dtype: The dtype of the column.
+    :ivar column_name: The name of the column, if available. This may be None.
+    """
+
+    def __init__(self, default_value: Any, dtype: pyarrow.DataType, column_name: Optional[str] = None):
+        msg = f"Invalid default value {repr(default_value)} for dtype {repr(dtype)}"
+        if column_name is not None:
+            msg += f" in column {repr(column_name)}"
+        super().__init__(msg)
+        self.default_value = default_value
+        self.dtype = dtype
+        self.column_name = column_name

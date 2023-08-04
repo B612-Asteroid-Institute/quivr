@@ -18,7 +18,7 @@ in the `Arrow C++ compute library
 
 The validators can be combined using the :func:`and_` function. This
 can combine several validators to make one compound statement. For
-example, this code validates the ``size`` column is betwen 5 and 30:
+example, this code validates the ``size`` column is between 5 and 30:
 
 .. code-block:: py
 

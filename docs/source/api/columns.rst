@@ -50,6 +50,9 @@ These are the simplest column types. They all are initialized the same way:
        # include. Metadata should be a string-to-string dictionary.
        quivr.Int32Column(metadata={'units': 'seconds'})
 
+       # Set a default value to be used if any inputs are null
+       quivr.Int32Column(nullable=False, default=3)
+
 
 When you access a column of a primitive type on a :class:`Table`
 instance, you get a :class:`pyarrow.Array` back. The data type of the
@@ -229,7 +232,7 @@ Time-Related Types
 Structured Data
 ---------------
 
-Columsn can contain nested structural data. With these types, each
+Columns can contain nested structural data. With these types, each
 *row* of the column contains some structure.
 
 It is easy to get confused by this: All columns are "lists" in a

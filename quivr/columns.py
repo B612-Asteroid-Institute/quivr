@@ -12,11 +12,13 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
-from typing import Dict, Generic, Optional, TypeVar, Union, overload
+import datetime
+import decimal
+from typing import Any, Callable, Dict, Generic, Optional, TypeVar, Union, overload
 
 import pyarrow as pa
 
-from . import tables, validators
+from . import errors, tables, validators
 
 Byteslike: TypeAlias = Union[bytes, str]
 MetadataDict: TypeAlias = Dict[Byteslike, Byteslike]
@@ -27,7 +29,7 @@ class Column:
     descriptor for the Table's structure.
 
     This is a base class for all column types. It is not intended to
-    be used directly; instead, use on of its subclasses.
+    be used directly; instead, use one of its subclasses.
 
     Columns implement the descriptor protocol, so they should be used
     as class attributes on a Table subclass.
@@ -36,11 +38,13 @@ class Column:
     :param nullable: Whether the column can contain null values.
     :param metadata: A dictionary of metadata to attach to the column.
     :param validator: A validator to use when setting the column.
+    :param default: A default value to use when setting the column.
 
     :ivar dtype: The pyarrow data type of the column.
     :ivar nullable: Whether the column can contain null values.
     :ivar metadata: A dictionary of metadata to attach to the column.
     :ivar validator: A validator to use when setting the column.
+    :ivar default: A default value to use when setting the column.
     """
 
     def __init__(
@@ -49,11 +53,23 @@ class Column:
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], Any], Any] = None,
     ):
         self.dtype = dtype
         self.nullable = nullable
         self.metadata = metadata
         self.validator = validator
+
+        self.default = default
+        if self.default is not None:
+            self._default_is_callable = callable(self.default)
+            if self._default_is_callable:
+                self._default_fn = self.default
+            else:
+                try:
+                    self._default_scalar = pa.scalar(self.default, self.dtype)
+                except (pa.ArrowInvalid, pa.ArrowTypeError, OverflowError) as e:
+                    raise errors.InvalidColumnDefault(self.default, self.dtype) from e
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -82,6 +98,7 @@ class Column:
         This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
         """
         idx = obj.table.schema.get_field_index(self.name)
+        value = self.fill_default(value)
         obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value])
 
     def __set_name__(self, owner: type, name: str) -> None:
@@ -91,6 +108,23 @@ class Column:
         This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
         """
         self.name = name
+
+    def fill_default(self, array: pa.Array) -> pa.Array:
+        """
+        Fills null values in the array with the Column's default value.
+        """
+        if self.default is None or array.null_count == 0:
+            return array
+        if self._default_is_callable:
+            null_count = array.null_count
+            try:
+                fill_values = pa.array([self._default_fn() for _ in range(null_count)], self.dtype)
+            except (pa.ArrowInvalid, pa.ArrowTypeError, OverflowError) as e:
+                raise errors.InvalidColumnDefault(self._default_fn, self.dtype, self.name) from e
+            null_mask = pa.compute.is_null(array)
+            return pa.compute.replace_with_mask(array, null_mask, fill_values)
+        else:
+            return array.fill_null(self._default_scalar)
 
     def pyarrow_field(self) -> pa.Field:
         """
@@ -146,13 +180,18 @@ class Int8Column(Column):
     A column for storing 8-bit integers.
     """
 
+    primitive_dtype = pa.int8()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.int8(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.int8(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -173,13 +212,18 @@ class Int16Column(Column):
     A column for storing 16-bit integers.
     """
 
+    primitive_dtype = pa.int16()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.int16(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.int16(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -200,13 +244,18 @@ class Int32Column(Column):
     A column for storing 32-bit integers.
     """
 
+    primitive_dtype = pa.int32()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.int32(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.int32(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -227,13 +276,18 @@ class Int64Column(Column):
     A column for storing 64-bit integers.
     """
 
+    primitive_dtype = pa.int64()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.int64(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.int64(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -254,13 +308,18 @@ class UInt8Column(Column):
     A column for storing 8-bit unsigned integers.
     """
 
+    primitive_dtype = pa.uint8()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.uint8(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.uint8(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -281,13 +340,18 @@ class UInt16Column(Column):
     A column for storing 16-bit unsigned integers.
     """
 
+    primitive_dtype = pa.uint16()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.uint16(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.uint16(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -308,13 +372,18 @@ class UInt32Column(Column):
     A column for storing 32-bit unsigned integers.
     """
 
+    primitive_dtype = pa.uint32()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.uint32(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.uint32(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -335,13 +404,18 @@ class UInt64Column(Column):
     A column for storing 64-bit unsigned integers.
     """
 
+    primitive_dtype = pa.uint64()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], int], int] = None,
     ):
-        super().__init__(pa.uint64(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.uint64(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -358,9 +432,22 @@ class UInt64Column(Column):
 
 
 class Float16Column(Column):
+    """A column for storing 16-bit floating point numbers.
+
+    16-bit floating point arrays have limited support in Arrow, and
+    thus limited support in quivr.
+
+    In particular:
+    - They cannot be written to or read from Parquet files.
+
+    - They cannot be constructed from Python floats in a natural way
+      (one must use numpy.float16).
+
+    - They don't support quivr column default values (because they are
+      not supported by Arrow's compute functions).
     """
-    A column for storing 16-bit floating point numbers.
-    """
+
+    primitive_dtype = pa.float16()
 
     def __init__(
         self,
@@ -389,13 +476,18 @@ class Float32Column(Column):
     A column for storing 32-bit floating point numbers.
     """
 
+    primitive_dtype = pa.float32()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], float], float] = None,
     ):
-        super().__init__(pa.float32(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.float32(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -416,13 +508,18 @@ class Float64Column(Column):
     A column for storing 64-bit floating point numbers.
     """
 
+    primitive_dtype = pa.float64()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], float], float] = None,
     ):
-        super().__init__(pa.float64(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.float64(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -441,13 +538,18 @@ class Float64Column(Column):
 class BooleanColumn(Column):
     """A column for storing booleans."""
 
+    primitive_dtype = pa.bool_()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, Callable[[], bool], bool] = None,
     ):
-        super().__init__(pa.bool_(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.bool_(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -472,13 +574,18 @@ class StringColumn(Column):
 
     """
 
+    primitive_dtype = pa.string()
+
     def __init__(
         self,
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, str, Callable[[], str]] = None,
     ):
-        super().__init__(pa.string(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.string(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -505,8 +612,11 @@ class LargeBinaryColumn(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, bytes, Callable[[], bytes]] = None,
     ):
-        super().__init__(pa.large_binary(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.large_binary(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -533,8 +643,11 @@ class LargeStringColumn(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, str, Callable[[], str]] = None,
     ):
-        super().__init__(pa.large_string(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.large_string(), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -632,6 +745,8 @@ class TimestampColumn(Column):
     :param nullable: Whether the column can contain null values.
     :param metadata: Optional metadata to associate with the column.
     :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -641,8 +756,11 @@ class TimestampColumn(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, datetime.datetime, Callable[[], datetime.datetime]] = None,
     ):
-        super().__init__(pa.timestamp(unit, tz), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.timestamp(unit, tz), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -672,6 +790,8 @@ class Time32Column(Column):
     :param nullable: Whether the column can contain null values.
     :param metadata: Optional metadata to associate with the column.
     :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -680,8 +800,11 @@ class Time32Column(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, datetime.time, Callable[[], datetime.time]] = None,
     ):
-        super().__init__(pa.time32(unit), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.time32(unit), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -711,6 +834,8 @@ class Time64Column(Column):
     :param nullable: Whether the column can contain null values.
     :param metadata: Optional metadata to associate with the column.
     :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -719,8 +844,11 @@ class Time64Column(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, datetime.time, Callable[[], datetime.time]] = None,
     ):
-        super().__init__(pa.time64(unit), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.time64(unit), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -816,8 +944,11 @@ class BinaryColumn(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, bytes, Callable[[], bytes]] = None,
     ):
-        super().__init__(pa.binary(-1), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.binary(-1), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -837,6 +968,11 @@ class FixedSizeBinaryColumn(Column):
     """A column for storing opaque fixed-size binary data.
 
     :param byte_width: The number of bytes per value.
+    :param nullable: Whether the column can contain null values.
+    :param metadata: Optional metadata to associate with the column.
+    :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -845,9 +981,12 @@ class FixedSizeBinaryColumn(Column):
         nullable: bool = True,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
+        default: Union[None, bytes, Callable[[], bytes]] = None,
     ):
         self.byte_width = byte_width
-        super().__init__(pa.binary(byte_width), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(
+            pa.binary(byte_width), nullable=nullable, metadata=metadata, validator=validator, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -887,12 +1026,21 @@ class Decimal128Column(Column):
     :param scale: The number of digits after the decimal point.
     :param nullable: Whether the column can contain nulls.
     :param metadata: A dictionary of metadata to attach to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
-        self, precision: int, scale: int, nullable: bool = True, metadata: Optional[MetadataDict] = None
+        self,
+        precision: int,
+        scale: int,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        default: Union[None, decimal.Decimal, Callable[[], decimal.Decimal]] = None,
     ):
-        super().__init__(pa.decimal128(precision, scale), nullable=nullable, metadata=metadata)
+        super().__init__(
+            pa.decimal128(precision, scale), nullable=nullable, metadata=metadata, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
@@ -922,12 +1070,21 @@ class Decimal256Column(Column):
     :param scale: The number of digits after the decimal point.
     :param nullable: Whether the column can contain nulls.
     :param metadata: A dictionary of metadata to attach to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
-        self, precision: int, scale: int, nullable: bool = True, metadata: Optional[MetadataDict] = None
+        self,
+        precision: int,
+        scale: int,
+        nullable: bool = True,
+        metadata: Optional[MetadataDict] = None,
+        default: Union[None, decimal.Decimal, Callable[[], decimal.Decimal]] = None,
     ):
-        super().__init__(pa.decimal256(precision, scale), nullable=nullable, metadata=metadata)
+        super().__init__(
+            pa.decimal256(precision, scale), nullable=nullable, metadata=metadata, default=default
+        )
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
