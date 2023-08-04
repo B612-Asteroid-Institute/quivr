@@ -43,7 +43,6 @@ from .columns import (
 from .concat import concatenate
 from .defragment import defragment
 from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
-from .indexing import StringIndex
 from .linkage import Linkage, MultiKeyLinkage
 from .matrix import MatrixArray, MatrixExtensionType
 from .tables import AnyTable, AttributeValueType, DataSourceType, Table
@@ -55,7 +54,6 @@ __all__ = [
     "MatrixArray",
     "MatrixExtensionType",
     "concatenate",
-    "StringIndex",
     "Column",
     "SubTableColumn",
     "Int8Column",
