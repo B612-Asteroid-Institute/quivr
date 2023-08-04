@@ -9,7 +9,17 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
-from typing import Any, ClassVar, Iterator, Optional, Type, TypeAlias, TypeVar, Union
+from typing import (
+    Any,
+    ClassVar,
+    Iterator,
+    Optional,
+    Type,
+    TypeAlias,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import numpy.typing as npt
@@ -318,6 +328,9 @@ class Table:
 
         for idx in empty_columns:
             arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
+
+        # Inform the type checker that we've filled all Nones
+        arrays = cast(list[pa.Array], arrays)
 
         for i, array in enumerate(arrays):
             if array.null_count > 0:
