@@ -31,6 +31,6 @@ jobs:
       - name: Build
         run: hatch build
       - name: Lint
-        run: hatch run lint
+        run: hatch run dev:lint
       - name: Test
-        run: hatch run test
+        run: hatch run test:all
