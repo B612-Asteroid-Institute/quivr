@@ -29,7 +29,7 @@ class Column:
     descriptor for the Table's structure.
 
     This is a base class for all column types. It is not intended to
-    be used directly; instead, use on of its subclasses.
+    be used directly; instead, use one of its subclasses.
 
     Columns implement the descriptor protocol, so they should be used
     as class attributes on a Table subclass.
@@ -745,6 +745,8 @@ class TimestampColumn(Column):
     :param nullable: Whether the column can contain null values.
     :param metadata: Optional metadata to associate with the column.
     :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -788,6 +790,8 @@ class Time32Column(Column):
     :param nullable: Whether the column can contain null values.
     :param metadata: Optional metadata to associate with the column.
     :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -830,6 +834,8 @@ class Time64Column(Column):
     :param nullable: Whether the column can contain null values.
     :param metadata: Optional metadata to associate with the column.
     :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -962,6 +968,11 @@ class FixedSizeBinaryColumn(Column):
     """A column for storing opaque fixed-size binary data.
 
     :param byte_width: The number of bytes per value.
+    :param nullable: Whether the column can contain null values.
+    :param metadata: Optional metadata to associate with the column.
+    :param validator: An optional validator to apply to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -1015,6 +1026,8 @@ class Decimal128Column(Column):
     :param scale: The number of digits after the decimal point.
     :param nullable: Whether the column can contain nulls.
     :param metadata: A dictionary of metadata to attach to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(
@@ -1057,6 +1070,8 @@ class Decimal256Column(Column):
     :param scale: The number of digits after the decimal point.
     :param nullable: Whether the column can contain nulls.
     :param metadata: A dictionary of metadata to attach to the column.
+    :param default: An optional default value for the column. This
+        can be a scalar value or a callable that takes no arguments.
     """
 
     def __init__(

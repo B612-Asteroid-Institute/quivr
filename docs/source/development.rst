@@ -75,8 +75,8 @@ code using `pytest-benchmark
 <https://pytest-benchmark.readthedocs.io/en/stable/>`_. These are
 not run by default, but can be run with ``hatch run benchmark``.
 
-Running tests aginst multiple Python Versions
----------------------------------------------
+Running tests against multiple Python Versions
+----------------------------------------------
 
 The ``hatch run test:all`` command runs all the tests against a matrix
 of supported Python versions. This thorough test can be run locally,
