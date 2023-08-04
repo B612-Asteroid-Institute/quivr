@@ -60,3 +60,12 @@ class TablesNotCompatibleError(InvariantViolatedError):
     """
 
     ...
+
+
+class LinkageCombinationError(InvariantViolatedError):
+    """Exception raised when linkages cannot be combined because they
+    have incompatible table types or keys.
+    """
+
+    ...
+

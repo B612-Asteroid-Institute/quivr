@@ -1,8 +1,10 @@
-from typing import Any, Generic, Iterator, Optional, TypeVar
+from __future__ import annotations
+
+from typing import Any, Generic, Iterable, Iterator, List, Optional, Tuple, TypeVar
 
 import pyarrow as pa
 
-from . import tables
+from . import concat, errors, tables
 
 
 class ArrowArrayIndex:
@@ -298,6 +300,24 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
 
         super().__init__(left_table, right_table, left_structarray, right_structarray)
 
+    @classmethod
+    def _from_structarray_keys(
+        cls,
+        left_table: LeftTable,
+        right_table: RightTable,
+        left_keys: pa.StructArray,
+        right_keys: pa.StructArray,
+    ) -> MultiKeyLinkage[LeftTable, RightTable]:
+        """Internal constructor used to create a MultiKeyLinkage when
+        the keys have already been converted to struct arrays.
+        """
+        self = cls.__new__(cls)
+        struct_dtype = left_keys.type
+        self.dtypes = {f.name: f.type for f in struct_dtype}
+        self.scalar_type = pa.struct(self.dtypes)
+        super().__init__(self, left_table, right_table, left_keys, right_keys)  # type: ignore
+        return self
+
     def key(self, **kwargs: Any) -> pa.Scalar:
         """
         Returns a composite key scalar for the given values.
@@ -359,3 +379,110 @@ def _build_struct_array(keys: dict[str, pa.Array]) -> pa.Array:
         fields.append(pa.field(k, v.type))
         arrays.append(v)
     return pa.StructArray.from_arrays(arrays, fields=fields)
+
+
+def combine_linkages(links: Iterable[Linkage[LeftTable, RightTable]]) -> Linkage[LeftTable, RightTable]:
+    """Combine a list of linkages into a single linkage.
+
+    The combined linkage will concatenate the left and right tables of
+    the source linkages, and then build an index on the combined
+    tables, using the same keys as the source linkages.
+
+    All the input linkages must have the same key names and table
+    types. All the tables that comprise the input linkages must have
+    identical attribute values, including for any nested subtables.
+
+    :param links: The linkages to concatenate.
+    :raises LinkageCombinationError: If the linkages do not have the same key names or if the
+        tables are not concatenatable.
+    :raises ValueError: If less than two linkages are provided.
+    :return: A linkage that combines the input linkages.
+    """
+    left_tables = []
+    right_tables = []
+    left_key_arrays = []
+    right_key_arrays = []
+    for next_link in links:
+        left_tables.append(next_link.left_table)
+        right_tables.append(next_link.right_table)
+        left_key_arrays.append(next_link.left_keys)
+        right_key_arrays.append(next_link.right_keys)
+
+    if len(left_tables) < 2:
+        raise ValueError("Must provide at least two linkages")
+
+    left_table, right_table, left_keys, right_keys = _concatenate_linkage_components(
+        left_tables, right_tables, left_key_arrays, right_key_arrays
+    )
+    return Linkage(left_table, right_table, left_keys, right_keys)
+
+
+def _concatenate_linkage_components(
+    left_tables: List[LeftTable],
+    right_tables: List[RightTable],
+    left_keys: List[pa.Array],
+    right_keys: List[pa.Array],
+) -> Tuple[LeftTable, RightTable, pa.Array, pa.Array]:
+    try:
+        left_table: LeftTable = concat.concatenate(left_tables)  # type: ignore
+    except errors.TablesNotCompatibleError as e:
+        raise errors.LinkageCombinationError("Left tables are not compatible") from e
+
+    try:
+        right_table: RightTable = concat.concatenate(right_tables)  # type: ignore
+    except errors.TablesNotCompatibleError as e:
+        raise errors.LinkageCombinationError("Right tables are not compatible") from e
+
+    try:
+        left_keys = pa.concat_arrays(left_keys)
+    except pa.lib.ArrowInvalid as e:
+        raise errors.LinkageCombinationError("Left keys types are not all identical") from e
+
+    try:
+        right_keys = pa.concat_arrays(right_keys)
+    except pa.lib.ArrowInvalid as e:
+        raise errors.LinkageCombinationError("Right keys types are not all identical") from e
+
+    assert len(left_table) == len(left_keys)
+    assert len(right_table) == len(right_keys)
+
+    return left_table, right_table, left_keys, right_keys
+
+
+def combine_multilinkages(
+    links: Iterable[MultiKeyLinkage[LeftTable, RightTable]]
+) -> MultiKeyLinkage[LeftTable, RightTable]:
+    """Combine a list of MultiKeyLinkages into a single MultiKeyLinkage.
+
+    The combined linkage will concatenate the left and right tables of
+    the source linkages, and then build an index on the combined
+    tables, using the same keys as the source linkages.
+
+    All the input linkages must have the same key structure (both
+    names and types), and must use the same table classes. All the
+    tables that comprise the input linkages must have identical
+    attribute values, including for any nested subtables.
+
+    :param links: The linkages to concatenate.
+    :raises LinkageCombinationError: If the linkages do not have the same key names or if the
+        tables are not concatenatable.
+    :raises ValueError: If less than two linkages are provided.
+    :return: A linkage that combines the input linkages.
+    """
+    left_tables = []
+    right_tables = []
+    left_key_arrays = []
+    right_key_arrays = []
+    for next_link in links:
+        left_tables.append(next_link.left_table)
+        right_tables.append(next_link.right_table)
+        left_key_arrays.append(next_link.left_keys)
+        right_key_arrays.append(next_link.right_keys)
+
+    if len(left_tables) < 2:
+        raise ValueError("Must provide at least two linkages")
+
+    left_table, right_table, left_keys, right_keys = _concatenate_linkage_components(
+        left_tables, right_tables, left_key_arrays, right_key_arrays
+    )
+    return MultiKeyLinkage._from_structarray_keys(left_table, right_table, left_keys, right_keys)

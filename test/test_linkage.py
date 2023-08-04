@@ -3,7 +3,13 @@ import pyarrow as pa
 import pytest
 
 from quivr import Float64Column, Int64Column, StringColumn, Table, UInt32Column
-from quivr.linkage import Linkage, MultiKeyLinkage
+from quivr.errors import LinkageCombinationError
+from quivr.linkage import (
+    Linkage,
+    MultiKeyLinkage,
+    combine_linkages,
+    combine_multilinkages,
+)
 
 
 class Observers(Table):
@@ -380,3 +386,166 @@ def test_linkage_uses_correct_dtypes_in_select():
     have_left, have_right = link.select(1)
     assert len(have_left) == 1
     assert len(have_right) == 3
+
+
+def test_combine_linkages():
+    class LeftSide(Table):
+        id = Int64Column(nullable=False)
+        x = Float64Column()
+
+    class RightSide(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = Int64Column()
+
+    left1 = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        x=[1, 2, 3, 4, 5],
+    )
+    right1 = RightSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        leftside_id=[1, 1, 1, 2, 3],
+    )
+    link1 = Linkage(left1, right1, left1.id, right1.leftside_id)
+
+    left2 = LeftSide.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        x=[6, 7, 8, 9, 10],
+    )
+    right2 = RightSide.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        leftside_id=[3, 3, 3, 4, 4],
+    )
+    link2 = Linkage(left2, right2, left2.id, right2.leftside_id)
+
+    combined = combine_linkages([link1, link2])
+    assert len(combined) == 10
+
+    have_left, have_right = combined.select(1)
+    assert len(have_left) == 1
+    assert len(have_right) == 3
+
+    have_left, have_right = combined.select(3)
+    assert len(have_left) == 1
+    assert len(have_right) == 4
+
+
+def test_combine_linkages_with_different_keys():
+    """
+    Combining linkages with different key types should raise an error.
+    """
+
+    class LeftSide(Table):
+        id = Int64Column(nullable=False)
+        x = Float64Column()
+
+    class RightSide(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = Int64Column()
+        y = Float64Column()
+
+    left1 = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        x=[1, 2, 3, 4, 5],
+    )
+    right1 = RightSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        leftside_id=[1, 1, 1, 2, 3],
+        y=[1, 2, 3, 4, 5],
+    )
+    link1 = Linkage(left1, right1, left1.id, right1.leftside_id)
+
+    left2 = LeftSide.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        x=[6, 7, 8, 9, 10],
+    )
+    right2 = RightSide.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        leftside_id=[3, 3, 3, 4, 4],
+        y=[6, 7, 8, 9, 10],
+    )
+    link2 = Linkage(left2, right2, left2.x, right2.y)
+
+    with pytest.raises(LinkageCombinationError):
+        combine_linkages([link1, link2])
+
+
+def test_combine_linkages_with_different_tables():
+    """
+    Combining linkages with different table types should error.
+    """
+
+    class LeftSide(Table):
+        id = Int64Column(nullable=False)
+        x = Float64Column()
+
+    class RightSide1(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = Int64Column()
+
+    class RightSide2(Table):
+        id = Int64Column(nullable=False)
+        leftside_id = Int64Column()
+
+    left1 = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        x=[1, 2, 3, 4, 5],
+    )
+    right1 = RightSide1.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        leftside_id=[1, 1, 1, 2, 3],
+    )
+    link1 = Linkage(left1, right1, left1.id, right1.leftside_id)
+
+    left2 = LeftSide.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        x=[6, 7, 8, 9, 10],
+    )
+    right2 = RightSide2.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        leftside_id=[3, 3, 3, 4, 4],
+    )
+    link2 = Linkage(left2, right2, left2.id, right2.leftside_id)
+
+    with pytest.raises(LinkageCombinationError):
+        combine_linkages([link1, link2])
+
+
+def test_combine_multi_key_linkages():
+    left1 = LeftSide.from_kwargs(
+        id=[1, 2, 3, 4, 5],
+        pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
+    )
+    right1 = RightSide.from_kwargs(
+        id=["a", "b", "c", "d", "e"],
+        leftside_id=[1, 2, 1, 2, 2],
+        pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
+    )
+    link1 = MultiKeyLinkage(
+        left_table=left1,
+        right_table=right1,
+        left_keys={"id": left1.id, "x": left1.pairs.x},
+        right_keys={"id": right1.leftside_id, "x": right1.pairs.x},
+    )
+
+    left2 = LeftSide.from_kwargs(
+        id=[6, 7, 8, 9, 10],
+        pairs=Pair.from_kwargs(x=[6, 7, 8, 9, 10], y=[6, 7, 8, 9, 10]),
+    )
+    right2 = RightSide.from_kwargs(
+        id=["f", "g", "h", "i", "j"],
+        leftside_id=[2, 3, 6, 7, 8],
+        pairs=Pair.from_kwargs(x=[2, 3, 6, 7, 8], y=[6, 7, 8, 9, 10]),
+    )
+    link2 = MultiKeyLinkage(
+        left_table=left2,
+        right_table=right2,
+        left_keys={"id": left2.id, "x": left2.pairs.x},
+        right_keys={"id": right2.leftside_id, "x": right2.pairs.x},
+    )
+
+    combined = combine_multilinkages([link1, link2])
+
+    k1 = combined.key(id=2, x=2)
+    have_left, have_right = combined.select(k1)
+    assert len(have_left) == 1
+    assert len(have_right) == 2

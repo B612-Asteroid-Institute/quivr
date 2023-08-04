@@ -16,6 +16,10 @@ values as well.
 .. autoclass:: MultiKeyLinkage
    :members:
 
+.. autofunction:: combine_linkages
+
+.. autofunction:: combine_multilinkages
+
 .. autotypevar:: quivr.linkage.LeftTable
 
 .. autotypevar:: quivr.linkage.RightTable

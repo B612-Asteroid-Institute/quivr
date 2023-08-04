@@ -42,8 +42,14 @@ from .columns import (
 )
 from .concat import concatenate
 from .defragment import defragment
-from .errors import InvariantViolatedError, TableFragmentedError, ValidationError
-from .linkage import Linkage, MultiKeyLinkage
+from .errors import (
+    InvariantViolatedError,
+    LinkageCombinationError,
+    TableFragmentedError,
+    TablesNotCompatibleError,
+    ValidationError,
+)
+from .linkage import Linkage, MultiKeyLinkage, combine_linkages, combine_multilinkages
 from .tables import AnyTable, AttributeValueType, DataSourceType, Table
 from .validators import Validator, and_, eq, ge, gt, is_in, le, lt
 
@@ -109,4 +115,8 @@ __all__ = [
     "Byteslike",
     "Linkage",
     "MultiKeyLinkage",
+    "combine_linkages",
+    "combine_multilinkages",
+    "LinkageCombinationError",
+    "TablesNotCompatibleError",
 ]

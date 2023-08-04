@@ -48,6 +48,7 @@ dependencies = [
   "pytest",
   "pytest-benchmark",
   "ruff",
+  "ipython"
 ]
 
 [tool.hatch.envs.dev.scripts]
