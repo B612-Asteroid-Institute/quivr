@@ -93,7 +93,7 @@ dependencies = [
 ]
 
 [[tool.hatch.envs.test.matrix]]
-python = ["3.10", "3.11", "3.12.0b4"]
+python = ["3.10", "3.11"]
 
 [tool.hatch.envs.test.scripts]
 all = [
