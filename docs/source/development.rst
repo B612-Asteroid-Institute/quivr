@@ -8,9 +8,6 @@ Quivr's development environment is managed with `Hatch
 ``hatch`` installed on your system, whether in a virtualenv or
 globally.
 
-To run the full battery of tests, you also need to install
-``hatch-containers`` to allow running tests in containers (to test
-against different Python versions).
 
 Development tasks
 -----------------
@@ -48,9 +45,9 @@ In addition, there are some tasks that are for building documentation:
 
    * - Command
      - Action
-   * - ``hatch run docs:make``
+   * - ``hatch run docs:make-html``
      - build the HTML documentation. It will be built in ``docs/build/html``, relative to the repo root.
-   * - ``hatch run docs:open``
+   * - ``hatch run docs:open-html``
      - open the HTML documentation in your browser.
    * - ``hatch run docs:clean``
      - remove the built HTML documentation.
@@ -77,3 +74,31 @@ microbenchmarks that measure performance of narrow portions of the
 code using `pytest-benchmark
 <https://pytest-benchmark.readthedocs.io/en/stable/>`_. These are
 not run by default, but can be run with ``hatch run benchmark``.
+
+Running tests aginst multiple Python Versions
+---------------------------------------------
+
+The ``hatch run test:all`` command runs all the tests against a matrix
+of supported Python versions. This thorough test can be run locally,
+but you'd need to have all the Python versions installed.
+
+A good way to do that is with `pyenv
+<https://github.com/pyenv/pyenv>`_. You can install multiple
+versions - for example, to install Python 3.10 and 3.11:
+
+.. code-block::
+
+   pyenv install 3.10 3.11
+
+Then, you need to make them available to the ``hatch`` program. Do
+that by running ``pyenv global`` to set the versions:
+
+.. code-block::
+
+   pyenv global 3.10 3.11
+
+
+You should be good to go. ``hatch run test:all`` should run in all
+environments. If any are listed as "skipped," you can ``pyenv
+install`` them, declare them in a ``pyenv global`` list, and try
+again.
