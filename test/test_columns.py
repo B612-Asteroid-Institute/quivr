@@ -33,7 +33,7 @@ class MyTable(qv.Table):
 
 def test_default_scalar_value():
     with global_id():
-        t = MyTable.from_data(
+        t = MyTable.from_kwargs(
             s1=["a", "b", "c", None, "d"],
             s2=["a", "b", "c", None, "d"],
         )
@@ -43,7 +43,7 @@ def test_default_scalar_value():
 
 def test_default_callable_value():
     with global_id():
-        t = MyTable.from_data(
+        t = MyTable.from_kwargs(
             s1=["a", "b", "c", None, "d"],
             s2=["a", None, None, None, "d"],
         )
@@ -53,13 +53,13 @@ def test_default_callable_value():
 
 def test_default_when_array_missing():
     with global_id():
-        t = MyTable.from_data(
+        t = MyTable.from_kwargs(
             s1=["a", "b", "c"],
         )
         assert t.s1.to_pylist() == ["a", "b", "c"]
         assert t.s2.to_pylist() == ["1", "2", "3"]
 
-        t2 = MyTable.from_data(
+        t2 = MyTable.from_kwargs(
             s2=["a", "b", "c"],
         )
         assert t2.s1.to_pylist() == ["defval", "defval", "defval"]
@@ -365,14 +365,14 @@ def test_default_values(test_case):
             col = test_case.column_class(default=default_value, nullable=False, **test_case.column_kwargs)
 
         with pytest.raises(qv.InvalidColumnDefault):
-            t = MyTable2.from_data(col=[None])
+            t = MyTable2.from_kwargs(col=[None])
         return
 
     # Scalar default case
     class MyTable3(qv.Table):
         col = test_case.column_class(default=test_case.default, nullable=False, **test_case.column_kwargs)
 
-    t = MyTable3.from_data(col=[None, test_case.valid_value])
+    t = MyTable3.from_kwargs(col=[None, test_case.valid_value])
     assert t.col.to_pylist() == [test_case.expected_value, test_case.valid_value]
 
     # Callable default case
@@ -382,5 +382,5 @@ def test_default_values(test_case):
     class MyTable4(qv.Table):
         col = test_case.column_class(default=default_value, nullable=False, **test_case.column_kwargs)
 
-    t = MyTable4.from_data(col=[None, test_case.valid_value])
+    t = MyTable4.from_kwargs(col=[None, test_case.valid_value])
     assert t.col.to_pylist() == [test_case.expected_value, test_case.valid_value]

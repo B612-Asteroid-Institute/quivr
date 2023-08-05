@@ -90,37 +90,10 @@ def test_table__eq__():
     assert b_table != b_table_attr_diff
 
 
-def test_create_from_arrays():
-    xs = pa.array([1, 2, 3], pa.int64())
-    ys = pa.array([4, 5, 6], pa.int64())
-    have = Pair.from_arrays([xs, ys])
-    assert len(have) == 3
-    np.testing.assert_array_equal(have.column("x"), [1, 2, 3])
-    np.testing.assert_array_equal(have.column("y"), [4, 5, 6])
-
-
-def test_create_wrapped_from_arrays():
-    xs = pa.array([1, 2, 3], pa.int64())
-    ys = pa.array([4, 5, 6], pa.int64())
-    pairs = pa.StructArray.from_arrays([xs, ys], fields=list(Pair.schema))
-    ids = pa.array(["v1", "v2", "v3"], pa.string())
-
-    have = Wrapper.from_arrays([pairs, ids])
-    assert len(have) == 3
-    np.testing.assert_array_equal(have.column("id"), ["v1", "v2", "v3"])
-
-
-def test_create_from_pydict():
-    have = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
-    assert len(have) == 3
-    np.testing.assert_array_equal(have.column("x"), [1, 2, 3])
-    np.testing.assert_array_equal(have.column("y"), [4, 5, 6])
-
-
 def test_table_to_structarray():
     xs = pa.array([1, 2, 3], pa.int64())
     ys = pa.array([4, 5, 6], pa.int64())
-    pair = Pair.from_arrays([xs, ys])
+    pair = Pair.from_kwargs(x=xs, y=ys)
 
     want = pa.StructArray.from_arrays([xs, ys], fields=list(Pair.schema))
 
@@ -128,29 +101,17 @@ def test_table_to_structarray():
     assert have == want
 
 
-def test_create_wrapped_from_pydict():
-    have = Wrapper.from_pydict(
-        {
-            "id": ["v1", "v2", "v3"],
-            "pair": [
-                {"x": 1, "y": 2},
-                {"x": 3, "y": 4},
-                {"x": 5, "y": 6},
-            ],
-        }
-    )
-    assert len(have) == 3
-    np.testing.assert_array_equal(have.column("id"), ["v1", "v2", "v3"])
-
-
 def test_generated_accessors():
-    have = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    have = Pair.from_kwargs(
+        x=[1, 2, 3],
+        y=[4, 5, 6],
+    )
     np.testing.assert_array_equal(have.x, [1, 2, 3])
     np.testing.assert_array_equal(have.y, [4, 5, 6])
 
 
 def test_iteration():
-    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     values = list(pair)
     assert len(values) == 3
     assert len(values[0]) == 1
@@ -167,34 +128,34 @@ def test_iteration():
 
 
 def test_chunk_counts():
-    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     assert pair.chunk_counts() == {"x": 1, "y": 1}
     pair = qv.concatenate([pair, pair], defrag=False)
     assert pair.chunk_counts() == {"x": 2, "y": 2}
 
 
 def test_check_fragmented():
-    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     assert not pair.fragmented()
     pair = qv.concatenate([pair, pair], defrag=False)
     assert pair.fragmented()
 
 
 def test_select():
-    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     have = pair.select("x", 3)
     assert len(have) == 1
     assert have.y[0].as_py() == 6
 
 
 def test_select_empty():
-    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     have = pair.select("x", 4)
     assert len(have) == 0
 
 
 def test_sort_by():
-    pair = Pair.from_pydict({"x": [1, 2, 3], "y": [5, 1, 2]})
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2])
 
     sorted1 = pair.sort_by("y")
     assert sorted1.x[0].as_py() == 2
@@ -208,11 +169,13 @@ def test_sort_by():
 
 
 def test_to_csv():
-    data = [
-        {"id": "1", "pair": {"x": 1, "y": 2}},
-        {"id": "2", "pair": {"x": 3, "y": 4}},
-    ]
-    wrapper = Wrapper.from_rows(data)
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2"],
+        pair=Pair.from_kwargs(
+            x=[1, 3],
+            y=[2, 4],
+        ),
+    )
 
     buf = io.BytesIO()
     wrapper.to_csv(buf)
@@ -247,11 +210,13 @@ def test_from_csv():
 
 
 def test_from_pylist():
-    data = [
-        {"id": "1", "pair": {"x": 1, "y": 2}},
-        {"id": "2", "pair": {"x": 3, "y": 4}},
-    ]
-    wrapper = Wrapper.from_rows(data)
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2"],
+        pair=Pair.from_kwargs(
+            x=[1, 3],
+            y=[2, 4],
+        ),
+    )
 
     np.testing.assert_array_equal(wrapper.id, ["1", "2"])
     np.testing.assert_array_equal(wrapper.pair.x, [1, 3])
@@ -273,12 +238,15 @@ class Layer3(qv.Table):
 
 
 def test_unflatten_table():
-    data = [
-        {"z": 1, "layer2": {"y": 2, "layer1": {"x": 3}}},
-        {"z": 4, "layer2": {"y": 5, "layer1": {"x": 6}}},
-    ]
-
-    l3 = Layer3.from_rows(data)
+    l3 = Layer3.from_kwargs(
+        z=[1, 4],
+        layer2=Layer2.from_kwargs(
+            y=[2, 5],
+            layer1=Layer1.from_kwargs(
+                x=[3, 6],
+            ),
+        ),
+    )
     flat_table = l3.flattened_table()
 
     unflat_table = Layer3._unflatten_table(flat_table)
@@ -380,35 +348,6 @@ def test_from_kwargs_no_data():
         Pair.from_kwargs()
 
 
-def test_from_data_using_kwargs():
-    have = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
-    np.testing.assert_array_equal(have.x, [1, 2, 3])
-    np.testing.assert_array_equal(have.y, [4, 5, 6])
-
-    # Change the ordering
-    have = Pair.from_data(y=[4, 5, 6], x=[1, 2, 3])
-    np.testing.assert_array_equal(have.x, [1, 2, 3])
-    np.testing.assert_array_equal(have.y, [4, 5, 6])
-
-    # Refer to a nested value
-    pair = have
-    wrapper = Wrapper.from_data(id=["1", "2", "3"], pair=pair)
-    np.testing.assert_array_equal(wrapper.id, ["1", "2", "3"])
-    np.testing.assert_array_equal(wrapper.pair.x, [1, 2, 3])
-
-
-def test_from_data_using_positional_list():
-    have = Pair.from_data([[1, 2, 3], [4, 5, 6]])
-    np.testing.assert_array_equal(have.x, [1, 2, 3])
-    np.testing.assert_array_equal(have.y, [4, 5, 6])
-
-
-def test_from_data_using_positional_dict():
-    have = Pair.from_data({"x": [1, 2, 3], "y": [4, 5, 6]})
-    np.testing.assert_array_equal(have.x, [1, 2, 3])
-    np.testing.assert_array_equal(have.y, [4, 5, 6])
-
-
 class TableWithAttributes(qv.Table):
     x = qv.Int64Column()
     y = qv.Int64Column()
@@ -416,27 +355,6 @@ class TableWithAttributes(qv.Table):
 
 
 class TestTableAttributes:
-    def test_from_pydict(self):
-        have = TableWithAttributes.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]}, attrib="foo")
-        np.testing.assert_array_equal(have.x, [1, 2, 3])
-        np.testing.assert_array_equal(have.y, [4, 5, 6])
-        assert have.attrib == "foo"
-
-    def test_from_rows(self):
-        have = TableWithAttributes.from_rows(
-            [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}],
-            attrib="foo",
-        )
-        np.testing.assert_array_equal(have.x, [1, 2, 3])
-        np.testing.assert_array_equal(have.y, [4, 5, 6])
-        assert have.attrib == "foo"
-
-    def test_from_lists(self):
-        have = TableWithAttributes.from_lists([[1, 2, 3], [4, 5, 6]], attrib="foo")
-        np.testing.assert_array_equal(have.x, [1, 2, 3])
-        np.testing.assert_array_equal(have.y, [4, 5, 6])
-        assert have.attrib == "foo"
-
     def test_from_dataframe(self):
         have = TableWithAttributes.from_dataframe(
             pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}),
@@ -457,20 +375,6 @@ class TestTableAttributes:
 
     def test_from_kwargs(self):
         have = TableWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
-        np.testing.assert_array_equal(have.x, [1, 2, 3])
-        np.testing.assert_array_equal(have.y, [4, 5, 6])
-        assert have.attrib == "foo"
-
-    def test_from_arrays(self):
-        xs = pa.array([1, 2, 3])
-        ys = pa.array([4, 5, 6])
-        have = TableWithAttributes.from_arrays([xs, ys], attrib="foo")
-        np.testing.assert_array_equal(have.x, [1, 2, 3])
-        np.testing.assert_array_equal(have.y, [4, 5, 6])
-        assert have.attrib == "foo"
-
-    def test_from_data(self):
-        have = TableWithAttributes.from_data(x=[1, 2, 3], y=[4, 5, 6], attrib="foo")
         np.testing.assert_array_equal(have.x, [1, 2, 3])
         np.testing.assert_array_equal(have.y, [4, 5, 6])
         assert have.attrib == "foo"
@@ -531,9 +435,9 @@ class TestValidation:
             x = qv.Int8Column(validator=lt(10))
 
         with pytest.raises(qv.ValidationError):
-            MyTable.from_data(x=[8, 9, 10], validate=True)
+            MyTable.from_kwargs(x=[8, 9, 10])
 
-        table = MyTable.from_data(x=[8, 9, 10], validate=False)
+        table = MyTable.from_kwargs(x=[8, 9, 10], validate=False)
         with pytest.raises(qv.ValidationError):
             table.validate()
 
@@ -585,8 +489,8 @@ def test_where_filtering():
         y = qv.Int8Column()
         label = qv.StringAttribute()
 
-    table = OuterTable.from_data(
-        inner=InnerTable.from_data(x=[1, 2, 3]),
+    table = OuterTable.from_kwargs(
+        inner=InnerTable.from_kwargs(x=[1, 2, 3]),
         y=[4, 5, 6],
         label="foo",
     )
@@ -603,7 +507,7 @@ def test_where_filtering():
 
 
 def test_apply_mask_numpy():
-    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+    values = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
 
     mask = np.array([True, False, True])
     have = values.apply_mask(mask)
@@ -611,7 +515,7 @@ def test_apply_mask_numpy():
 
 
 def test_apply_mask_pylist():
-    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+    values = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
 
     mask = [True, False, True]
     have = values.apply_mask(mask)
@@ -619,7 +523,7 @@ def test_apply_mask_pylist():
 
 
 def test_apply_mask_pyarrow():
-    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+    values = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
 
     mask = pa.array([True, False, True], pa.bool_())
     have = values.apply_mask(mask)
@@ -627,7 +531,7 @@ def test_apply_mask_pyarrow():
 
 
 def test_apply_mask_wrong_size():
-    values = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+    values = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
 
     mask = [True, False]
     with pytest.raises(ValueError):
@@ -635,7 +539,7 @@ def test_apply_mask_wrong_size():
 
 
 def test_apply_mask_pyarrow_with_nulls():
-    values = Pair.from_data(x=[1, 2, 3], y=[4, None, 6])
+    values = Pair.from_kwargs(x=[1, 2, 3], y=[4, None, 6])
 
     mask = pa.array([True, False, None], pa.bool_())
     with pytest.raises(ValueError):

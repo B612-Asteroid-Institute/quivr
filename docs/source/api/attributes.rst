@@ -27,7 +27,7 @@ Example usage:
        reference_frame = qv.StringAttribute(default="earth")
 
 
-    obs = Observations.from_data(
+    obs = Observations.from_kwargs(
        x=[1, 2, 3],
        y=[4, 5, 6]
        z=[7, 8, 9],
@@ -50,7 +50,7 @@ the Attribute constructor:
        measurements = qv.Int64Column()
        source = qv.StringAttribute(mutable=True)
 
-   p = Dataset.from_data(measurements=[1, 2, 3], source="earth")
+   p = Dataset.from_kwargs(measurements=[1, 2, 3], source="earth")
    p.source = "mars"  # only if p.source is mutable!
 
 Mutability can have confusing behavior when working with nested tables
@@ -68,8 +68,8 @@ re-attach the sub-table to the parent. This is easier to explain with code:
    class Database(qv.Table):
        datasets = Dataset.as_column()
 
-   d = Database.from_data(
-       datasets=Dataset.from_data(
+   d = Database.from_kwargs(
+       datasets=Dataset.from_kwargs(
            measurements=[1, 2, 3],
            source="earth",
        )

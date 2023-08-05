@@ -18,7 +18,7 @@ constructors of tables which provide null values will be rejected:
 
 
    # This will raise an error, now:
-   t = MyTable.from_data(id=["a", "b", None, "d"])
+   t = MyTable.from_kwargs(id=["a", "b", None, "d"])
 
 
 Using defaults
@@ -41,7 +41,7 @@ which takes no arguments and which returns a value:
 
    # This won't raise an error. Instead, it will call uuid.uuidv4()
    # for each null id, and will insert '0' for each null login_attempts.
-   t = User.from_data(
+   t = User.from_kwargs(
        id=["a", "b", None, "d", None],
        login_attempts=[0, 1, None, None, 3],
    )
@@ -52,6 +52,6 @@ a constructor. For example:
 .. code-block:: python
 
    # t.login_attempts will be filled with [0, 0, 0].
-   t = User.from_data(
+   t = User.from_kwargs(
        id=["a", "b", "c"],
    )

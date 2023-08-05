@@ -18,13 +18,13 @@ class PetsAndOwners(qv.Table):
 
 # L19
 
-people = People.from_data(
+people = People.from_kwargs(
     id=[1, 2, 3, 4, 5],
     name=['Bob', 'Sue', 'Joe', 'Mary', 'John'],
     age=[30, 25, 40, 35, 50]
 )
 
-pets = Pets.from_data(
+pets = Pets.from_kwargs(
     name=['Fido', 'Spot', 'Mittens', 'Rover', 'Lucy', 'Whiskers', 'Max'],
     owner_id=[1, 1, 2, 3, 4, 5, 5],
     species=['Dog', 'Dog', 'Cat', 'Dog', 'Dog', 'Cat', 'Dog']

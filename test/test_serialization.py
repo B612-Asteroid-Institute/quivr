@@ -16,8 +16,8 @@ class Container(qv.Table):
 class TestParquetSerialization:
     def test_roundtrip(self, tmp_path):
         path = tmp_path / "test.parquet"
-        pair = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
-        container = Container.from_data(pair=pair, name=["hello", "world", "foo"])
+        pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+        container = Container.from_kwargs(pair=pair, name=["hello", "world", "foo"])
         container.to_parquet(path)
         assert path.exists()
         assert path.stat().st_size > 0
@@ -28,8 +28,8 @@ class TestParquetSerialization:
 
     def test_mmap(self, tmp_path):
         path = tmp_path / "test.parquet"
-        pair = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
-        container = Container.from_data(pair=pair, name=["hello", "world", "foo"])
+        pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+        container = Container.from_kwargs(pair=pair, name=["hello", "world", "foo"])
         container.to_parquet(path)
 
         have = Container.from_parquet(path, memory_map=True)
@@ -37,8 +37,8 @@ class TestParquetSerialization:
 
     def test_filters(self, tmp_path):
         path = tmp_path / "test.parquet"
-        pair = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
-        container = Container.from_data(pair=pair, name=["hello", "world", "foo"])
+        pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+        container = Container.from_kwargs(pair=pair, name=["hello", "world", "foo"])
         container.to_parquet(path)
         assert path.exists()
         assert path.stat().st_size > 0
@@ -53,7 +53,7 @@ class TestParquetSerialization:
 
     def test_column_renaming(self, tmp_path):
         path = tmp_path / "test.parquet"
-        pair = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
+        pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
         pair.to_parquet(path)
 
         class Pair2(qv.Table):
@@ -61,5 +61,5 @@ class TestParquetSerialization:
             b = qv.Int64Column()
 
         have = Pair2.from_parquet(path, column_name_map={"x": "a", "y": "b"})
-        want = Pair2.from_data(a=[1, 2, 3], b=[4, 5, 6])
+        want = Pair2.from_kwargs(a=[1, 2, 3], b=[4, 5, 6])
         assert have == want
