@@ -18,3 +18,6 @@
       
 .. autoexception:: LinkageCombinationError
    :members:
+
+.. autoexception:: AttributeImmutableError
+   :members:

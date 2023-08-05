@@ -1,7 +1,15 @@
 import pandas as pd
 import pyarrow as pa
+import pytest
 
-from quivr import FloatAttribute, Int64Column, IntAttribute, StringAttribute, Table
+from quivr import (
+    AttributeImmutableError,
+    FloatAttribute,
+    Int64Column,
+    IntAttribute,
+    StringAttribute,
+    Table,
+)
 
 
 def test_multiple_attributes():
@@ -92,6 +100,36 @@ def test_nested_table_shadowing():
     assert table.inner.id == 10
 
 
+def test_nested_table_mutability():
+    class Inner(Table):
+        x = Int64Column()
+        id = IntAttribute(mutable=True)
+
+    class Outer(Table):
+        name = StringAttribute(mutable=True)
+        inner = Inner.as_column()
+
+    table = Outer.from_data(
+        name="foo",
+        inner=Inner.from_data(
+            x=[1, 2, 3],
+            id=10,
+        ),
+    )
+    assert table.name == "foo"
+    assert table.inner.id == 10
+    table.name = "bar"
+    table.inner.id = 20
+    assert table.name == "bar"
+    assert table.inner.id == 10
+
+    inner = table.inner
+    inner.id = 30
+    table.inner = inner
+    assert table.name == "bar"
+    assert table.inner.id == 30
+
+
 def test_csv_nested_table(tmp_path):
     class Inner(Table):
         x = Int64Column()
@@ -168,6 +206,7 @@ class TestStringAttribute:
     class MyTable(Table):
         vals = Int64Column()
         name = StringAttribute()
+        mutable_name = StringAttribute(mutable=True, default="bar")
 
     def test_from_data(self):
         table = self.MyTable.from_data(name="foo", vals=[1, 2, 3])
@@ -176,14 +215,19 @@ class TestStringAttribute:
         assert len(table) == 3
 
     def test_mutation(self, tmp_path):
-        table = self.MyTable.from_data(name="foo", vals=[1, 2, 3])
-        table.name = "bar"
-        assert table.name == "bar"
+        table = self.MyTable.from_data(name="foo", mutable_name="bar", vals=[1, 2, 3])
+        table.mutable_name = "baz"
+        assert table.mutable_name == "baz"
 
         # Make sure mutation survives round trip
         table.to_parquet(tmp_path / "test.parquet")
         table2 = self.MyTable.from_parquet(tmp_path / "test.parquet")
-        assert table2.name == "bar"
+        assert table2.mutable_name == "baz"
+
+    def test_immutable(self):
+        table = self.MyTable.from_data(name="foo", vals=[1, 2, 3])
+        with pytest.raises(AttributeImmutableError):
+            table.name = "bar"
 
     def test_parquet_round_trip(self, tmp_path):
         table = self.MyTable.from_data(name="foo", vals=[1, 2, 3])
@@ -208,6 +252,7 @@ class TestIntAttribute:
     class MyTable(Table):
         vals = Int64Column()
         id = IntAttribute()
+        mutable_id = IntAttribute(mutable=True, default=1)
 
     def test_from_data(self):
         table = self.MyTable.from_data(id=1, vals=[1, 2, 3])
@@ -217,8 +262,13 @@ class TestIntAttribute:
 
     def test_mutation(self):
         table = self.MyTable.from_data(id=1, vals=[1, 2, 3])
-        table.id = 2
-        assert table.id == 2
+        table.mutable_id = 2
+        assert table.mutable_id == 2
+
+    def test_immutable(self):
+        table = self.MyTable.from_data(id=1, vals=[1, 2, 3])
+        with pytest.raises(AttributeImmutableError):
+            table.id = 2
 
     def test_parquet_round_trip(self, tmp_path):
         table = self.MyTable.from_data(id=1, vals=[1, 2, 3])
@@ -243,6 +293,7 @@ class TestFloatAttribute:
     class MyTable(Table):
         vals = Int64Column()
         id = FloatAttribute()
+        mutable_id = FloatAttribute(mutable=True, default=1.5)
 
     def test_from_data(self):
         table = self.MyTable.from_data(id=1.5, vals=[1, 2, 3])
@@ -252,8 +303,13 @@ class TestFloatAttribute:
 
     def test_mutation(self):
         table = self.MyTable.from_data(id=1.5, vals=[1, 2, 3])
-        table.id = 2.5
-        assert table.id == 2.5
+        table.mutable_id = 2.5
+        assert table.mutable_id == 2.5
+
+    def test_immutable(self):
+        table = self.MyTable.from_data(id=1.5, vals=[1, 2, 3])
+        with pytest.raises(AttributeImmutableError):
+            table.id = 2.5
 
     def test_parquet_round_trip(self, tmp_path):
         table = self.MyTable.from_data(id=1.5, vals=[1, 2, 3])
@@ -297,3 +353,69 @@ def test_attribute_metadata_keys():
 
     have = Outer._attribute_metadata_keys()
     assert have == {"inner1.id", "inner2.a", "inner2.b", "middle.c", "middle.inner.id", "id"}
+
+
+def test_benchmark_int_attribute_access(benchmark):
+    class MyTable(Table):
+        vals = Int64Column()
+        attr = IntAttribute()
+
+    table = MyTable.from_kwargs(vals=[], attr=1)
+    benchmark(lambda: table.attr)
+
+
+def test_benchmark_int_attribute_mutation(benchmark):
+    class MyTable(Table):
+        vals = Int64Column()
+        attr = IntAttribute(mutable=True)
+
+    table = MyTable.from_kwargs(vals=[], attr=1)
+
+    def increment(table):
+        table.attr += 1
+
+    benchmark(increment, table)
+
+
+def test_benchmark_str_attribute_access(benchmark):
+    class MyTable(Table):
+        vals = Int64Column()
+        attr = StringAttribute()
+
+    table = MyTable.from_kwargs(vals=[], attr="foo")
+    benchmark(lambda: table.attr)
+
+
+def test_benchmark_str_attribute_mutation(benchmark):
+    class MyTable(Table):
+        vals = Int64Column()
+        attr = StringAttribute(mutable=True)
+
+    table = MyTable.from_kwargs(vals=[], attr="foo")
+
+    def increment(table):
+        table.attr = (table.attr + "bar")[:5]
+
+    benchmark(increment, table)
+
+
+def test_benchmark_float_attribute_access(benchmark):
+    class MyTable(Table):
+        vals = Int64Column()
+        attr = FloatAttribute()
+
+    table = MyTable.from_kwargs(vals=[], attr=1.0)
+    benchmark(lambda: table.attr)
+
+
+def test_benchmark_float_attribute_mutation(benchmark):
+    class MyTable(Table):
+        vals = Int64Column()
+        attr = FloatAttribute(mutable=True)
+
+    table = MyTable.from_kwargs(vals=[], attr=1.0)
+
+    def increment(table):
+        table.attr += 1.0
+
+    benchmark(increment, table)

@@ -68,3 +68,11 @@ class LinkageCombinationError(InvariantViolatedError):
     """
 
     ...
+
+
+class AttributeImmutableError(RuntimeError):
+    """Exception raised when an attempt is made to modify an immutable
+    attribute.
+    """
+
+    ...

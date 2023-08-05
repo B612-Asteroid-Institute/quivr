@@ -1,6 +1,8 @@
 import struct
 from typing import TYPE_CHECKING, Generic, Optional, TypeVar
 
+from . import errors
+
 if TYPE_CHECKING:
     from .tables import Table
 
@@ -22,9 +24,11 @@ class Attribute(Generic[T]):
 
     def __init__(
         self,
+        mutable: bool = False,
         default: Optional[T] = None,
     ):
         self.default = default
+        self.mutable = mutable
         self.name = "__ERR_UNSET_NAME"
 
     def __get__(self, instance: "Table", owner: type) -> T:
@@ -39,9 +43,12 @@ class Attribute(Generic[T]):
         return self.from_bytes(raw)
 
     def __set__(self, instance: "Table", value: T) -> None:
+        name = self.name.encode("utf8")
         metadata = instance.table.schema.metadata
         if metadata is None:
             metadata = {}
+        if name in metadata and not self.mutable:
+            raise errors.AttributeImmutableError(f"Attribute {self.name} is not mutable")
         metadata[self.name.encode("utf8")] = self.to_bytes(value)
         instance.table = instance.table.replace_schema_metadata(metadata)
 
@@ -83,8 +90,8 @@ class StringAttribute(Attribute[str]):
 
     _type = str
 
-    def __init__(self, default: Optional[str] = None):
-        super().__init__(default=default)
+    def __init__(self, default: Optional[str] = None, mutable: bool = False):
+        super().__init__(default=default, mutable=mutable)
 
     def to_bytes(self, value: str) -> bytes:
         return value.encode("utf8")
@@ -114,10 +121,12 @@ class IntAttribute(Attribute[int]):
 
     _type = int
 
-    def __init__(self, default: Optional[int] = None, nbytes: int = 8, signed: bool = True):
+    def __init__(
+        self, default: Optional[int] = None, mutable: bool = False, nbytes: int = 8, signed: bool = True
+    ):
         self.nbytes = nbytes
         self.signed = signed
-        super().__init__(default=default)
+        super().__init__(default=default, mutable=mutable)
 
     def to_bytes(self, value: int) -> bytes:
         return value.to_bytes(length=self.nbytes, byteorder="little", signed=self.signed)
@@ -147,7 +156,7 @@ class FloatAttribute(Attribute[float]):
 
     _type = float
 
-    def __init__(self, default: Optional[float] = None, nbytes: int = 8):
+    def __init__(self, default: Optional[float] = None, mutable: bool = False, nbytes: int = 8):
         if nbytes == 8:
             self._struct_fmt = "<d"
         elif nbytes == 4:
@@ -156,7 +165,7 @@ class FloatAttribute(Attribute[float]):
             self._struct_fmt = "<e"
         else:
             raise ValueError("nbytes must be 2, 4 or 8")
-        super().__init__(default=default)
+        super().__init__(default=default, mutable=mutable)
 
     def to_bytes(self, value: float) -> bytes:
         return struct.pack(self._struct_fmt, value)
