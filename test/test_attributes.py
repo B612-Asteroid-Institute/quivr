@@ -100,6 +100,36 @@ def test_nested_table_shadowing():
     assert table.inner.id == 10
 
 
+def test_nested_table_mutability():
+    class Inner(Table):
+        x = Int64Column()
+        id = IntAttribute(mutable=True)
+
+    class Outer(Table):
+        name = StringAttribute(mutable=True)
+        inner = Inner.as_column()
+
+    table = Outer.from_data(
+        name="foo",
+        inner=Inner.from_data(
+            x=[1, 2, 3],
+            id=10,
+        ),
+    )
+    assert table.name == "foo"
+    assert table.inner.id == 10
+    table.name = "bar"
+    table.inner.id = 20
+    assert table.name == "bar"
+    assert table.inner.id == 10
+
+    inner = table.inner
+    inner.id = 30
+    table.inner = inner
+    assert table.name == "bar"
+    assert table.inner.id == 30
+
+
 def test_csv_nested_table(tmp_path):
     class Inner(Table):
         x = Int64Column()

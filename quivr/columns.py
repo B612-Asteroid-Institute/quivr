@@ -151,6 +151,18 @@ class SubTableColumn(Column, Generic[T]):
         dtype = pa.struct(table_type.schema)
         super().__init__(dtype, nullable=nullable, metadata=metadata)
 
+    def __set__(self, obj: tables.Table, value: T) -> None:
+        # Propagate the value's metadata through to the parent
+        metadata = obj.table.schema.metadata
+        value_meta = value.table.schema.metadata
+        if value_meta is not None:
+            for key, val in value_meta.items():
+                key = (self.name + "." + key.decode("utf-8")).encode("utf-8")
+                metadata[key] = val
+        idx = obj.table.schema.get_field_index(self.name)
+        obj.table = obj.table.replace_schema_metadata(metadata)
+        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value.to_structarray()])
+
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
         ...

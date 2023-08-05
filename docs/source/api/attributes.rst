@@ -53,13 +53,43 @@ the Attribute constructor:
    p = Dataset.from_data(measurements=[1, 2, 3], source="earth")
    p.source = "mars"  # only if p.source is mutable!
 
+Mutability can have confusing behavior when working with nested tables
+(like with :meth:`Table.as_column`). When you chain accessors to
+access a sub-table, your changes to that sub-table's attributes won't
+be reflected back in the original table unless you explicitly
+re-attach the sub-table to the parent. This is easier to explain with code:
+
+.. code-block:: py
+
+   class Dataset(Table):
+       measurements = Int64Column()
+       source = StringAttribute(mutable=True)
+
+   class Database(Table):
+       datasets = Dataset.as_column()
+
+   d = Database.from_data(
+       datasets=Dataset.from_data(
+           measurements=[1, 2, 3],
+           source="earth",
+       )
+   )
+   # Don't do this:
+   d.datasets.source = "mars"
+   print(d.datasets.source)  # prints "earth" - the value is unchanged!
+
+   # Do this instead:
+   ds = d.datasets
+   ds.source = "mars"
+   d.datasets = ds
+   print(d.datasets.source)  # Now prints "mars"
+
+
 Reference
 ---------
 
 .. autoclass:: StringAttribute
-      
-.. autoclass:: FloatAttribute
-      
-.. autoclass:: IntAttribute
 
-	       
+.. autoclass:: FloatAttribute
+
+.. autoclass:: IntAttribute
