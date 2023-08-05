@@ -1,3 +1,5 @@
+.. _columns_api:
+
 Columns
 =======
 

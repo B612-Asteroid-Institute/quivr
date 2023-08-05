@@ -1,3 +1,5 @@
+.. _linkage_guide:
+
 Linkages: Working with Multiple Tables
 ======================================
 
