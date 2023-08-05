@@ -197,18 +197,18 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
       - be the same length as the associated table
 
     Example:
-        >>> from quivr import *
-        >>> class Positions(Table):
-        ...     x = Float32Column()
-        ...     y = Float32Column()
-        ...     time = TimestampColumn(unit="s")
-        ...     id = UInt32Column()
+        >>> import quivr as qv
+        >>> class Positions(qv.Table):
+        ...     x = qv.Float32Column()
+        ...     y = qv.Float32Column()
+        ...     time = qv.TimestampColumn(unit="s")
+        ...     id = qv.UInt32Column()
         ...
-        >>> class Velocities(tables.Table):
-        ...     vx = Float32Column()
-        ...     vy = Float32Column()
-        ...     time = TimestampColumn(unit="s")
-        ...     id = UInt32Column()
+        >>> class Velocities(qv.Table):
+        ...     vx = qv.Float32Column()
+        ...     vy = qv.Float32Column()
+        ...     time = qv.TimestampColumn(unit="s")
+        ...     id = qv.UInt32Column()
         ...
         >>> positions = Positions.from_data(
         ...     x=[0.0, 1.0, 2.0, 3.0, 4.0],
@@ -222,7 +222,7 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         ...     time=[0, 1, 2, 3, 4],
         ...     id=[0, 1, 1, 2, 2],
         ... )
-        >>> linkage = MultiKeyLinkage(
+        >>> linkage = qv.MultiKeyLinkage(
         ...     positions,
         ...     velocities,
         ...     {"id": positions.id, "time": positions.time},
@@ -235,8 +235,6 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         [('id', 1), ('time', datetime.datetime(1970, 1, 1, 0, 0, 2))] Positions(size=1) Velocities(size=1)
         [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 3))] Positions(size=1) Velocities(size=1)
         [('id', 2), ('time', datetime.datetime(1970, 1, 1, 0, 0, 4))] Positions(size=1) Velocities(size=1)
-
-
 
 
     :param left_table: The left table to link.
@@ -323,18 +321,18 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         Returns a composite key scalar for the given values.
 
         Example:
-            >>> from quivr import *
-            >>> class Positions(Table):
-            ...     x = Float32Column()
-            ...     y = Float32Column()
-            ...     time = TimestampColumn(unit="s")
-            ...     id = UInt32Column()
+            >>> import quivr as qv
+            >>> class Positions(qv.Table):
+            ...     x = qv.Float32Column()
+            ...     y = qv.Float32Column()
+            ...     time = qv.TimestampColumn(unit="s")
+            ...     id = qv.UInt32Column()
             ...
-            >>> class Velocities(tables.Table):
-            ...     vx = Float32Column()
-            ...     vy = Float32Column()
-            ...     time = TimestampColumn(unit="s")
-            ...     id = UInt32Column()
+            >>> class Velocities(qv.Table):
+            ...     vx = qv.Float32Column()
+            ...     vy = qv.Float32Column()
+            ...     time = qv.TimestampColumn(unit="s")
+            ...     id = qv.UInt32Column()
             ...
             >>> positions = Positions.from_data(
             ...     x=[0.0, 1.0, 2.0, 3.0, 4.0],
@@ -348,7 +346,7 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
             ...     time=[0, 1, 2, 3, 4],
             ...     id=[0, 1, 1, 2, 2],
             ... )
-            >>> linkage = MultiKeyLinkage(
+            >>> linkage = qv.MultiKeyLinkage(
             ...     positions,
             ...     velocities,
             ...     {"time": positions.time, "id": positions.id},

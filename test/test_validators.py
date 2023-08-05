@@ -2,13 +2,12 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from quivr import validators
-from quivr.errors import ValidationError
+import quivr as qv
 
 
 def test_eq():
     values = pa.array([1, 1, 1, 1], type=pa.int64())
-    checker = validators.eq(1)
+    checker = qv.eq(1)
     assert checker.valid(values)
     checker.validate(values)
 
@@ -19,13 +18,13 @@ def test_eq():
     assert indices.to_pylist() == [3]
     assert values.to_pylist() == [2]
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(qv.ValidationError):
         checker.validate(values)
 
 
 def test_lt():
     values = pa.array([1, 2, 3, 4], type=pa.int64())
-    checker = validators.lt(5)
+    checker = qv.lt(5)
     assert checker.valid(values)
 
     values = pa.array([1, 2, 3, 5], type=pa.int64())
@@ -38,7 +37,7 @@ def test_lt():
 
 def test_le():
     values = pa.array([1, 2, 3, 4], type=pa.int64())
-    checker = validators.le(4)
+    checker = qv.le(4)
     assert checker.valid(values)
 
     values = pa.array([1, 2, 3, 5], type=pa.int64())
@@ -51,7 +50,7 @@ def test_le():
 
 def test_gt():
     values = pa.array([1, 2, 3, 4], type=pa.int64())
-    checker = validators.gt(0)
+    checker = qv.gt(0)
     assert checker.valid(values)
 
     values = pa.array([1, 2, 3, 0], type=pa.int64())
@@ -64,7 +63,7 @@ def test_gt():
 
 def test_ge():
     values = pa.array([1, 2, 3, 4], type=pa.int64())
-    checker = validators.ge(1)
+    checker = qv.ge(1)
     assert checker.valid(values)
 
     values = pa.array([1, 2, 3, 0], type=pa.int64())
@@ -77,7 +76,7 @@ def test_ge():
 
 def test_is_in():
     values = pa.array(["a", "b", "c", "c"], type=pa.string())
-    checker = validators.is_in(["a", "b", "c"])
+    checker = qv.is_in(["a", "b", "c"])
     assert checker.valid(values)
 
     values = pa.array(["a", "b", "c", "d"], type=pa.string())
@@ -91,17 +90,17 @@ def test_is_in():
 @pytest.mark.benchmark(group="validators")
 def test_benchmark_eq(benchmark):
     values = pa.array(np.ones(1000), type=pa.int64())
-    checker = validators.eq(1)
+    checker = qv.eq(1)
     benchmark(checker.valid, values)
 
 
 def test_validating_with_nulls():
     values = pa.array([1, 1, 1, None], type=pa.int64())
-    checker = validators.eq(1)
+    checker = qv.eq(1)
     checker.validate(values)
 
 
 def test_validate_all_null():
     values = pa.array([None, None, None, None], type=pa.int64())
-    checker = validators.eq(1)
+    checker = qv.eq(1)
     checker.validate(values)

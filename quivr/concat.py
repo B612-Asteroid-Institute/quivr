@@ -2,8 +2,7 @@ from typing import Iterator
 
 import pyarrow as pa
 
-from . import errors, tables
-from .defragment import defragment
+from . import defragment, errors, tables
 
 
 def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
@@ -44,5 +43,5 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
     table = pa.Table.from_batches(batches)
     result = first_cls.from_pyarrow(table=table)
     if defrag:
-        result = defragment(result)
+        result = defragment.defragment(result)
     return result

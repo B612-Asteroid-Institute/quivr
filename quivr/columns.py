@@ -138,7 +138,7 @@ T = TypeVar("T", bound=tables.Table)
 
 class SubTableColumn(Column, Generic[T]):
     """
-    A column which represents an embedded Quivr table.
+    A column which represents an embedded quivr table.
 
     :param table_type: The type of the table to embed.
     :param nullable: Whether the column can contain null values.
@@ -1150,13 +1150,14 @@ class ListColumn(Column):
 
     The values in the list can be of any type.
 
-    Note that all quivr tables.Tables are storing lists of values, so this
+    Note that all quivr Tables are storing lists of values, so this
     column type is only useful for storing lists of lists.
 
     :param value_type: The type of the values in the list.
     :param nullable: Whether the list can contain null values.
     :param metadata: A dictionary of metadata to attach to the column.
     :param validator: A validator to run against the column's values.
+
     """
 
     def __init__(

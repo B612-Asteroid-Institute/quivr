@@ -2,22 +2,15 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
-from quivr import (
-    AttributeImmutableError,
-    FloatAttribute,
-    Int64Column,
-    IntAttribute,
-    StringAttribute,
-    Table,
-)
+import quivr as qv
 
 
 def test_multiple_attributes():
-    class MyTable(Table):
-        vals = Int64Column()
-        name = StringAttribute()
-        id = IntAttribute()
-        fval = FloatAttribute()
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        name = qv.StringAttribute()
+        id = qv.IntAttribute()
+        fval = qv.FloatAttribute()
 
     table = MyTable.from_data(name="foo", id=1, vals=[1, 2, 3], fval=2.5)
     assert table.attributes() == {
@@ -28,17 +21,17 @@ def test_multiple_attributes():
 
 
 def test_nested_attribute_metadata():
-    class Inner(Table):
-        x = Int64Column()
-        id1 = StringAttribute()
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        id1 = qv.StringAttribute()
 
-    class Middle(Table):
+    class Middle(qv.Table):
         inner = Inner.as_column()
-        id2 = StringAttribute()
+        id2 = qv.StringAttribute()
 
-    class Outer(Table):
+    class Outer(qv.Table):
         middle = Middle.as_column()
-        id3 = StringAttribute()
+        id3 = qv.StringAttribute()
 
     inner = Inner.from_kwargs(x=[1, 2, 3], id1="a")
     middle = Middle.from_kwargs(
@@ -60,12 +53,12 @@ def test_nested_attribute_metadata():
 
 
 def test_nested_table():
-    class Inner(Table):
-        x = Int64Column()
-        id = IntAttribute()
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        id = qv.IntAttribute()
 
-    class Outer(Table):
-        name = StringAttribute()
+    class Outer(qv.Table):
+        name = qv.StringAttribute()
         inner = Inner.as_column()
 
     table = Outer.from_data(
@@ -81,12 +74,12 @@ def test_nested_table():
 
 def test_nested_table_shadowing():
     # Test that reusing a name at two levels is safe.
-    class Inner(Table):
-        x = Int64Column()
-        id = IntAttribute()
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        id = qv.IntAttribute()
 
-    class Outer(Table):
-        id = IntAttribute()
+    class Outer(qv.Table):
+        id = qv.IntAttribute()
         inner = Inner.as_column()
 
     table = Outer.from_data(
@@ -101,12 +94,12 @@ def test_nested_table_shadowing():
 
 
 def test_nested_table_mutability():
-    class Inner(Table):
-        x = Int64Column()
-        id = IntAttribute(mutable=True)
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        id = qv.IntAttribute(mutable=True)
 
-    class Outer(Table):
-        name = StringAttribute(mutable=True)
+    class Outer(qv.Table):
+        name = qv.StringAttribute(mutable=True)
         inner = Inner.as_column()
 
     table = Outer.from_data(
@@ -131,12 +124,12 @@ def test_nested_table_mutability():
 
 
 def test_csv_nested_table(tmp_path):
-    class Inner(Table):
-        x = Int64Column()
-        id = IntAttribute()
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        id = qv.IntAttribute()
 
-    class Outer(Table):
-        name = StringAttribute()
+    class Outer(qv.Table):
+        name = qv.StringAttribute()
         inner = Inner.as_column()
 
     table = Outer.from_data(
@@ -154,9 +147,9 @@ def test_csv_nested_table(tmp_path):
 
 
 class TestConstructors:
-    class MyTable(Table):
-        vals = Int64Column()
-        name = StringAttribute()
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        name = qv.StringAttribute()
 
     def test_from_dataframe(self):
         df = pd.DataFrame({"vals": [1, 2, 3]})
@@ -164,14 +157,14 @@ class TestConstructors:
         assert table.name == "foo"
 
     def test_from_flat_dataframe(self):
-        class Inner(Table):
-            x = Int64Column()
-            id = IntAttribute()
+        class Inner(qv.Table):
+            x = qv.Int64Column()
+            id = qv.IntAttribute()
 
-        class Outer(Table):
-            y = Int64Column()
+        class Outer(qv.Table):
+            y = qv.Int64Column()
             inner = Inner.as_column()
-            name = StringAttribute()
+            name = qv.StringAttribute()
 
         df = pd.DataFrame({"inner.x": [1, 2, 3], "y": [4, 5, 6]})
         table = Outer.from_flat_dataframe(df, name="foo")
@@ -203,10 +196,10 @@ class TestConstructors:
 
 
 class TestStringAttribute:
-    class MyTable(Table):
-        vals = Int64Column()
-        name = StringAttribute()
-        mutable_name = StringAttribute(mutable=True, default="bar")
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        name = qv.StringAttribute()
+        mutable_name = qv.StringAttribute(mutable=True, default="bar")
 
     def test_from_data(self):
         table = self.MyTable.from_data(name="foo", vals=[1, 2, 3])
@@ -226,7 +219,7 @@ class TestStringAttribute:
 
     def test_immutable(self):
         table = self.MyTable.from_data(name="foo", vals=[1, 2, 3])
-        with pytest.raises(AttributeImmutableError):
+        with pytest.raises(qv.AttributeImmutableError):
             table.name = "bar"
 
     def test_parquet_round_trip(self, tmp_path):
@@ -249,10 +242,10 @@ class TestStringAttribute:
 
 
 class TestIntAttribute:
-    class MyTable(Table):
-        vals = Int64Column()
-        id = IntAttribute()
-        mutable_id = IntAttribute(mutable=True, default=1)
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        id = qv.IntAttribute()
+        mutable_id = qv.IntAttribute(mutable=True, default=1)
 
     def test_from_data(self):
         table = self.MyTable.from_data(id=1, vals=[1, 2, 3])
@@ -267,7 +260,7 @@ class TestIntAttribute:
 
     def test_immutable(self):
         table = self.MyTable.from_data(id=1, vals=[1, 2, 3])
-        with pytest.raises(AttributeImmutableError):
+        with pytest.raises(qv.AttributeImmutableError):
             table.id = 2
 
     def test_parquet_round_trip(self, tmp_path):
@@ -290,10 +283,10 @@ class TestIntAttribute:
 
 
 class TestFloatAttribute:
-    class MyTable(Table):
-        vals = Int64Column()
-        id = FloatAttribute()
-        mutable_id = FloatAttribute(mutable=True, default=1.5)
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        id = qv.FloatAttribute()
+        mutable_id = qv.FloatAttribute(mutable=True, default=1.5)
 
     def test_from_data(self):
         table = self.MyTable.from_data(id=1.5, vals=[1, 2, 3])
@@ -308,7 +301,7 @@ class TestFloatAttribute:
 
     def test_immutable(self):
         table = self.MyTable.from_data(id=1.5, vals=[1, 2, 3])
-        with pytest.raises(AttributeImmutableError):
+        with pytest.raises(qv.AttributeImmutableError):
             table.id = 2.5
 
     def test_parquet_round_trip(self, tmp_path):
@@ -331,43 +324,43 @@ class TestFloatAttribute:
 
 
 def test_attribute_metadata_keys():
-    class Inner1(Table):
-        id = IntAttribute()
+    class Inner1(qv.Table):
+        id = qv.IntAttribute()
 
-    class Inner2(Table):
-        a = StringAttribute()
-        b = StringAttribute()
+    class Inner2(qv.Table):
+        a = qv.StringAttribute()
+        b = qv.StringAttribute()
 
-    class DoubleInner(Table):
-        id = IntAttribute()
+    class DoubleInner(qv.Table):
+        id = qv.IntAttribute()
 
-    class Middle(Table):
-        c = StringAttribute()
+    class Middle(qv.Table):
+        c = qv.StringAttribute()
         inner = DoubleInner.as_column()
 
-    class Outer(Table):
+    class Outer(qv.Table):
         inner1 = Inner1.as_column()
         inner2 = Inner2.as_column()
         middle = Middle.as_column()
-        id = IntAttribute()
+        id = qv.IntAttribute()
 
     have = Outer._attribute_metadata_keys()
     assert have == {"inner1.id", "inner2.a", "inner2.b", "middle.c", "middle.inner.id", "id"}
 
 
 def test_benchmark_int_attribute_access(benchmark):
-    class MyTable(Table):
-        vals = Int64Column()
-        attr = IntAttribute()
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        attr = qv.IntAttribute()
 
     table = MyTable.from_kwargs(vals=[], attr=1)
     benchmark(lambda: table.attr)
 
 
 def test_benchmark_int_attribute_mutation(benchmark):
-    class MyTable(Table):
-        vals = Int64Column()
-        attr = IntAttribute(mutable=True)
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        attr = qv.IntAttribute(mutable=True)
 
     table = MyTable.from_kwargs(vals=[], attr=1)
 
@@ -378,18 +371,18 @@ def test_benchmark_int_attribute_mutation(benchmark):
 
 
 def test_benchmark_str_attribute_access(benchmark):
-    class MyTable(Table):
-        vals = Int64Column()
-        attr = StringAttribute()
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        attr = qv.StringAttribute()
 
     table = MyTable.from_kwargs(vals=[], attr="foo")
     benchmark(lambda: table.attr)
 
 
 def test_benchmark_str_attribute_mutation(benchmark):
-    class MyTable(Table):
-        vals = Int64Column()
-        attr = StringAttribute(mutable=True)
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        attr = qv.StringAttribute(mutable=True)
 
     table = MyTable.from_kwargs(vals=[], attr="foo")
 
@@ -400,18 +393,18 @@ def test_benchmark_str_attribute_mutation(benchmark):
 
 
 def test_benchmark_float_attribute_access(benchmark):
-    class MyTable(Table):
-        vals = Int64Column()
-        attr = FloatAttribute()
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        attr = qv.FloatAttribute()
 
     table = MyTable.from_kwargs(vals=[], attr=1.0)
     benchmark(lambda: table.attr)
 
 
 def test_benchmark_float_attribute_mutation(benchmark):
-    class MyTable(Table):
-        vals = Int64Column()
-        attr = FloatAttribute(mutable=True)
+    class MyTable(qv.Table):
+        vals = qv.Int64Column()
+        attr = qv.FloatAttribute(mutable=True)
 
     table = MyTable.from_kwargs(vals=[], attr=1.0)
 

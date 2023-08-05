@@ -17,14 +17,14 @@ Example usage:
 
 .. code-block:: py
 
-   from quivr import Table, StringAttribute, Float64Column
+   import quivr as qv
 
-   class Observations(Table):
-       x = Float64Column()
-       y = Float64Column()
-       z = Float64Column()
+   class Observations(qv.Table):
+       x = qv.Float64Column()
+       y = qv.Float64Column()
+       z = qv.Float64Column()
 
-       reference_frame = StringAttribute(default="earth")
+       reference_frame = qv.StringAttribute(default="earth")
 
 
     obs = Observations.from_data(
@@ -46,9 +46,9 @@ the Attribute constructor:
 
 .. code-block:: py
 
-   class Dataset(Table):
-       measurements = Int64Column()
-       source = StringAttribute(mutable=True)
+   class Dataset(qv.Table):
+       measurements = qv.Int64Column()
+       source = qv.StringAttribute(mutable=True)
 
    p = Dataset.from_data(measurements=[1, 2, 3], source="earth")
    p.source = "mars"  # only if p.source is mutable!
@@ -61,11 +61,11 @@ re-attach the sub-table to the parent. This is easier to explain with code:
 
 .. code-block:: py
 
-   class Dataset(Table):
-       measurements = Int64Column()
-       source = StringAttribute(mutable=True)
+   class Dataset(qv.Table):
+       measurements = qv.Int64Column()
+       source = qv.StringAttribute(mutable=True)
 
-   class Database(Table):
+   class Database(qv.Table):
        datasets = Dataset.as_column()
 
    d = Database.from_data(

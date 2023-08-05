@@ -22,10 +22,11 @@ example, this code validates the ``size`` column is between 5 and 30:
 
 .. code-block:: py
 
-   from quivr import Table, Int8Column, ge, le, and_
+   import quivr as qv
+   from quivr import and_, ge, le
 
-   class Hat(Table):
-       size = Int8Column(validator=and_(ge(5), le(30)))
+   class Hat(qv.Table):
+       size = qv.Int8Column(validator=and_(ge(5), le(30)))
        
 
 .. autofunction:: eq

@@ -14,33 +14,29 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
-from quivr.attributes import IntAttribute, StringAttribute
-from quivr.columns import DictionaryColumn, Int8Column, Int64Column, StringColumn
-from quivr.concat import concatenate
-from quivr.errors import ValidationError
-from quivr.tables import Table
+import quivr as qv
 from quivr.validators import lt
 
 
-class Pair(Table):
-    x = Int64Column()
-    y = Int64Column()
+class Pair(qv.Table):
+    x = qv.Int64Column()
+    y = qv.Int64Column()
 
 
-class Wrapper(Table):
+class Wrapper(qv.Table):
     pair = Pair.as_column()
-    id = StringColumn()
+    id = qv.StringColumn()
 
 
 def test_table__eq__():
-    class A(Table):
-        x = Int64Column()
-        y = StringAttribute()
+    class A(qv.Table):
+        x = qv.Int64Column()
+        y = qv.StringAttribute()
 
-    class B(Table):
-        z = Int64Column()
+    class B(qv.Table):
+        z = qv.Int64Column()
         a = A.as_column()
-        b = IntAttribute()
+        b = qv.IntAttribute()
 
     a_table = A.from_kwargs(
         x=[1],
@@ -173,14 +169,14 @@ def test_iteration():
 def test_chunk_counts():
     pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
     assert pair.chunk_counts() == {"x": 1, "y": 1}
-    pair = concatenate([pair, pair], defrag=False)
+    pair = qv.concatenate([pair, pair], defrag=False)
     assert pair.chunk_counts() == {"x": 2, "y": 2}
 
 
 def test_check_fragmented():
     pair = Pair.from_pydict({"x": [1, 2, 3], "y": [4, 5, 6]})
     assert not pair.fragmented()
-    pair = concatenate([pair, pair], defrag=False)
+    pair = qv.concatenate([pair, pair], defrag=False)
     assert pair.fragmented()
 
 
@@ -262,17 +258,17 @@ def test_from_pylist():
     np.testing.assert_array_equal(wrapper.pair.y, [2, 4])
 
 
-class Layer1(Table):
-    x = Int64Column()
+class Layer1(qv.Table):
+    x = qv.Int64Column()
 
 
-class Layer2(Table):
-    y = Int64Column()
+class Layer2(qv.Table):
+    y = qv.Int64Column()
     layer1 = Layer1.as_column()
 
 
-class Layer3(Table):
-    z = Int64Column()
+class Layer3(qv.Table):
+    z = qv.Int64Column()
     layer2 = Layer2.as_column()
 
 
@@ -309,18 +305,18 @@ def test_from_kwargs():
 
 
 def test_from_kwargs_dictionary_type():
-    class SomeTable(Table):
-        vals = DictionaryColumn(index_type=pa.int8(), value_type=pa.string())
+    class SomeTable(qv.Table):
+        vals = qv.DictionaryColumn(index_type=pa.int8(), value_type=pa.string())
 
     have = SomeTable.from_kwargs(vals=["a", "b", "b"])
     assert have.vals[0].as_py() == "a"
 
 
 def test_from_kwargs_with_missing():
-    class SomeTable(Table):
-        x = Int64Column(nullable=True)
-        y = Int64Column(nullable=False)
-        z = Int64Column(nullable=True)
+    class SomeTable(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=False)
+        z = qv.Int64Column(nullable=True)
 
     # Eliding nullable columns is OK
     have = SomeTable.from_kwargs(y=[1, 2, 3])
@@ -344,10 +340,10 @@ def test_from_kwargs_with_missing():
 
 
 def test_from_kwargs_with_missing_as_none():
-    class SomeTable(Table):
-        x = Int64Column(nullable=True)
-        y = Int64Column(nullable=False)
-        z = Int64Column(nullable=True)
+    class SomeTable(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=False)
+        z = qv.Int64Column(nullable=True)
 
     # Eliding nullable columns is OK
     have = SomeTable.from_kwargs(x=None, y=[1, 2, 3], z=None)
@@ -371,9 +367,9 @@ def test_from_kwargs_with_missing_as_none():
 
 
 def test_from_kwargs_raises_mismatched_sizes():
-    class SomeTable(Table):
-        x = Int64Column()
-        y = Int64Column()
+    class SomeTable(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
 
     with pytest.raises(ValueError, match=r"Column y has wrong length 4 \(first column has length 3\)"):
         SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6, 7])
@@ -413,10 +409,10 @@ def test_from_data_using_positional_dict():
     np.testing.assert_array_equal(have.y, [4, 5, 6])
 
 
-class TableWithAttributes(Table):
-    x = Int64Column()
-    y = Int64Column()
-    attrib = StringAttribute()
+class TableWithAttributes(qv.Table):
+    x = qv.Int64Column()
+    y = qv.Int64Column()
+    attrib = qv.StringAttribute()
 
 
 class TestTableAttributes:
@@ -531,14 +527,14 @@ def test_empty():
 
 class TestValidation:
     def test_int8_bounds(self):
-        class MyTable(Table):
-            x = Int8Column(validator=lt(10))
+        class MyTable(qv.Table):
+            x = qv.Int8Column(validator=lt(10))
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(qv.ValidationError):
             MyTable.from_data(x=[8, 9, 10], validate=True)
 
         table = MyTable.from_data(x=[8, 9, 10], validate=False)
-        with pytest.raises(ValidationError):
+        with pytest.raises(qv.ValidationError):
             table.validate()
 
 
@@ -581,13 +577,13 @@ class TestTableEqualityBenchmarks:
 
 
 def test_where_filtering():
-    class InnerTable(Table):
-        x = Int8Column()
+    class InnerTable(qv.Table):
+        x = qv.Int8Column()
 
-    class OuterTable(Table):
+    class OuterTable(qv.Table):
         inner = InnerTable.as_column()
-        y = Int8Column()
-        label = StringAttribute()
+        y = qv.Int8Column()
+        label = qv.StringAttribute()
 
     table = OuterTable.from_data(
         inner=InnerTable.from_data(x=[1, 2, 3]),
@@ -667,9 +663,9 @@ def test_from_pyarrow_table_wrong_type():
 
 
 def test_from_pyarrow_int_type_conversions():
-    class Int8Pair(Table):
-        x = Int8Column()
-        y = Int8Column()
+    class Int8Pair(qv.Table):
+        x = qv.Int8Column()
+        y = qv.Int8Column()
 
     table = pa.table({"x": pa.array([1, 2, 3], pa.int32()), "y": pa.array([4, 5, 6], pa.int64())})
     have = Int8Pair.from_pyarrow(table)
@@ -679,9 +675,9 @@ def test_from_pyarrow_int_type_conversions():
 
 
 def test_from_pyarrow_int_overflow():
-    class Int8Pair(Table):
-        x = Int8Column()
-        y = Int8Column()
+    class Int8Pair(qv.Table):
+        x = qv.Int8Column()
+        y = qv.Int8Column()
 
     table = pa.table({"x": pa.array([1, 2, 3], pa.int32()), "y": pa.array([4, 5, 1000], pa.int64())})
     with pytest.raises(ValueError):
@@ -732,9 +728,9 @@ def test_from_pyarrow_preserves_attributes():
 
 
 def test_from_pyarrow_preserves_nested_attributes():
-    class NestedAttributeWrapper(Table):
+    class NestedAttributeWrapper(qv.Table):
         inner = TableWithAttributes.as_column()
-        name = StringAttribute()
+        name = qv.StringAttribute()
 
     table = pa.table(
         {

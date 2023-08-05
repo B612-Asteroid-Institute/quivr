@@ -1,18 +1,18 @@
-from quivr import Table, StringColumn, UInt32Column, Linkage, concatenate
+import quivr as qv
 
-class People(Table):
-    id = UInt32Column()
-    name = StringColumn()
-    age = UInt32Column()
+class People(qv.Table):
+    id = qv.UInt32Column()
+    name = qv.StringColumn()
+    age = qv.UInt32Column()
 
-class Pets(Table):
-    name = StringColumn()
-    owner_id = UInt32Column()
-    species = StringColumn()
+class Pets(qv.Table):
+    name = qv.StringColumn()
+    owner_id = qv.UInt32Column()
+    species = qv.StringColumn()
 
 # L13
 
-class PetsAndOwners(Table):
+class PetsAndOwners(qv.Table):
     owner = People.as_column()
     pets = Pets.as_column()
 
@@ -30,7 +30,7 @@ pets = Pets.from_data(
     species=['Dog', 'Dog', 'Cat', 'Dog', 'Dog', 'Cat', 'Dog']
 )
 
-linkage = Linkage(people, pets, people.id, pets.owner_id)
+linkage = qv.Linkage(people, pets, people.id, pets.owner_id)
 
 # L35
 
@@ -65,8 +65,8 @@ for id, owner, pets in linkage:
     if 'Dog' in pets.species.tolist():
         dog_owners.append(owner)
 
-cat_owners = concatenate(cat_owners)
-dog_owners = concatenate(dog_owners)
+cat_owners = qv.concatenate(cat_owners)
+dog_owners = qv.concatenate(dog_owners)
 
 print(cat_owners.age.to_numpy().mean())
 # 37.5

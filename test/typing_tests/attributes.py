@@ -1,12 +1,12 @@
 from typing_extensions import assert_type
 
-import quivr
+import quivr as qv
 
 
-class AttribTable(quivr.Table):
-    string_attrib = quivr.StringAttribute()
-    int_attrib = quivr.IntAttribute()
-    float_attrib = quivr.FloatAttribute()
+class AttribTable(qv.Table):
+    string_attrib = qv.StringAttribute()
+    int_attrib = qv.IntAttribute()
+    float_attrib = qv.FloatAttribute()
 
 
 attrib_instance = AttribTable.empty(string_attrib="hello", int_attrib=1, float_attrib=1.0)

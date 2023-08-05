@@ -49,17 +49,17 @@ it with Columns that describe the data you're working with, and quivr
 will handle the rest.
 
 ```python
-from quivr import Table, Float64Column
+import quivr as qv
 import pyarrow as pa
 
 
-class Coordinates(Table):
-	x = Float64Column()
-	y = Float64Column()
-	z = Float64Column()
-	vx = Float64Column()
-	vy = Float64Column()
-	vz = Float64Column()
+class Coordinates(qv.Table):
+	x = qv.Float64Column()
+	y = qv.Float64Column()
+	z = qv.Float64Column()
+	vx = qv.Float64Column()
+	vy = qv.Float64Column()
+	vz = qv.Float64Column()
 ```
 
 Then, you can construct tables from data:
@@ -94,10 +94,10 @@ You can embed one table's definition within another, and you can make columns nu
 
 ```python
 
-class AsteroidOrbit(Table):
-	designation = StringColumn()
-	mass = Float64Column(nullable=True)
-	radius = Float64Column(nullable=True)
+class AsteroidOrbit(qv.Table):
+	designation = qv.StringColumn()
+	mass = qv.Float64Column(nullable=True)
+	radius = qv.Float64Column(nullable=True)
 	coords = Coordinates.as_column()
 
 # You can construct embedded columns from Arrow StructArrays, which you can get from
@@ -150,10 +150,10 @@ can do so like this:
 
 ```python
 
-class AsteroidOrbit(Table):
-	designation = StringColumn()
-	mass = Float64Column(nullable=True)
-	radius = Float64Column(nullable=True)
+class AsteroidOrbit(qv.Table):
+	designation = qv.StringColumn()
+	mass = qv.Float64Column(nullable=True)
+	radius = qv.Float64Column(nullable=True)
 	coords = Coordinates.as_column()
 
     def total_mass(self):
@@ -164,8 +164,8 @@ class AsteroidOrbit(Table):
 You can also use this to add "meta-columns" which are combinations of other columns. For example:
 
 ```python
-class CoordinateCovariance(Table):
-	matrix_values = ListColumn(pa.float64(), 36)
+class CoordinateCovariance(qv.Table):
+	matrix_values = qv.ListColumn(pa.float64(), 36)
 
     @property
     def matrix(self):
@@ -173,10 +173,10 @@ class CoordinateCovariance(Table):
         return self.matrix_values.to_numpy().reshape(-1, 6, 6)
 
 
-class AsteroidOrbit(Table):
-	designation = StringColumn()
-	mass = Float64Column(nullable=True)
-	radius = Float64Column(nullable=True)
+class AsteroidOrbit(qv.Table):
+	designation = qv.StringColumn()
+	mass = qv.Float64Column(nullable=True)
+	radius = qv.Float64Column(nullable=True)
 	coords = Coordinates.as_column()
 	covariance = CoordinateCovariance.as_column()
 
@@ -199,16 +199,16 @@ if you do this, there are a few rules:
     (via `super().__init__(table)`).
  2. You must implement a `with_table(self, table: pa.Table) -> Self`
     method which returns a **new** instance with the provided table,
-    bringing along the current values of all instance attributes.
+    bringingalong the current values of all instance attributes.
 
 For example:
 
 ```python
 from typing import Self
 
-class AsteroidOrbit(Table):
-    designation = StringColumn()
-	mass = Float64Column(nullable=True)
+class AsteroidOrbit(qv.Table):
+    designation = qv.StringColumn()
+	mass = qv.Float64Column(nullable=True)
 	
 	def __init__(self, table: pa.Table, mu: float):
 	    super().__init__(table)
@@ -239,14 +239,14 @@ To add data validation, use the `validator=` keyword inside
 columns. For example:
 
 ```python
-from quivr import Table, Int64Column, Float64Column, StringColumn
+import quivr as qv
 from quivr.validators import gt, ge, le, and_, is_in
 
-class Observation(Table):
-    id = Int64Column(validator=gt(0))
-    ra = Float64Column(validator=and_(ge(0), le(360))
-    dataset_id = StringColumn(validator=is_in(["ztf", "nsc", "skymapper"])))
-    unvalidated = Int64Column()
+class Observation(qv.Table):
+    id = qv.Int64Column(validator=gt(0))
+    ra = qv.Float64Column(validator=and_(ge(0), le(360))
+    dataset_id = qv.StringColumn(validator=is_in(["ztf", "nsc", "skymapper"])))
+    unvalidated = qv.Int64Column()
 ```
 
 This `Observation` table has validators that
@@ -284,26 +284,6 @@ If you're plucking out rows that match a single value, you can use the
 # Get the orbit of Ceres
 ceres_orbit = orbits.select("designation", "Ceres")
 ```
-
-#### Indexes for Fast Lookups
-
-If you're going to be doing a lot of lookups on a particular column,
-it can be useful to create an index for that column. You can do using
-the `quivr.StringIndex` class to build an index for string values:
-
-```python
-# Build an index for the designation column
-designation_index = quivr.StringIndex(orbits, "designation")
-
-# Get the orbit of Ceres
-ceres_orbit = designation_index.lookup("Ceres")
-```
-
-The `lookup` method on the StringIndex returns Quivr Tables, or None
-if there is no match. Keep in mind that the returned tables might have
-multiple rows if there are multiple matches.
-
-_TODO: Add numeric and time-based indexes._
 
 ### Serialization
 

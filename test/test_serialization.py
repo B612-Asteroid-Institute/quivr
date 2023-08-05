@@ -1,16 +1,16 @@
 import pyarrow.compute as pc
 
-from quivr import Int64Column, StringColumn, Table
+import quivr as qv
 
 
-class Pair(Table):
-    x = Int64Column()
-    y = Int64Column()
+class Pair(qv.Table):
+    x = qv.Int64Column()
+    y = qv.Int64Column()
 
 
-class Container(Table):
+class Container(qv.Table):
     pair = Pair.as_column()
-    name = StringColumn()
+    name = qv.StringColumn()
 
 
 class TestParquetSerialization:
@@ -56,9 +56,9 @@ class TestParquetSerialization:
         pair = Pair.from_data(x=[1, 2, 3], y=[4, 5, 6])
         pair.to_parquet(path)
 
-        class Pair2(Table):
-            a = Int64Column()
-            b = Int64Column()
+        class Pair2(qv.Table):
+            a = qv.Int64Column()
+            b = qv.Int64Column()
 
         have = Pair2.from_parquet(path, column_name_map={"x": "a", "y": "b"})
         want = Pair2.from_data(a=[1, 2, 3], b=[4, 5, 6])

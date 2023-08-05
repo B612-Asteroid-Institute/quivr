@@ -3,17 +3,17 @@ import numpy.typing as npt
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from quivr import Table, Float64Column, ListColumn, StringColumn
+import quivr as qv
 
 
-class CartesianCoordinates(Table):
-    x = Float64Column()
-    y = Float64Column()
-    z = Float64Column()
-    vx = Float64Column()
-    vy = Float64Column()
-    vz = Float64Column()
-    covariance = ListColumn(pa.float64())
+class CartesianCoordinates(qv.Table):
+    x = qv.Float64Column()
+    y = qv.Float64Column()
+    z = qv.Float64Column()
+    vx = qv.Float64Column()
+    vy = qv.Float64Column()
+    vz = qv.Float64Column()
+    covariance = qv.ListColumn(pa.float64())
 
     def covariance_matrix(self) -> npt.NDArray[np.float64]:
         raw = self.column("covariance").to_numpy()
@@ -32,12 +32,12 @@ class CartesianCoordinates(Table):
         )
 
 
-class Orbit(Table):
+class Orbit(qv.Table):
     coords = CartesianCoordinates.as_column()
-    epoch = Float64Column()
-    object_id = StringColumn()
+    epoch = qv.Float64Column()
+    object_id = qv.StringColumn()
 
 
-class Etc(Table):
+class Etc(qv.Table):
     orbit = Orbit.as_column()
-    thing = Float64Column()
+    thing = qv.Float64Column()

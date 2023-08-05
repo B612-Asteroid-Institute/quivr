@@ -170,10 +170,10 @@ class Table:
 
         For example:
 
-            >>> import quivr
-            >>> class MyTable(quivr.Table):
-            ...     a = quivr.StringColumn()
-            ...     b = quivr.Int64Column()
+            >>> import quivr as qv
+            >>> class MyTable(qv.Table):
+            ...     a = qv.StringColumn()
+            ...     b = qv.Int64Column()
             ...
             >>> # All of these are equivalent:
             >>> MyTable.from_data({"a": ["a", "b"], "b": [1, 2]})
@@ -380,12 +380,12 @@ class Table:
         :returns: A Table object.
 
         Examples:
-            >>> import quivr
-            >>> class Inner(quivr.Table):
-            ...     a = quivr.StringColumn()
+            >>> import quivr as qv
+            >>> class Inner(qv.Table):
+            ...     a = qv.StringColumn()
             ...
-            >>> class Outer(quivr.Table):
-            ...     z = quivr.StringColumn()
+            >>> class Outer(qv.Table):
+            ...     z = qv.StringColumn()
             ...     i = Inner.as_column()
             ...
             >>> data = [{"z": "v1", "i": {"a": "v1_in"}}, {"z": "v2", "i": {"a": "v2_in"}}]
@@ -1004,11 +1004,11 @@ class Table:
         :param expr: A pyarrow Expression to apply to the table.
 
         Examples:
-            >>> from quivr import Table, Int64Column
+            >>> import quivr as qv
             >>> import pyarrow.compute as pc
-            >>> class MyTable(Table):
-            ...     x = Int64Column()
-            ...     y = Int64Column()
+            >>> class MyTable(qv.Table):
+            ...     x = qv.Int64Column()
+            ...     y = qv.Int64Column()
             >>> t = MyTable.from_data(x=[1, 2, 3], y=[4, 5, 6])
             >>> filtered = t.where(pc.field("x") > 1)
             >>> print(filtered.x.to_pylist())
