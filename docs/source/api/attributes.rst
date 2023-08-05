@@ -35,7 +35,26 @@ Example usage:
     )
 
     print(obs.reference_frame)  # prints 'mars'
-    
+
+Mutability
+----------
+
+By default, attributes are immutable: they can be set when a Table
+instance is created, but they cannot be modified. If you need an
+attribute to be mutable, you can do so by passing ``mutable=True`` to
+the Attribute constructor:
+
+.. code-block:: py
+
+   class Dataset(Table):
+       measurements = Int64Column()
+       source = StringAttribute(mutable=True)
+
+   p = Dataset.from_data(measurements=[1, 2, 3], source="earth")
+   p.source = "mars"  # only if p.source is mutable!
+
+Reference
+---------
 
 .. autoclass:: StringAttribute
       
