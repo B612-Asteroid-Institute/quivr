@@ -1,3 +1,5 @@
+.. _serde_guide:
+
 Serialization and Deserialization
 =================================
 

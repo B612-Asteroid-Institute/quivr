@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import warnings
 from io import IOBase
 
 if sys.version_info < (3, 11):
@@ -13,6 +14,7 @@ from typing import (
     Any,
     ClassVar,
     Iterator,
+    List,
     Optional,
     Type,
     TypeAlias,
@@ -168,34 +170,10 @@ class Table:
         against the table's schema. If validation fails, a
         :class:`ValidationError` will be raised.
 
-        For example:
-
-            >>> import quivr as qv
-            >>> class MyTable(qv.Table):
-            ...     a = qv.StringColumn()
-            ...     b = qv.Int64Column()
-            ...
-            >>> # All of these are equivalent:
-            >>> MyTable.from_data({"a": ["a", "b"], "b": [1, 2]})
-            MyTable(size=2)
-            >>> MyTable.from_data([{"a": "a", "b": 1}, {"a": "b", "b": 2}])
-            MyTable(size=2)
-            >>> MyTable.from_data(a=["a", "b"], b=[1, 2])
-            MyTable(size=2)
-            >>> import numpy as np
-            >>> MyTable.from_data(a=np.array(["a", "b"]), b=np.array([1, 2]))
-            MyTable(size=2)
-
-        :param data: The data to populate the table with.
-        :param validate: Whether to validate the data against the table's schema.
-        :param \\**kwargs: More data in keyword argument form. The keys
-          can be column names or attribute names. The values should be
-          arrays, lists, or pyarrow Arrays.
-        :type \\**kwargs: Union[:obj:`AttributeValueType`, :obj:`DataSourceType`]
-
         """
+        warnings.warn(DeprecationWarning("Table.from_data will be removed in quivr version 0.7"))
         if data is None:
-            instance = cls.from_kwargs(**kwargs)
+            instance = cls.from_kwargs(validate=validate, **kwargs)
         else:
             attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
             if isinstance(data, pa.Table):
@@ -253,7 +231,7 @@ class Table:
         return columns.SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
-    def from_kwargs(cls, **kwargs: Union[DataSourceType, AttributeValueType]) -> Self:
+    def from_kwargs(cls, validate: bool = True, **kwargs: Union[DataSourceType, AttributeValueType]) -> Self:
         """Create a Table instance from keyword arguments.
 
         Each keyword argument corresponds to a column in the Table.
@@ -264,6 +242,7 @@ class Table:
 
         For attributes, the values should be the appropriate type for that attribute.
 
+        :param validate: If (the default), run column validators on all input data.
         :param \\**kwargs: The data to populate the table with.
         :type \\**kwargs: Union[:obj:`AttributeValueType`, :obj:`DataSourceType`]
 
@@ -337,8 +316,19 @@ class Table:
                 column = getattr(cls, cls.schema[i].name)
                 arrays[i] = column.fill_default(array)
 
+        pyarrow_table = cls._build_arrow_table(arrays, metadata)
         attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
-        return cls.from_arrays(arrays, metadata=metadata, **attrib_kwargs)
+        return cls.from_pyarrow(table=pyarrow_table, validate=validate, **attrib_kwargs)
+
+    @classmethod
+    def _build_arrow_table(cls, arrays: List[pa.Array], metadata: dict[bytes, bytes]) -> pa.Table:
+        """
+        Construct a pyarrow Table which will back cls from a list of arrays. The
+        Table's schema comes from cls.schema.
+        """
+        schema = cls.schema.with_metadata(metadata)
+        table = pa.Table.from_arrays(arrays, schema=schema)
+        return table
 
     @classmethod
     def from_arrays(
@@ -356,16 +346,17 @@ class Table:
         :type \\**kwargs: :obj:`AttributeValueType`
         :return: A Table object.
         """
+        warnings.warn(DeprecationWarning("Table.from_arrays will be removed in quivr version 0.7"))
         if metadata is None:
             metadata = {}
-        schema = cls.schema.with_metadata(metadata)
-        table = pa.Table.from_arrays(arrays, schema=schema)
+        table = cls._build_arrow_table(arrays, metadata)
         return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
     @classmethod
     def from_pydict(
         cls, d: dict[str, Union[pa.array, list[Any], npt.NDArray[Any]]], **kwargs: AttributeValueType
     ) -> Self:
+        warnings.warn(DeprecationWarning("Table.from_pydict will be removed in quivr version 0.7"))
         table = pa.Table.from_pydict(d, schema=cls.schema)
         return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
@@ -378,20 +369,8 @@ class Table:
         :param \\**kwargs: Additional keyword arguments for any Table attributes.
         :type \\**kwargs: :obj:`AttributeValueType`
         :returns: A Table object.
-
-        Examples:
-            >>> import quivr as qv
-            >>> class Inner(qv.Table):
-            ...     a = qv.StringColumn()
-            ...
-            >>> class Outer(qv.Table):
-            ...     z = qv.StringColumn()
-            ...     i = Inner.as_column()
-            ...
-            >>> data = [{"z": "v1", "i": {"a": "v1_in"}}, {"z": "v2", "i": {"a": "v2_in"}}]
-            >>> Outer.from_rows(data)
-            Outer(size=2)
         """
+        warnings.warn(DeprecationWarning("Table.from_rows will be removed in quivr version 0.7"))
         table = pa.Table.from_pylist(rows, schema=cls.schema)
         return cls(table=table, **kwargs)
 
@@ -409,8 +388,10 @@ class Table:
         :returns: A Table object.
 
         """
-        table = pa.Table.from_arrays(list(map(pa.array, lists)), schema=cls.schema)
-        return cls(table=table, **kwargs)
+        warnings.warn(DeprecationWarning("Table.from_lists will be removed in quivr version 0.7"))
+        arrays = list(map(pa.array, lists))
+        table = cls._build_arrow_table(arrays, {})
+        return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, **kwargs: AttributeValueType) -> Self:
@@ -1009,7 +990,7 @@ class Table:
             >>> class MyTable(qv.Table):
             ...     x = qv.Int64Column()
             ...     y = qv.Int64Column()
-            >>> t = MyTable.from_data(x=[1, 2, 3], y=[4, 5, 6])
+            >>> t = MyTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
             >>> filtered = t.where(pc.field("x") > 1)
             >>> print(filtered.x.to_pylist())
             [2, 3]

@@ -210,13 +210,13 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
         ...     time = qv.TimestampColumn(unit="s")
         ...     id = qv.UInt32Column()
         ...
-        >>> positions = Positions.from_data(
+        >>> positions = Positions.from_kwargs(
         ...     x=[0.0, 1.0, 2.0, 3.0, 4.0],
         ...     y=[0.0, 1.0, 2.0, 3.0, 4.0],
         ...     time=[0, 1, 2, 3, 4],
         ...     id=[0, 1, 1, 2, 2],
         ... )
-        >>> velocities = Velocities.from_data(
+        >>> velocities = Velocities.from_kwargs(
         ...     vx=[0.0, 1.0, 2.0, 3.0, 4.0],
         ...     vy=[0.0, 1.0, 2.0, 3.0, 4.0],
         ...     time=[0, 1, 2, 3, 4],
@@ -334,13 +334,13 @@ class MultiKeyLinkage(Linkage[LeftTable, RightTable]):
             ...     time = qv.TimestampColumn(unit="s")
             ...     id = qv.UInt32Column()
             ...
-            >>> positions = Positions.from_data(
+            >>> positions = Positions.from_kwargs(
             ...     x=[0.0, 1.0, 2.0, 3.0, 4.0],
             ...     y=[0.0, 1.0, 2.0, 3.0, 4.0],
             ...     time=[0, 1, 2, 3, 4],
             ...     id=[0, 1, 1, 2, 2],
             ... )
-            >>> velocities = Velocities.from_data(
+            >>> velocities = Velocities.from_kwargs(
             ...     vx=[0.0, 1.0, 2.0, 3.0, 4.0],
             ...     vy=[0.0, 1.0, 2.0, 3.0, 4.0],
             ...     time=[0, 1, 2, 3, 4],

@@ -1,3 +1,5 @@
+.. _validators_api:
+
 Column Validators
 =================
 

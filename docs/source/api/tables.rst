@@ -21,13 +21,8 @@ Constructors
 
 See also: :ref:`serde`.
 
-.. automethod:: Table.from_data
 .. automethod:: Table.from_kwargs
 .. automethod:: Table.from_pyarrow
-.. automethod:: Table.from_arrays
-.. automethod:: Table.from_pydict
-.. automethod:: Table.from_rows
-.. automethod:: Table.from_lists
 .. automethod:: Table.from_dataframe
 .. automethod:: Table.from_flat_dataframe
 .. automethod:: Table.empty
