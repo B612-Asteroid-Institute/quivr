@@ -1,12 +1,12 @@
-from quivr import *
+import quivr as qv
 
-class TaxiData(Table):
-    vendor_id = UInt8Column()
-    pickup = TimestampColumn(unit="us")
-    dropoff = TimestampColumn(unit="us")
-    passenger_count = UInt8Column()
-    trip_distance = Float64Column()
-    rate_code = UInt8Column()
+class TaxiData(qv.Table):
+    vendor_id = qv.UInt8Column()
+    pickup = qv.TimestampColumn(unit="us")
+    dropoff = qv.TimestampColumn(unit="us")
+    passenger_count = qv.UInt8Column()
+    trip_distance = qv.Float64Column()
+    rate_code = qv.UInt8Column()
 
     @classmethod
     def from_parquet(cls, path):

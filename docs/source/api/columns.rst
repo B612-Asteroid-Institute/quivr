@@ -9,12 +9,12 @@ class attributes on :class:`Table` subclasses. For example:
 
 .. code-block:: py
 
-   import quivr
+   import quivr as qv
    
-   class Person(quivr.Table):
-       name = quivr.StringColumn()
-       age = quivr.Uint8Column()
-       favorite_books = quivr.ListColumn(quivr.StringColumn())
+   class Person(qv.Table):
+       name = qv.StringColumn()
+       age = qv.Uint8Column()
+       favorite_books = qv.ListColumn(quivr.StringColumn())
 
 The ``Person`` Table defined above has three columns: a string name, a
 uint8 age, and a list of strings for books.
@@ -33,25 +33,25 @@ These are the simplest column types. They all are initialized the same way:
 
 .. code-block:: py
 
-   import quivr
+   import quivr as qv
 
-   class MyTable(quivr.Table)
+   class MyTable(qv.Table)
        # With no arguments, you get a nullable column that doesn't validate data.
-       # This could be quivr.Uint8Column(), or quivr.StringColumn(), whatever
-       quivr.Int32Column()
+       # This could be qv.Uint8Column(), or qv.StringColumn(), whatever
+       qv.Int32Column()
 
        # Pass nullable=False to get a non-nullable column.
-       quivr.Int32Column(nullable=False)
+       qv.Int32Column(nullable=False)
 
        # Pass a validator to check the input data against a constraint.
-       quivr.Int32Column(validator=quivr.gt(0))
+       qv.Int32Column(validator=qv.gt(0))
 
        # Pass metadata for arbitrary extra information to
        # include. Metadata should be a string-to-string dictionary.
-       quivr.Int32Column(metadata={'units': 'seconds'})
+       qv.Int32Column(metadata={'units': 'seconds'})
 
        # Set a default value to be used if any inputs are null
-       quivr.Int32Column(nullable=False, default=3)
+       qv.Int32Column(nullable=False, default=3)
 
 
 When you access a column of a primitive type on a :class:`Table`

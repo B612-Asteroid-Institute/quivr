@@ -1,12 +1,12 @@
-from quivr import *
+import quivr as qv
 
-class TaxiData(Table):
-    VendorID = Int64Column()
-    tpep_pickup_datetime = TimestampColumn(unit="us")
-    tpep_dropoff_datetime = TimestampColumn(unit="us")
-    passenger_count = Float64Column()
-    trip_distance = Float64Column()
-    RatecodeID = Float64Column()
+class TaxiData(qv.Table):
+    VendorID = qv.Int64Column()
+    tpep_pickup_datetime = qv.TimestampColumn(unit="us")
+    tpep_dropoff_datetime = qv.TimestampColumn(unit="us")
+    passenger_count = qv.Float64Column()
+    trip_distance = qv.Float64Column()
+    RatecodeID = qv.Float64Column()
     ...
 
 
