@@ -8,7 +8,6 @@ import pyarrow as pa
 import pytest
 
 import quivr as qv
-from quivr import errors
 
 current_id = 0
 
@@ -350,7 +349,7 @@ def test_default_values(test_case):
         # Should be an error at class definition time if the default
         # value is an invalid scalar
 
-        with pytest.raises(errors.InvalidColumnDefault):
+        with pytest.raises(qv.InvalidColumnDefault):
 
             class MyTable(qv.Table):
                 col = test_case.column_class(
@@ -365,7 +364,7 @@ def test_default_values(test_case):
         class MyTable2(qv.Table):
             col = test_case.column_class(default=default_value, nullable=False, **test_case.column_kwargs)
 
-        with pytest.raises(errors.InvalidColumnDefault):
+        with pytest.raises(qv.InvalidColumnDefault):
             t = MyTable2.from_data(col=[None])
         return
 

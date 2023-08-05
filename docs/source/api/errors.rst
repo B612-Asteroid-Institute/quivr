@@ -21,3 +21,6 @@
 
 .. autoexception:: AttributeImmutableError
    :members:
+
+.. autoexception:: InvalidColumnDefault
+   :members:

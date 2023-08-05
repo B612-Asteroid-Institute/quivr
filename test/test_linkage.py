@@ -2,28 +2,21 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from quivr import Float64Column, Int64Column, StringColumn, Table, UInt32Column
-from quivr.errors import LinkageCombinationError
-from quivr.linkage import (
-    Linkage,
-    MultiKeyLinkage,
-    combine_linkages,
-    combine_multilinkages,
-)
+import quivr as qv
 
 
-class Observers(Table):
-    code = StringColumn(nullable=False)
-    x = Float64Column()
-    y = Float64Column()
-    z = Float64Column()
+class Observers(qv.Table):
+    code = qv.StringColumn(nullable=False)
+    x = qv.Float64Column()
+    y = qv.Float64Column()
+    z = qv.Float64Column()
 
 
-class Ephemeris(Table):
-    orbit_id = StringColumn(nullable=False)
-    observer_code = StringColumn(nullable=True)
-    ra = Float64Column()
-    dec = Float64Column()
+class Ephemeris(qv.Table):
+    orbit_id = qv.StringColumn(nullable=False)
+    observer_code = qv.StringColumn(nullable=True)
+    ra = qv.Float64Column()
+    dec = qv.Float64Column()
 
 
 def test_linkage_indexing():
@@ -41,7 +34,7 @@ def test_linkage_indexing():
         dec=[1, 2, 3, 4, 5, 6, 7, 8, 9],
     )
 
-    linkage = Linkage(
+    linkage = qv.Linkage(
         left_table=observers,
         right_table=ephems,
         left_keys=observers.code,
@@ -80,7 +73,7 @@ def test_linkage_iteration():
         dec=[1, 2, 3, 4, 5, 6, 7, 8, 9],
     )
 
-    linkage = Linkage(
+    linkage = qv.Linkage(
         left_table=observers,
         right_table=ephems,
         left_keys=observers.code,
@@ -95,13 +88,13 @@ def test_linkage_iteration():
 
 
 def test_integer_linkage():
-    class LeftSide(Table):
-        id = Int64Column(nullable=False)
-        x = Float64Column()
+    class LeftSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        x = qv.Float64Column()
 
-    class RightSide(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
+    class RightSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.Int64Column()
 
     left = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
@@ -111,7 +104,7 @@ def test_integer_linkage():
         id=[1, 2, 3, 4, 5],
         leftside_id=[1, 1, 1, 2, 2],
     )
-    link = Linkage(left, right, left.id, right.leftside_id)
+    link = qv.Linkage(left, right, left.id, right.leftside_id)
 
     # Bit counterintuitive, but the linkage provides empty RightSide
     # tables for leftside_id=3, 4, 5.
@@ -159,19 +152,19 @@ def test_integer_linkage():
     assert have_right_5 == RightSide.empty()
 
 
-class Pair(Table):
-    x = Int64Column(nullable=False)
-    y = Int64Column(nullable=False)
+class Pair(qv.Table):
+    x = qv.Int64Column(nullable=False)
+    y = qv.Int64Column(nullable=False)
 
 
-class LeftSide(Table):
-    id = Int64Column(nullable=False)
+class LeftSide(qv.Table):
+    id = qv.Int64Column(nullable=False)
     pairs = Pair.as_column()
 
 
-class RightSide(Table):
-    id = StringColumn(nullable=False)
-    leftside_id = Int64Column()
+class RightSide(qv.Table):
+    id = qv.StringColumn(nullable=False)
+    leftside_id = qv.Int64Column()
     pairs = Pair.as_column()
 
 
@@ -188,7 +181,7 @@ class TestMultiKeyLinkages:
 
     def test_link_composite_key(self):
         left, right = self.left, self.right
-        link = MultiKeyLinkage(
+        link = qv.MultiKeyLinkage(
             left_table=left,
             right_table=right,
             left_keys={"id": left.id, "x": left.pairs.x},
@@ -202,7 +195,7 @@ class TestMultiKeyLinkages:
 
     def test_create_scalar_not_present(self):
         left, right = self.left, self.right
-        link = MultiKeyLinkage(
+        link = qv.MultiKeyLinkage(
             left_table=left,
             right_table=right,
             left_keys={"id": left.id, "x": left.pairs.x},
@@ -217,7 +210,7 @@ class TestMultiKeyLinkages:
 
     def test_create_scalar_key_invalid(self):
         left, right = self.left, self.right
-        link = MultiKeyLinkage(
+        link = qv.MultiKeyLinkage(
             left_table=left,
             right_table=right,
             left_keys={"id": left.id, "x": left.pairs.x},
@@ -241,15 +234,15 @@ class TestMultiKeyLinkages:
 
         # Can't make a linkage with empty key sets
         with pytest.raises(ValueError, match="Left and right key dictionaries must not be empty"):
-            MultiKeyLinkage(left, right, {}, {})
+            qv.MultiKeyLinkage(left, right, {}, {})
 
         # Can't make a linkage with different keys
         with pytest.raises(ValueError, match="Left and right key dictionaries must have the same keys"):
-            MultiKeyLinkage(left, right, {"id": left.id}, {"foo": right.id})
+            qv.MultiKeyLinkage(left, right, {"id": left.id}, {"foo": right.id})
 
         # Can't make a linkage with different key dtypes
         with pytest.raises(TypeError, match="Left key id and right key id must have the same type"):
-            MultiKeyLinkage(
+            qv.MultiKeyLinkage(
                 left,
                 right,
                 left_keys={"id": left.id, "x": left.pairs.x},
@@ -259,7 +252,7 @@ class TestMultiKeyLinkages:
         # Can't make a linkage with nulls in the key
         with pytest.raises(ValueError, match="Right key x must not contain null values"):
             x_with_null = pa.array([1, 2, 3, 4, None], type=pa.int64())
-            MultiKeyLinkage(
+            qv.MultiKeyLinkage(
                 left,
                 right,
                 left_keys={"id": left.id, "x": left.pairs.x},
@@ -269,7 +262,7 @@ class TestMultiKeyLinkages:
         # Can't make a linkage with different key lengths
         with pytest.raises(ValueError, match="Left key x must have the same length as the left table"):
             x_short = pa.array([1, 2, 3, 4], type=pa.int64())
-            MultiKeyLinkage(
+            qv.MultiKeyLinkage(
                 left,
                 right,
                 left_keys={"id": left.id, "x": x_short},
@@ -277,7 +270,7 @@ class TestMultiKeyLinkages:
             )
         with pytest.raises(ValueError, match="Right key x must have the same length as the right table"):
             x_short = pa.array([1, 2, 3, 4], type=pa.int64())
-            MultiKeyLinkage(
+            qv.MultiKeyLinkage(
                 left,
                 right,
                 left_keys={"id": left.id, "x": left.pairs.x},
@@ -304,7 +297,7 @@ def test_benchmark_linkage_creation(benchmark, left_table_size, right_table_size
         dec=np.ones(right_table_size),
     )
 
-    benchmark(lambda: Linkage(observers, ephems, observers.code, ephems.observer_code))
+    benchmark(lambda: qv.Linkage(observers, ephems, observers.code, ephems.observer_code))
 
 
 @pytest.mark.benchmark(group="linkage-iteration")
@@ -326,7 +319,7 @@ def test_benchmark_linkage_iteration(benchmark, left_table_size, right_table_siz
         dec=np.ones(right_table_size),
     )
 
-    linkage = Linkage(observers, ephems, observers.code, ephems.observer_code)
+    linkage = qv.Linkage(observers, ephems, observers.code, ephems.observer_code)
 
     benchmark(lambda: _noop_iterate(linkage))
 
@@ -337,13 +330,13 @@ def _noop_iterate(iterator):
 
 
 def test_access_keys_via_linkage():
-    class LeftSide(Table):
-        id = Int64Column(nullable=False)
-        x = Float64Column()
+    class LeftSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        x = qv.Float64Column()
 
-    class RightSide(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
+    class RightSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.Int64Column()
 
     left = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
@@ -353,7 +346,7 @@ def test_access_keys_via_linkage():
         id=[1, 2, 3, 4, 5],
         leftside_id=[1, 1, 1, 2, 2],
     )
-    link = Linkage(left, right, left.id, right.leftside_id)
+    link = qv.Linkage(left, right, left.id, right.leftside_id)
 
     assert link.left_keys == left.id
     assert link.right_keys == right.leftside_id
@@ -361,13 +354,13 @@ def test_access_keys_via_linkage():
 
 
 def test_linkage_uses_correct_dtypes_in_select():
-    class LeftSide(Table):
-        id = UInt32Column(nullable=False)
-        x = Float64Column()
+    class LeftSide(qv.Table):
+        id = qv.UInt32Column(nullable=False)
+        x = qv.Float64Column()
 
-    class RightSide(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = UInt32Column()
+    class RightSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.UInt32Column()
 
     left = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
@@ -377,7 +370,7 @@ def test_linkage_uses_correct_dtypes_in_select():
         id=[1, 2, 3, 4, 5],
         leftside_id=[1, 1, 1, 2, 2],
     )
-    link = Linkage(left, right, left.id, right.leftside_id)
+    link = qv.Linkage(left, right, left.id, right.leftside_id)
 
     assert link.left_keys.type == pa.uint32()
     assert link.right_keys.type == pa.uint32()
@@ -389,13 +382,13 @@ def test_linkage_uses_correct_dtypes_in_select():
 
 
 def test_combine_linkages():
-    class LeftSide(Table):
-        id = Int64Column(nullable=False)
-        x = Float64Column()
+    class LeftSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        x = qv.Float64Column()
 
-    class RightSide(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
+    class RightSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.Int64Column()
 
     left1 = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
@@ -405,7 +398,7 @@ def test_combine_linkages():
         id=[1, 2, 3, 4, 5],
         leftside_id=[1, 1, 1, 2, 3],
     )
-    link1 = Linkage(left1, right1, left1.id, right1.leftside_id)
+    link1 = qv.Linkage(left1, right1, left1.id, right1.leftside_id)
 
     left2 = LeftSide.from_kwargs(
         id=[6, 7, 8, 9, 10],
@@ -415,9 +408,9 @@ def test_combine_linkages():
         id=[6, 7, 8, 9, 10],
         leftside_id=[3, 3, 3, 4, 4],
     )
-    link2 = Linkage(left2, right2, left2.id, right2.leftside_id)
+    link2 = qv.Linkage(left2, right2, left2.id, right2.leftside_id)
 
-    combined = combine_linkages([link1, link2])
+    combined = qv.combine_linkages([link1, link2])
     assert len(combined) == 10
 
     have_left, have_right = combined.select(1)
@@ -434,14 +427,14 @@ def test_combine_linkages_with_different_keys():
     Combining linkages with different key types should raise an error.
     """
 
-    class LeftSide(Table):
-        id = Int64Column(nullable=False)
-        x = Float64Column()
+    class LeftSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        x = qv.Float64Column()
 
-    class RightSide(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
-        y = Float64Column()
+    class RightSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.Int64Column()
+        y = qv.Float64Column()
 
     left1 = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
@@ -452,7 +445,7 @@ def test_combine_linkages_with_different_keys():
         leftside_id=[1, 1, 1, 2, 3],
         y=[1, 2, 3, 4, 5],
     )
-    link1 = Linkage(left1, right1, left1.id, right1.leftside_id)
+    link1 = qv.Linkage(left1, right1, left1.id, right1.leftside_id)
 
     left2 = LeftSide.from_kwargs(
         id=[6, 7, 8, 9, 10],
@@ -463,10 +456,10 @@ def test_combine_linkages_with_different_keys():
         leftside_id=[3, 3, 3, 4, 4],
         y=[6, 7, 8, 9, 10],
     )
-    link2 = Linkage(left2, right2, left2.x, right2.y)
+    link2 = qv.Linkage(left2, right2, left2.x, right2.y)
 
-    with pytest.raises(LinkageCombinationError):
-        combine_linkages([link1, link2])
+    with pytest.raises(qv.LinkageCombinationError):
+        qv.combine_linkages([link1, link2])
 
 
 def test_combine_linkages_with_different_tables():
@@ -474,17 +467,17 @@ def test_combine_linkages_with_different_tables():
     Combining linkages with different table types should error.
     """
 
-    class LeftSide(Table):
-        id = Int64Column(nullable=False)
-        x = Float64Column()
+    class LeftSide(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        x = qv.Float64Column()
 
-    class RightSide1(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
+    class RightSide1(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.Int64Column()
 
-    class RightSide2(Table):
-        id = Int64Column(nullable=False)
-        leftside_id = Int64Column()
+    class RightSide2(qv.Table):
+        id = qv.Int64Column(nullable=False)
+        leftside_id = qv.Int64Column()
 
     left1 = LeftSide.from_kwargs(
         id=[1, 2, 3, 4, 5],
@@ -494,7 +487,7 @@ def test_combine_linkages_with_different_tables():
         id=[1, 2, 3, 4, 5],
         leftside_id=[1, 1, 1, 2, 3],
     )
-    link1 = Linkage(left1, right1, left1.id, right1.leftside_id)
+    link1 = qv.Linkage(left1, right1, left1.id, right1.leftside_id)
 
     left2 = LeftSide.from_kwargs(
         id=[6, 7, 8, 9, 10],
@@ -504,10 +497,10 @@ def test_combine_linkages_with_different_tables():
         id=[6, 7, 8, 9, 10],
         leftside_id=[3, 3, 3, 4, 4],
     )
-    link2 = Linkage(left2, right2, left2.id, right2.leftside_id)
+    link2 = qv.Linkage(left2, right2, left2.id, right2.leftside_id)
 
-    with pytest.raises(LinkageCombinationError):
-        combine_linkages([link1, link2])
+    with pytest.raises(qv.LinkageCombinationError):
+        qv.combine_linkages([link1, link2])
 
 
 def test_combine_multi_key_linkages():
@@ -520,7 +513,7 @@ def test_combine_multi_key_linkages():
         leftside_id=[1, 2, 1, 2, 2],
         pairs=Pair.from_kwargs(x=[1, 2, 3, 4, 5], y=[1, 2, 3, 4, 5]),
     )
-    link1 = MultiKeyLinkage(
+    link1 = qv.MultiKeyLinkage(
         left_table=left1,
         right_table=right1,
         left_keys={"id": left1.id, "x": left1.pairs.x},
@@ -536,14 +529,14 @@ def test_combine_multi_key_linkages():
         leftside_id=[2, 3, 6, 7, 8],
         pairs=Pair.from_kwargs(x=[2, 3, 6, 7, 8], y=[6, 7, 8, 9, 10]),
     )
-    link2 = MultiKeyLinkage(
+    link2 = qv.MultiKeyLinkage(
         left_table=left2,
         right_table=right2,
         left_keys={"id": left2.id, "x": left2.pairs.x},
         right_keys={"id": right2.leftside_id, "x": right2.pairs.x},
     )
 
-    combined = combine_multilinkages([link1, link2])
+    combined = qv.combine_multilinkages([link1, link2])
 
     k1 = combined.key(id=2, x=2)
     have_left, have_right = combined.select(k1)

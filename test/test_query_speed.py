@@ -3,7 +3,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
 
-from quivr import Column, Float64Column, Int64Column, StringColumn, Table
+import quivr as qv
 
 try:
     import datafusion
@@ -13,10 +13,10 @@ except ImportError:
 
 
 def new_table(N=1_000_00):
-    class MyTable(Table):
-        x = Float64Column()
-        y = StringColumn()
-        z = Int64Column()
+    class MyTable(qv.Table):
+        x = qv.Float64Column()
+        y = qv.StringColumn()
+        z = qv.Int64Column()
 
     seed = 1234
     np.random.seed(seed)
@@ -101,16 +101,16 @@ def test_sum_if_using_numpy(benchmark):
     benchmark(sumif_numpy, data)
 
 
-class InnerTable(Table):
-    x = Float64Column()
-    y = StringColumn()
-    z = Int64Column()
+class InnerTable(qv.Table):
+    x = qv.Float64Column()
+    y = qv.StringColumn()
+    z = qv.Int64Column()
 
 
-class OuterTable(Table):
-    x = Float64Column()
-    y = StringColumn()
-    z = Int64Column()
+class OuterTable(qv.Table):
+    x = qv.Float64Column()
+    y = qv.StringColumn()
+    z = qv.Int64Column()
     inner = InnerTable.as_column()
 
 
@@ -200,11 +200,11 @@ def test_sum_if_nested_using_numpy(benchmark):
     benchmark(sumif_nested_numpy, data)
 
 
-class TableWithListColumn(Table):
-    x = Float64Column()
-    y = StringColumn()
-    z = Int64Column()
-    covariance = Column(pa.fixed_shape_tensor(pa.float64(), (3, 3)))
+class TableWithListColumn(qv.Table):
+    x = qv.Float64Column()
+    y = qv.StringColumn()
+    z = qv.Int64Column()
+    covariance = qv.Column(pa.fixed_shape_tensor(pa.float64(), (3, 3)))
 
     def cov_matrix(self):
         return self.covariance.combine_chunks().to_numpy_ndarray()

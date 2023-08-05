@@ -1,17 +1,17 @@
 import pyarrow
 from typing_extensions import assert_type
 
-import quivr
+import quivr as qv
 
 
-class Pair(quivr.Table):
-    x = quivr.Float64Column()
+class Pair(qv.Table):
+    x = qv.Float64Column()
 
 
-class MyTable(quivr.Table):
-    string_col = quivr.StringColumn()
-    int8_col = quivr.Int8Column()
-    float64_col = quivr.Float64Column()
+class MyTable(qv.Table):
+    string_col = qv.StringColumn()
+    int8_col = qv.Int8Column()
+    float64_col = qv.Float64Column()
 
     pair_col = Pair.as_column(nullable=True)
 
@@ -26,11 +26,11 @@ assert_type(instance.int8_col, pyarrow.Int8Array)
 assert_type(instance.float64_col, pyarrow.lib.DoubleArray)
 
 # Class-level attributes should be the columns themselves
-assert_type(MyTable.string_col, quivr.StringColumn)
+assert_type(MyTable.string_col, qv.StringColumn)
 
 # Sub-tables should be generics
 assert_type(instance.pair_col, Pair)
-assert_type(MyTable.pair_col, quivr.SubTableColumn[Pair])
+assert_type(MyTable.pair_col, qv.SubTableColumn[Pair])
 
 
 empty_instance = MyTable.empty()

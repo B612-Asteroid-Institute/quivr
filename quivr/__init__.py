@@ -44,6 +44,7 @@ from .concat import concatenate
 from .defragment import defragment
 from .errors import (
     AttributeImmutableError,
+    InvalidColumnDefault,
     InvariantViolatedError,
     LinkageCombinationError,
     TableFragmentedError,
@@ -80,6 +81,7 @@ __all__ = [
     "Int64Column",
     "Int8Column",
     "IntAttribute",
+    "InvalidColumnDefault",
     "InvariantViolatedError",
     "LargeBinaryColumn",
     "LargeListColumn",
