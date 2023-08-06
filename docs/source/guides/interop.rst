@@ -276,4 +276,4 @@ constructor.
 Parquet
 -------
 
-See :ref:`serde_parquet`_.
+See :ref:`serde_parquet`.

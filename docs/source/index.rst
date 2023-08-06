@@ -15,7 +15,13 @@ The central object in ``quivr`` is the :class:`Table`: a precise
 description of the schema for arrays of data, combined with namespaced
 methods to keep your code well-structured.
 
-Quivr's tables are :ref:`composable <composition>`.
+To repeat, there are three motivations behind quivr:
+
+1. Use schemas to describe data
+2. Use namespaces to organize logic that operates on data
+3. Use composition to manage complexity
+
+For more, the best place to start is the :ref:`basic_usage` guide.
 
 .. toctree::
    :maxdepth: 2

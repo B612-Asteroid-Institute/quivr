@@ -1,3 +1,5 @@
+.. _basic_usage:
+
 Basic Usage
 ===========
 
@@ -5,7 +7,7 @@ Basic Usage
 
 Using ``quivr`` starts with writing some classes which describe the
 data you're working with. You write a :obj:`Table` definition using
-``quivr``'s :obj:`Column` and :obj:`Attribute` types to describe the
+``quivr``'s :obj:`Column` and :ref:`Attribute <attributes>` types to describe the
 data.
 
 Here's an example, a basic table of X-Y-Z positions:
