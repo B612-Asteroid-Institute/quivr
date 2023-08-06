@@ -193,7 +193,7 @@ class Table:
                 else:
                     raise TypeError(f"Unsupported type: {type(data[0])}")
             elif isinstance(data, pd.DataFrame):
-                instance = cls.from_dataframe(data, **attrib_kwargs)
+                instance = cls.from_dataframe(data, validate, **attrib_kwargs)
             else:
                 raise TypeError(f"Unsupported type: {type(data)}")
 
@@ -397,7 +397,7 @@ class Table:
         return cls.from_pyarrow(table=table, validate=False, **kwargs)
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, **kwargs: AttributeValueType) -> Self:
+    def from_dataframe(cls, df: pd.DataFrame, validate: bool = True, **kwargs: AttributeValueType) -> Self:
         """Load a DataFrame into the Table.
 
         If the DataFrame is missing any of the Table's columns, an
@@ -410,12 +410,13 @@ class Table:
         unflattened DataFrame, or use from_flat_dataframe.
 
         :param df: A pandas DataFrame containing the data to load.
+        :param validate: Whether to validate the data after loading.
         :param \\**kwargs: Additional keyword arguments for any Table attributes.
         :type \\**kwargs: :obj:`AttributeValueType`
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
-        return cls.from_pyarrow(table=table, validate=False, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
 
     @classmethod
     def _unflatten_table(cls, table: pa.Table) -> pa.Table:
@@ -456,13 +457,16 @@ class Table:
         return pa.Table.from_arrays(child_arrays, schema=cls.schema)
 
     @classmethod
-    def from_flat_dataframe(cls, df: pd.DataFrame, **kwargs: AttributeValueType) -> Self:
+    def from_flat_dataframe(
+        cls, df: pd.DataFrame, validate: bool = True, **kwargs: AttributeValueType
+    ) -> Self:
         """Load a flattened DataFrame into the Table.
 
         .. caution::
           Known bug: Doesn't correctly interpret fixed-length lists.
 
         :param df: A pandas DataFrame containing the data to load.
+        :param validate: Whether to validate the data after loading.
         :param \\**kwargs: Additional keyword arguments for any Table attributes.
         :type \\**kwargs: :obj:`AttributeValueType`
 
@@ -473,7 +477,8 @@ class Table:
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            return cls(table=pa.Table.from_pandas(df, schema=cls.schema), **kwargs)
+            table = pa.Table.from_pandas(df, schema=cls.schema)
+            return cls.from_pyarrow(table=table, validate=validate, **kwargs)
 
         root = pa.field("", pa.struct(cls.schema))
 
@@ -541,7 +546,7 @@ class Table:
             table_arrays.append(sa.field(subfield.name))
 
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
-        return cls(table=table, **kwargs)
+        return cls.from_pyarrow(table, validate=validate, **kwargs)
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
@@ -736,6 +741,7 @@ class Table:
         pq_buffer_size: int = 0,
         filters: Optional[pc.Expression] = None,
         column_name_map: Optional[dict[str, str]] = None,
+        validate: bool = True,
         **kwargs: AttributeValueType,
     ) -> Self:
         """Read a table from a Parquet file.
@@ -755,6 +761,7 @@ class Table:
                 column names in the resulting Table. This is useful if the Parquet file contains
                 column names that are not valid Python identifiers, or if you want to rename
                 columns for any other reason.
+        :param validate: Whether to run column validation on the resulting Table.
         :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
 
         """
@@ -765,7 +772,7 @@ class Table:
             filters=filters,
             column_name_map=column_name_map,
         )
-        return cls.from_pyarrow(table=table, validate=True, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
 
     @classmethod
     def _load_parquet_table(
@@ -812,13 +819,15 @@ class Table:
         pyarrow.feather.write_feather(self.table, path, **kwargs)
 
     @classmethod
-    def from_feather(cls, path: str, **kwargs: AttributeValueType) -> Self:
+    def from_feather(cls, path: str, validate: bool = True, **kwargs: AttributeValueType) -> Self:
         """Read a table from a Feather file.
 
         :param path: The path to the Feather file.
+        :param validate: Whether to run column validators on the table after loading it.
         :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
         """
-        return cls(table=pyarrow.feather.read_table(path), **kwargs)
+        table = pyarrow.feather.read_table(path)
+        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
 
     def to_csv(self, path: str, attribute_columns: bool = True) -> None:
         """Write the table to a CSV file. Any nested structure is flattened.
@@ -839,7 +848,10 @@ class Table:
 
     @classmethod
     def from_csv(
-        cls, input_file: Union[str, os.PathLike, IOBase], **kwargs: AttributeValueType  # type: ignore
+        cls,
+        input_file: Union[str, os.PathLike, IOBase],  # type: ignore
+        validate: bool = True,
+        **kwargs: AttributeValueType,
     ) -> Self:
         """
         Read a table from a CSV file.
@@ -869,7 +881,7 @@ class Table:
         metadata = table.schema.metadata or {}
         metadata.update(attribute_meta)
         table = table.replace_schema_metadata(metadata)
-        return cls(table, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
 
     def is_valid(self) -> bool:
         """Validate the table against the schema."""
@@ -894,7 +906,7 @@ class Table:
         """
         data = [[] for _ in range(len(cls.schema))]  # type: ignore
         empty_table = pa.table(data, schema=cls.schema)
-        return cls(table=empty_table, **kwargs)
+        return cls.from_pyarrow(table=empty_table, validate=False, **kwargs)
 
     def attributes(self) -> dict[str, Any]:
         """Return a dictionary of the table's attributes."""
