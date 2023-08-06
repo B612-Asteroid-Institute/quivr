@@ -68,6 +68,9 @@ class Table:
     """
 
     schema: ClassVar[pa.Schema]
+
+    #: Instance variable
+    #: does it work?
     table: pa.Table
 
     _quivr_subtables: ClassVar[dict[str, columns.SubTableColumn[Any]]]
