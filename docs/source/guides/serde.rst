@@ -6,6 +6,8 @@ Serialization and Deserialization
 ``quivr`` Tables can be loaded from Parquet files, Feather files, and CSVs.
 
 
+.. _serde_parquet:
+
 Parquet
 +++++++
 
