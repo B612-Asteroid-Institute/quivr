@@ -344,8 +344,12 @@ def test_from_kwargs_raises_mismatched_sizes():
 
 
 def test_from_kwargs_no_data():
+    class NullablePair(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
     with pytest.raises(ValueError, match="No data provided"):
-        Pair.from_kwargs()
+        NullablePair.from_kwargs()
 
 
 class TableWithAttributes(qv.Table):
@@ -539,7 +543,11 @@ def test_apply_mask_wrong_size():
 
 
 def test_apply_mask_pyarrow_with_nulls():
-    values = Pair.from_kwargs(x=[1, 2, 3], y=[4, None, 6])
+    class NullablePair(qv.Table):
+        x = qv.Int8Column(nullable=True)
+        y = qv.Int8Column(nullable=True)
+
+    values = NullablePair.from_kwargs(x=[1, 2, 3], y=[4, None, 6])
 
     mask = pa.array([True, False, None], pa.bool_())
     with pytest.raises(ValueError):
@@ -547,7 +555,7 @@ def test_apply_mask_pyarrow_with_nulls():
 
 
 def test_from_pyarrow_table():
-    table = pa.table({"x": [1, 2, 3], "y": [4, 5, 6]})
+    table = pa.table({"x": [1, 2, 3], "y": [4, 5, 6]}, schema=Pair.schema)
     have = Pair.from_pyarrow(table)
     assert isinstance(have, Pair)
     assert have.x.equals(pa.array([1, 2, 3], pa.int64()))
@@ -597,7 +605,10 @@ def test_from_pyarrow_empty_table():
 
 
 def test_from_pyarrow_nested_table():
-    table = pa.table({"pair": [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}], "id": ["a", "b", "c"]})
+    table = pa.table(
+        {"pair": [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}], "id": ["a", "b", "c"]},
+        schema=Wrapper.schema,
+    )
 
     have = Wrapper.from_pyarrow(table)
     assert isinstance(have, Wrapper)
@@ -623,7 +634,13 @@ def test_from_pyarrow_explicit_attribute():
 def test_from_pyarrow_preserves_attributes():
     table = pa.table(
         {"x": [1, 2, 3], "y": [4, 5, 6]},
-        schema=pa.schema([("x", pa.int64()), ("y", pa.int64())], metadata={"attrib": "bar"}),
+        schema=pa.schema(
+            [
+                pa.field("x", pa.int64(), nullable=False),
+                pa.field("y", pa.int64(), nullable=False),
+            ],
+            metadata={"attrib": "bar"},
+        ),
     )
     have = TableWithAttributes.from_pyarrow(table)
     assert have.x.equals(pa.array([1, 2, 3], pa.int64()))
@@ -641,7 +658,18 @@ def test_from_pyarrow_preserves_nested_attributes():
             "inner": [{"x": 1, "y": 4}, {"x": 2, "y": 5}, {"x": 3, "y": 6}],
         },
         schema=pa.schema(
-            [("inner", pa.struct([("x", pa.int64()), ("y", pa.int64())]))],
+            [
+                pa.field(
+                    "inner",
+                    pa.struct(
+                        [
+                            pa.field("x", pa.int64(), nullable=False),
+                            pa.field("y", pa.int64(), nullable=False),
+                        ]
+                    ),
+                    nullable=False,
+                ),
+            ],
             metadata={"name": "foo", "inner.attrib": "bar"},
         ),
     )

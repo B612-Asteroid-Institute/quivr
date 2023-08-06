@@ -1,12 +1,12 @@
 import quivr as qv
 
 class TaxiData(qv.Table):
-    vendor_id = qv.Int64Column()
-    pickup = qv.TimestampColumn(unit="us")
-    dropoff = qv.TimestampColumn(unit="us")
-    passenger_count = qv.Float64Column()
-    trip_distance = qv.Float64Column()
-    rate_code = qv.Float64Column()
+    vendor_id = qv.Int64Column(nullable=True)
+    pickup = qv.TimestampColumn(unit="us", nullable=True)
+    dropoff = qv.TimestampColumn(unit="us", nullable=True)
+    passenger_count = qv.Float64Column(nullable=True)
+    trip_distance = qv.Float64Column(nullable=True)
+    rate_code = qv.Float64Column(nullable=True)
     ...
 
 column_name_mapping = {

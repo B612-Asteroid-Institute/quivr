@@ -1,12 +1,12 @@
 import quivr as qv
 
 class TaxiData(qv.Table):
-    vendor_id = qv.UInt8Column()
-    pickup = qv.TimestampColumn(unit="us")
-    dropoff = qv.TimestampColumn(unit="us")
-    passenger_count = qv.UInt8Column()
-    trip_distance = qv.Float64Column()
-    rate_code = qv.UInt8Column()
+    vendor_id = qv.UInt8Column(nullable=True)
+    pickup = qv.TimestampColumn(unit="us", nullable=True)
+    dropoff = qv.TimestampColumn(unit="us", nullable=True)
+    passenger_count = qv.UInt8Column(nullable=True)
+    trip_distance = qv.Float64Column(nullable=True)
+    rate_code = qv.UInt8Column(nullable=True)
 
     @classmethod
     def from_parquet(cls, path):
