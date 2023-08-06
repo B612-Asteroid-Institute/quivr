@@ -132,6 +132,37 @@ class Column:
         """
         return pa.field(self.name, self.dtype, self.nullable, self.metadata)
 
+    def _load(
+        self,
+        data: Union[tables.DataSourceType, None],
+        size_hint: Optional[int],
+    ) -> Optional[pa.Array]:
+        """Load a data source as a pyarrow Array of data which
+        matches the column's schema. Defaults are not poulated.
+
+        size_hint is an optional expected size of the input data. If provided:
+         - For input of None, an array of nulls is returned.
+         - For all other inputs, the input's length is checked.
+
+        If the column is nullable and the input value is None, then
+        this returns None.  Otherwise, it will either return a pyarrow
+        Array, or raise an error.
+        """
+        if data is None:
+            if not self.nullable and self.default is None:
+                raise errors.InvalidColumnDataError(
+                    self, "received no data, but field is not nullable and has no default"
+                )
+
+            # Either it's nullable, or has a default; either way, we can proceed.
+            if size_hint is None:
+                # We can't even make a null array of the appropriate
+                # size, so we're forced to return None.
+                return None
+            return pa.nulls(size_hint, type=self.dtype)
+
+        return pa.array(data, type=self.dtype)
+
 
 T = TypeVar("T", bound=tables.Table)
 

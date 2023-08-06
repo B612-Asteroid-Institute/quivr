@@ -24,3 +24,6 @@
 
 .. autoexception:: InvalidColumnDefault
    :members:
+
+.. autoexception:: InvalidColumnDataError
+   :members:

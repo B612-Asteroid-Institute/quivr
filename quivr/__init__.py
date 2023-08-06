@@ -44,6 +44,7 @@ from .concat import concatenate
 from .defragment import defragment
 from .errors import (
     AttributeImmutableError,
+    InvalidColumnDataError,
     InvalidColumnDefault,
     InvariantViolatedError,
     LinkageCombinationError,
@@ -123,4 +124,5 @@ __all__ = [
     "is_in",
     "le",
     "lt",
+    "InvalidColumnDataError",
 ]

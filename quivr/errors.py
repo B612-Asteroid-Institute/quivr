@@ -2,6 +2,8 @@ from typing import Any, Optional
 
 import pyarrow
 
+from . import columns
+
 
 class InvariantViolatedError(RuntimeError):
     """
@@ -76,3 +78,14 @@ class AttributeImmutableError(RuntimeError):
     """
 
     ...
+
+
+class InvalidColumnDataError(Exception):
+    """
+    Exception raised when invalid data is provided to populate a particular column
+    """
+
+    def __init__(self, column: columns.Column, msg: str):
+        self.column = column
+        msg = f"Invalid data provided for column {column.name}: {msg}"
+        super().__init__(msg)

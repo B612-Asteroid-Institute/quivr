@@ -3,7 +3,7 @@ from typing import Any
 import pyarrow
 import pyarrow.compute as pc
 
-from .errors import ValidationError
+from . import errors
 
 
 class Validator:
@@ -64,13 +64,13 @@ class Validator:
         """
         if not self.valid(array):
             if self.func.kind == "scalar_aggregate":
-                raise ValidationError(f"array did not pass validator '{self.label}'")
+                raise errors.ValidationError(f"array did not pass validator '{self.label}'")
             indices, failures = self.failures(array)
             if len(failures) == 1:
                 index = indices[0].as_py()
                 value = failures[0].as_py()
                 msg = f"val={value}, index={index} failed validator '{self.label}'"
-                raise ValidationError(msg, failures)
+                raise errors.ValidationError(msg, failures)
             else:
                 n_failed = len(failures)
                 index = indices[0].as_py()
@@ -79,7 +79,7 @@ class Validator:
                     f"validator '{self.label}' failed on {n_failed} values, "
                     + f"first failure: val={value}, index={index}"
                 )
-                raise ValidationError(msg, failures)
+                raise errors.ValidationError(msg, failures)
 
     def failures(self, array: pyarrow.Array) -> tuple[pyarrow.Array, pyarrow.Array]:
         """

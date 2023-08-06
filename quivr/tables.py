@@ -16,6 +16,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Protocol,
     Type,
     TypeAlias,
     TypeVar,
@@ -32,14 +33,22 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
-from . import columns
-from .attributes import Attribute
-from .errors import TableFragmentedError, ValidationError
-from .schemagraph import _walk_schema
-from .validators import Validator
+from . import attributes, columns, errors, schemagraph, validators
+
+
+class ArrowArrayProvider(Protocol):
+    """
+    A Protocol which describes objects that support the Arrow custom array extension protocol.
+    """
+
+    def __arrow_array__(self, type: Optional[pa.DataType] = None) -> pa.Array:
+        ...
+
 
 AttributeValueType: TypeAlias = Union[int, float, str]
-DataSourceType: TypeAlias = Union[pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any]]
+DataSourceType: TypeAlias = Union[
+    pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any], ArrowArrayProvider
+]
 AnyTable = TypeVar("AnyTable", bound="Table")
 
 
@@ -74,14 +83,14 @@ class Table:
     table: pa.Table
 
     _quivr_subtables: ClassVar[dict[str, columns.SubTableColumn[Any]]]
-    _quivr_attributes: ClassVar[dict[str, Attribute[Any]]]
-    _column_validators: ClassVar[dict[str, Validator]]
+    _quivr_attributes: ClassVar[dict[str, attributes.Attribute[Any]]]
+    _column_validators: ClassVar[dict[str, validators.Validator]]
 
     def __init_subclass__(cls: Type["Table"], **kwargs: Any):
         fields = []
         column_validators = {}
         subtables = {}
-        attributes = {}
+        attrs = {}
         for name, obj in cls.__dict__.items():
             if isinstance(obj, columns.Column):
                 fields.append(obj.pyarrow_field())
@@ -89,8 +98,8 @@ class Table:
                     column_validators[name] = obj.validator
                 if isinstance(obj, columns.SubTableColumn):
                     subtables[name] = obj
-            elif isinstance(obj, Attribute):
-                attributes[name] = obj
+            elif isinstance(obj, attributes.Attribute):
+                attrs[name] = obj
 
         # Generate a pyarrow schema
         schema = pa.schema(fields)
@@ -100,7 +109,7 @@ class Table:
         cls._quivr_subtables = subtables
 
         # Add attributes
-        cls._quivr_attributes = attributes
+        cls._quivr_attributes = attrs
 
         # Add validators
         cls._column_validators = column_validators
@@ -252,6 +261,7 @@ class Table:
         """
         arrays: list[Union[None, pa.Array]] = []
         size = None
+        size_col = ""
 
         # We don't know the size of the table until we've found a
         # field in the schema which corresponds to a kwarg with data.
@@ -263,29 +273,27 @@ class Table:
         metadata: dict[bytes, bytes] = {}
         for i, field in enumerate(cls.schema):
             column_name = field.name
-            value = kwargs.pop(column_name, None)
+            column = getattr(cls, column_name)
 
-            if value is None:
-                if not field.nullable:
-                    column = getattr(cls, column_name)
-                    if column.default is None:
-                        raise ValueError(f"Missing non-nullable column {column_name}")
-                if size is not None:
-                    value = pa.nulls(size, type=cls.schema[i].type)
-                    arrays.append(value)
-                else:
-                    # We'll have to wait until we get to a non-None column
-                    # to figure out the size.
-                    empty_columns.append(i)
-                    arrays.append(None)
+            value = kwargs.pop(column_name, None)
+            array = column._load(value, size)
+            if array is None:
+                # We'll have to wait until we get to a non-None column
+                # to figure out the size.
+                empty_columns.append(i)
+                arrays.append(None)
                 continue
 
             if size is None:
-                size = len(value)  # type: ignore
-            elif len(value) != size:
-                raise ValueError(
-                    f"Column {column_name} has wrong length {len(value)} (first column has length {size})"
+                size = len(array)
+                size_col = column_name
+            elif len(array) != size:
+                raise errors.InvalidColumnDataError(
+                    column,
+                    f"wrong length {len(value)} (expected {size} based on column {size_col})",
                 )
+
+            arrays.append(array)
 
             if isinstance(value, Table):
                 field_meta = value.table.schema.metadata
@@ -293,17 +301,6 @@ class Table:
                     for key, val in field_meta.items():
                         key = (field.name + "." + key.decode("utf-8")).encode("utf-8")
                         metadata[key] = val
-                arrays.append(value.to_structarray())
-            elif isinstance(value, pa.Array):
-                arrays.append(value)
-            elif isinstance(value, np.ndarray):
-                arrays.append(pa.array(value, type=field.type))
-            elif isinstance(value, list):
-                arrays.append(pa.array(value, type=field.type))
-            elif isinstance(value, pd.Series):
-                arrays.append(pa.array(value, type=field.type))
-            else:
-                raise TypeError(f"Unsupported type for {column_name}: {type(value)}")
 
         if size is None:
             raise ValueError("No data provided")
@@ -536,7 +533,7 @@ class Table:
             # Clean the fields out
             df = df.drop(field_columns, axis="columns")
 
-        _walk_schema(root, visitor, None)
+        schemagraph._walk_schema(root, visitor, None)
         # Now build a table back up. Grab the root-level struct array.
         sa = struct_arrays[""]
 
@@ -611,7 +608,7 @@ class Table:
         :raises TableFragmentedError: if the table is fragmented.
         """
         if self.fragmented():
-            raise TableFragmentedError(
+            raise errors.TableFragmentedError(
                 "Tables cannot be converted to StructArrays while fragmented; call defragment(table) first."
             )
         arrays = [chunked_array.chunks[0] for chunked_array in self.table.columns]
@@ -895,8 +892,8 @@ class Table:
         for name, validator in self._column_validators.items():
             try:
                 validator.validate(self.table.column(name))
-            except ValidationError as e:
-                raise ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e
+            except errors.ValidationError as e:
+                raise errors.ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e
 
     @classmethod
     def empty(cls, **kwargs: AttributeValueType) -> Self:
@@ -1013,3 +1010,12 @@ class Table:
             [5, 6]
         """
         return self.__class__(self.table.filter(expr))
+
+    def __arrow_array__(self, type: Optional[pa.DataType] = None) -> pa.StructArray:
+        """
+        Implements the Arrow array protocol by returning as StructArray.
+        """
+        array = self.to_structarray()
+        if type is None:
+            return array
+        return array.cast(type)

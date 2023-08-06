@@ -293,9 +293,9 @@ def test_from_kwargs_with_missing():
     assert have.z.null_count == 3
     np.testing.assert_array_equal(have.y, [1, 2, 3])
 
-    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+    with pytest.raises(qv.InvalidColumnDataError, match="received no data"):
         have = SomeTable.from_kwargs(x=[1, 2, 3])
-    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+    with pytest.raises(qv.InvalidColumnDataError, match="received no data"):
         have = SomeTable.from_kwargs(z=[1, 2, 3])
 
     # Eliding nullable columns is OK
@@ -320,9 +320,9 @@ def test_from_kwargs_with_missing_as_none():
     assert have.z.null_count == 3
     np.testing.assert_array_equal(have.y, [1, 2, 3])
 
-    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+    with pytest.raises(qv.InvalidColumnDataError):
         have = SomeTable.from_kwargs(x=[1, 2, 3], y=None)
-    with pytest.raises(ValueError, match="Missing non-nullable column y"):
+    with pytest.raises(qv.InvalidColumnDataError):
         have = SomeTable.from_kwargs(z=[1, 2, 3], y=None)
 
     # Eliding nullable columns is OK
@@ -339,7 +339,7 @@ def test_from_kwargs_raises_mismatched_sizes():
         x = qv.Int64Column()
         y = qv.Int64Column()
 
-    with pytest.raises(ValueError, match=r"Column y has wrong length 4 \(first column has length 3\)"):
+    with pytest.raises(qv.InvalidColumnDataError):
         SomeTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6, 7])
 
 
