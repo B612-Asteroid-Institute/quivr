@@ -38,12 +38,12 @@ These are the simplest column types. They all are initialized the same way:
    import quivr as qv
 
    class MyTable(qv.Table)
-       # With no arguments, you get a nullable column that doesn't validate data.
+       # With no arguments, you get a non-nullable column that doesn't validate data.
        # This could be qv.Uint8Column(), or qv.StringColumn(), whatever
        qv.Int32Column()
 
-       # Pass nullable=False to get a non-nullable column.
-       qv.Int32Column(nullable=False)
+       # Pass nullable=True to get a nullable column.
+       qv.Int32Column(nullable=True)
 
        # Pass a validator to check the input data against a constraint.
        qv.Int32Column(validator=qv.gt(0))
@@ -53,7 +53,7 @@ These are the simplest column types. They all are initialized the same way:
        qv.Int32Column(metadata={'units': 'seconds'})
 
        # Set a default value to be used if any inputs are null
-       qv.Int32Column(nullable=False, default=3)
+       qv.Int32Column(nullable=True, default=3)
 
 
 When you access a column of a primitive type on a :class:`Table`
