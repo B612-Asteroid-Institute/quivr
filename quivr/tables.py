@@ -51,6 +51,16 @@ DataSourceType: TypeAlias = Union[
 ]
 AnyTable = TypeVar("AnyTable", bound="Table")
 
+# If a table uses any of the following names, it will break quivr
+# internals entirely, so they must be rejected.
+_FORBIDDEN_COLUMN_NAMES = {
+    "table",
+    "schema",
+    "_quivr_subtables",
+    "_quivr_attributes",
+    "_column_validators",
+}
+
 
 class Table:
     """Table is the primary data structure in quivr.
@@ -92,6 +102,10 @@ class Table:
         subtables = {}
         attrs = {}
         for name, obj in cls.__dict__.items():
+            if name in _FORBIDDEN_COLUMN_NAMES:
+                raise AttributeError(
+                    f"Invalid column name {name} in {cls.__name__}: {name} is a reserved name"
+                )
             if isinstance(obj, columns.Column):
                 fields.append(obj.pyarrow_field())
                 if obj.validator is not None:

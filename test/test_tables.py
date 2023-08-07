@@ -678,3 +678,30 @@ def test_from_pyarrow_preserves_nested_attributes():
     assert have.inner.attrib == "bar"
     assert have.inner.x.equals(pa.array([1, 2, 3], pa.int64()))
     assert have.inner.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+
+def test_no_forbidden_column_names():
+    with pytest.raises(AttributeError):
+
+        class T1(qv.Table):
+            schema = qv.StringColumn()
+
+    with pytest.raises(AttributeError):
+
+        class T2(qv.Table):
+            table = qv.StringColumn()
+
+    with pytest.raises(AttributeError):
+
+        class T3(qv.Table):
+            _quivr_subtables = qv.StringColumn()
+
+    with pytest.raises(AttributeError):
+
+        class T4(qv.Table):
+            _quivr_attributes = qv.StringColumn()
+
+    with pytest.raises(AttributeError):
+
+        class T5(qv.Table):
+            _column_validators = qv.StringColumn()
