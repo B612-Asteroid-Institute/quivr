@@ -66,7 +66,7 @@ Then, you can construct tables from data:
 
 ```python
 
-coords = Coordinates.from_data(
+coords = Coordinates.from_kwargs(
     x=np.array([ 1.00760887, -2.06203093,  1.24360546, -1.00131722]),
     y=np.array([-2.7227298 ,  0.70239707,  2.23125432,  0.37269832]),
     z=np.array([-0.27148738, -0.31768623, -0.2180482 , -0.02528401]),
@@ -102,7 +102,7 @@ class AsteroidOrbit(qv.Table):
 
 # You can construct embedded columns from Arrow StructArrays, which you can get from
 # other Quivr tables using the to_structarray() method with zero copy.
-orbits = AsteroidOrbit.from_data(
+orbits = AsteroidOrbit.from_kwargs(
     designation=np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
     mass=np.array([9.393e20, 2.06e21, 2.59e20, None]),
     radius=np.array([4.6e6, 2.7e6, 2.6e6, None]),
@@ -254,9 +254,9 @@ This `Observation` table has validators that
 - the `ra` column's values are between 0 and 360, inclusive
 - the `dataset_id` column only has strings in the set `{"ztf", "nsc", "skymapper"}`
 
-When an `Observation` instance is created using the `from_data`
+When an `Observation` instance is created using the `from_kwargs`
 method, these validation checks will be run, by default. This can be
-disabled by calling `Observation.from_data(..., validate=False)`.
+disabled by calling `Observation.from_kwargs(..., validate=False)`.
 
 In addition, an instance can be explicitly validated by calling the
 `.validate()` method, which will raise a `quivr.ValidationError` if
