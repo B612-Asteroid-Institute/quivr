@@ -23,7 +23,10 @@ are not valid Python identifiers, or just if you'd prefer they be
 something different, you can supply a column name mapping to the
 deserialization functions (:meth:`Table.from_parquet`).
 
-For example, here is the 2022 schema for the famous `New York City taxi data <https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page>`_:
+For example, here is the 2022 schema for the famous `New York City
+taxi data
+<https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page>`_. Note
+that *all* columns are nullable in this dataset.
 
 .. code-block::
 

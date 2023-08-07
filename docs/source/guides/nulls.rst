@@ -3,12 +3,12 @@
 Handling Nulls
 ==============
 
-One of the central features of Quivr is its support for handling null
+One of the core features of Quivr is its support for handling null
 values in data.
 
-Any data behind a Quivr table can have null values. You can explicitly
-forbid nulls by passing a ``nullable=False`` parameter when
-contructing a :obj:`quivr.Column`. If this is set, then any
+Data behind a Quivr table can have null values. You can explicitly
+permit nulls by passing a ``nullable=True`` parameter when
+contructing a :obj:`quivr.Column`. If this is not set, then any
 constructors of tables which provide null values will be rejected:
 
 .. code-block:: python
@@ -16,11 +16,17 @@ constructors of tables which provide null values will be rejected:
    import quivr as qv
 
    class MyTable(qv.Table):
-       id = qv.StringColumn(nullable=False)
+       id = qv.StringColumn()
 
-
-   # This will raise an error, now:
+   # This will raise an error:
    t = MyTable.from_kwargs(id=["a", "b", None, "d"])
+
+   class MyTable2(qv.Table):
+       id = qv.StringColumn(nullable=True)
+
+   # This is fine
+   t = MyTable2.from_kwargs(id=["a", "b", None, "d"])
+
 
 
 Using defaults
@@ -38,8 +44,8 @@ which takes no arguments and which returns a value:
    import uuid
 
    class User(qv.Table):
-       id = qv.StringColumn(nullable=False, default=uuid.uuidv4)
-       login_attempts = qv.UInt32Column(nullable=False, default=0)
+       id = qv.StringColumn(default=uuid.uuidv4)
+       login_attempts = qv.UInt32Column(default=0)
 
    # This won't raise an error. Instead, it will call uuid.uuidv4()
    # for each null id, and will insert '0' for each null login_attempts.
@@ -57,3 +63,8 @@ a constructor. For example:
    t = User.from_kwargs(
        id=["a", "b", "c"],
    )
+
+Loading Foreign Data
+--------------------
+
+

@@ -50,7 +50,7 @@ class Column:
     def __init__(
         self,
         dtype: pa.DataType,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], Any], Any] = None,
@@ -176,7 +176,7 @@ class SubTableColumn(Column, Generic[T]):
     :param metadata: A dictionary of metadata to attach to the column.
     """
 
-    def __init__(self, table_type: type[T], nullable: bool = True, metadata: Optional[MetadataDict] = None):
+    def __init__(self, table_type: type[T], nullable: bool = False, metadata: Optional[MetadataDict] = None):
         self.table_type = table_type
         self.schema = table_type.schema
         dtype = pa.struct(table_type.schema)
@@ -227,7 +227,7 @@ class Int8Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -259,7 +259,7 @@ class Int16Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -291,7 +291,7 @@ class Int32Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -323,7 +323,7 @@ class Int64Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -355,7 +355,7 @@ class UInt8Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -387,7 +387,7 @@ class UInt16Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -419,7 +419,7 @@ class UInt32Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -451,7 +451,7 @@ class UInt64Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], int], int] = None,
@@ -494,7 +494,7 @@ class Float16Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -523,7 +523,7 @@ class Float32Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], float], float] = None,
@@ -555,7 +555,7 @@ class Float64Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], float], float] = None,
@@ -585,7 +585,7 @@ class BooleanColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, Callable[[], bool], bool] = None,
@@ -621,7 +621,7 @@ class StringColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, str, Callable[[], str]] = None,
@@ -652,7 +652,7 @@ class LargeBinaryColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, bytes, Callable[[], bytes]] = None,
@@ -683,7 +683,7 @@ class LargeStringColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, str, Callable[[], str]] = None,
@@ -716,7 +716,7 @@ class Date32Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -746,7 +746,7 @@ class Date64Column(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -796,7 +796,7 @@ class TimestampColumn(Column):
         self,
         unit: str,
         tz: Optional[str] = None,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, datetime.datetime, Callable[[], datetime.datetime]] = None,
@@ -840,7 +840,7 @@ class Time32Column(Column):
     def __init__(
         self,
         unit: str,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, datetime.time, Callable[[], datetime.time]] = None,
@@ -884,7 +884,7 @@ class Time64Column(Column):
     def __init__(
         self,
         unit: str,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, datetime.time, Callable[[], datetime.time]] = None,
@@ -921,7 +921,7 @@ class DurationColumn(Column):
     def __init__(
         self,
         unit: str,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -955,7 +955,7 @@ class MonthDayNanoIntervalColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -984,7 +984,7 @@ class BinaryColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, bytes, Callable[[], bytes]] = None,
@@ -1021,7 +1021,7 @@ class FixedSizeBinaryColumn(Column):
     def __init__(
         self,
         byte_width: int,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
         default: Union[None, bytes, Callable[[], bytes]] = None,
@@ -1077,7 +1077,7 @@ class Decimal128Column(Column):
         self,
         precision: int,
         scale: int,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         default: Union[None, decimal.Decimal, Callable[[], decimal.Decimal]] = None,
     ):
@@ -1121,7 +1121,7 @@ class Decimal256Column(Column):
         self,
         precision: int,
         scale: int,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         default: Union[None, decimal.Decimal, Callable[[], decimal.Decimal]] = None,
     ):
@@ -1153,7 +1153,7 @@ class NullColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1194,7 +1194,7 @@ class ListColumn(Column):
     def __init__(
         self,
         value_type: Union[pa.DataType, pa.Field, Column],
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1235,7 +1235,7 @@ class FixedSizeListColumn(Column):
         self,
         value_type: Union[pa.DataType, pa.Field, Column],
         list_size: int,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1281,7 +1281,7 @@ class LargeListColumn(Column):
     def __init__(
         self,
         value_type: Union[pa.DataType, pa.Field, Column],
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1320,7 +1320,7 @@ class MapColumn(Column):
         self,
         key_type: Union[pa.DataType, pa.Field, Column],
         item_type: Union[pa.DataType, pa.Field, Column],
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1365,7 +1365,7 @@ class DictionaryColumn(Column):
         index_type: pa.DataType,
         value_type: Union[pa.DataType, pa.Field, Column],
         ordered: bool = False,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1410,7 +1410,7 @@ class StructColumn(Column):
     def __init__(
         self,
         fields: list[pa.Field],
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
@@ -1444,7 +1444,7 @@ class RunEndEncodedColumn(Column):
         self,
         run_end_type: pa.DataType,
         value_type: pa.DataType,
-        nullable: bool = True,
+        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
