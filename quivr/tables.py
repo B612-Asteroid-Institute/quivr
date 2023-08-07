@@ -781,7 +781,12 @@ class Table:
         column_name_map: Optional[dict[str, str]],
     ) -> pa.Table:
         if column_name_map is not None:
-            inverted_map = {v: k for k, v in column_name_map.items()} if column_name_map else {}
+            for value in column_name_map.values():
+                if value not in cls.schema.names:
+                    raise ValueError(
+                        f"Column name {value} does not exist for {cls.__name__}, so cannot rename to it"
+                    )
+            inverted_map = {v: k for k, v in column_name_map.items()}
             column_names = [inverted_map.get(field.name, field.name) for field in cls.schema]
             schema = pa.schema(
                 [pa.field(inverted_map.get(field.name, field.name), field.type) for field in cls.schema]
