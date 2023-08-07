@@ -1,4 +1,5 @@
 import pyarrow.compute as pc
+import pytest
 
 import quivr as qv
 
@@ -63,3 +64,11 @@ class TestParquetSerialization:
         have = Pair2.from_parquet(path, column_name_map={"x": "a", "y": "b"})
         want = Pair2.from_kwargs(a=[1, 2, 3], b=[4, 5, 6])
         assert have == want
+
+    def test_column_renaming_to_missing_column_name(self, tmp_path):
+        path = tmp_path / "test.parquet"
+        pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+        pair.to_parquet(path)
+
+        with pytest.raises(ValueError):
+            Pair.from_parquet(path, column_name_map={"x": "nonexistent"})
