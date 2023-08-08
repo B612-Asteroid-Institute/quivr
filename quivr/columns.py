@@ -159,9 +159,14 @@ class Column:
                 # We can't even make a null array of the appropriate
                 # size, so we're forced to return None.
                 return None
-            return pa.nulls(size_hint, type=self.dtype)
+
+            return self._nulls(size_hint)
 
         return pa.array(data, type=self.dtype)
+
+    def _nulls(self, n: int) -> pa.Array:
+        """Return an array of nulls of the appropriate size."""
+        return pa.nulls(n, type=self.dtype)
 
 
 T = TypeVar("T", bound=tables.Table)
@@ -216,6 +221,16 @@ class SubTableColumn(Column, Generic[T]):
 
         subtable = pa.Table.from_arrays(array.flatten(), schema=schema)
         return self.table_type(subtable)
+
+    def _nulls(self, n: int) -> pa.Array:
+        """Return an array of nulls of the appropriate size."""
+        # Quite unfortunate: pyarrow doesn't support creating a struct
+        # array of nulls; it incorrectly populates all the fields with
+        # nulls (including non-nullable ones!) so we need to do this
+        # manually.
+        #
+        # See: https://github.com/apache/arrow/issues/37072
+        return pa.array([None] * n, type=self.dtype)
 
 
 class Int8Column(Column):

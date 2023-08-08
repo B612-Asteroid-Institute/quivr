@@ -363,7 +363,7 @@ def test_from_kwargs_missing_nullable_subtable():
 
     have = Wrapper.from_kwargs(x=[1, 2, 3])
     assert have.x.null_count == 0
-    assert have.pairs.null_count == 3
+    assert have.pairs.to_structarray().null_count == 3
 
 
 class TableWithAttributes(qv.Table):

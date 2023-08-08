@@ -320,7 +320,8 @@ class Table:
             raise ValueError("No data provided")
 
         for idx in empty_columns:
-            arrays[idx] = pa.nulls(size, type=cls.schema[idx].type)
+            column = getattr(cls, cls.schema[idx].name)
+            arrays[idx] = column._nulls(size)
 
         # Inform the type checker that we've filled all Nones
         arrays = cast(list[pa.Array], arrays)
