@@ -363,7 +363,19 @@ def test_from_kwargs_missing_nullable_subtable():
 
     have = Wrapper.from_kwargs(x=[1, 2, 3])
     assert have.x.null_count == 0
-    assert have.pairs.to_structarray().null_count == 3
+    # This isn't exactly what we'd like to see. I'd like it if this
+    # could be written more like "assert have.pairs.null_count ==
+    # 3". But pairs is a quivr.Table, not a pyarrow.Array; it doesn't
+    # have a null count directly. The best we can do is look at the
+    # structs inside.
+    assert have.pairs.x.null_count == 3
+    assert have.pairs.y.null_count == 3
+
+    # This reflects the behavior we'd like to see, but it's not
+    # really the way the API works.
+    have_sa = have.to_structarray()
+    assert have_sa.field("x").null_count == 0
+    assert have_sa.field("pairs").null_count == 3
 
 
 class TableWithAttributes(qv.Table):
