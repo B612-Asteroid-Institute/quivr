@@ -352,6 +352,20 @@ def test_from_kwargs_no_data():
         NullablePair.from_kwargs()
 
 
+def test_from_kwargs_missing_nullable_subtable():
+    class Pair(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+
+    class Wrapper(qv.Table):
+        x = qv.Int64Column()
+        pairs = Pair.as_column(nullable=True)
+
+    have = Wrapper.from_kwargs(x=[1, 2, 3])
+    assert have.x.null_count == 0
+    assert have.pairs.null_count == 3
+
+
 class TableWithAttributes(qv.Table):
     x = qv.Int64Column()
     y = qv.Int64Column()
