@@ -53,7 +53,7 @@ from .errors import (
     ValidationError,
 )
 from .linkage import Linkage, MultiKeyLinkage, combine_linkages, combine_multilinkages
-from .tables import AnyTable, AttributeValueType, DataSourceType, Table
+from .tables import AnyTable, AttributeValueType, DataSourceType, Table, ArrowArrayProvider
 from .validators import Validator, and_, eq, ge, gt, is_in, le, lt
 
 __all__ = [
@@ -125,4 +125,5 @@ __all__ = [
     "le",
     "lt",
     "InvalidColumnDataError",
+    "ArrowArrayProvider",
 ]

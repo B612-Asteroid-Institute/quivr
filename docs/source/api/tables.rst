@@ -102,3 +102,7 @@ Type Information Helpers
 .. autodata:: AttributeValueType
 
    Represents the permitted set of values to be passed in when setting a Table attribute value.
+
+.. autoclass:: ArrowArrayProvider
+
+   .. automethod:: __arrow_array__
