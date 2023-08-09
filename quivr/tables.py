@@ -88,8 +88,6 @@ class Table:
 
     schema: ClassVar[pa.Schema]
 
-    #: Instance variable
-    #: does it work?
     table: pa.Table
 
     _quivr_subtables: ClassVar[dict[str, columns.SubTableColumn[Any]]]
@@ -140,12 +138,14 @@ class Table:
         for name in self._quivr_attributes:
             # Ensure all attributes are set or have a default
             getattr(self, name)
+    
 
     @classmethod
     def from_pyarrow(
         cls,
         table: pa.Table,
         validate: bool = True,
+        permit_nulls: bool = False,
         **kwargs: AttributeValueType,
     ) -> Self:
         """Create a new table from a pyarrow Table.
@@ -163,13 +163,28 @@ class Table:
         :param table: The pyarrow Table to create the table from.
         :param validate: Whether to validate the table against the
             schema, and run any column validators.
+        :param permit_nulls: Whether to permit null values in the
+            table. If True, nulls will be permitted, even in non-nullable
+            fields. This is used when a Table is used as a nullable subtable.
         :param \\**kwargs: Keyword arguments to set attributes on the
             table.
         :type \\**kwargs: :obj:`AttributeValueType`
         :return: A new Table instance.
         """
+        schema = cls.schema
+        if permit_nulls:
+            # Rewrite the schema to permit nulls
+            fields = []
+            for field in schema:
+                if field.nullable:
+                    fields.append(field)
+                else:
+                    fields.append(field.with_nullable(True))
+            schema = pa.schema(fields, metadata=schema.metadata)
 
-        schema = cls.schema.with_metadata(table.schema.metadata)
+        # Absorb metadata from the table
+        schema = schema.with_metadata(table.schema.metadata)
+            
         table = table.cast(schema)
         instance = cls(table, **kwargs)
         if validate:

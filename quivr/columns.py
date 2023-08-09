@@ -220,7 +220,7 @@ class SubTableColumn(Column, Generic[T]):
         schema = self.schema.with_metadata(metadata)
 
         subtable = pa.Table.from_arrays(array.flatten(), schema=schema)
-        return self.table_type(subtable)
+        return self.table_type.from_pyarrow(subtable, permit_nulls=self.nullable)
 
     def _nulls(self, n: int) -> pa.Array:
         """Return an array of nulls of the appropriate size."""
