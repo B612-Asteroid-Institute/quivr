@@ -138,7 +138,6 @@ class Table:
         for name in self._quivr_attributes:
             # Ensure all attributes are set or have a default
             getattr(self, name)
-    
 
     @classmethod
     def from_pyarrow(
@@ -184,7 +183,7 @@ class Table:
 
         # Absorb metadata from the table
         schema = schema.with_metadata(table.schema.metadata)
-            
+
         table = table.cast(schema)
         instance = cls(table, **kwargs)
         if validate:

@@ -99,7 +99,7 @@ def test_nested_table_mutability():
 
     class Outer(qv.Table):
         name = qv.StringAttribute(mutable=True)
-        inner = Inner.as_column()
+        inner = Inner.as_column(nullable=False)
 
     table = Outer.from_kwargs(
         name="foo",

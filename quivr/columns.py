@@ -183,8 +183,21 @@ class SubTableColumn(Column, Generic[T]):
 
     def __init__(self, table_type: type[T], nullable: bool = False, metadata: Optional[MetadataDict] = None):
         self.table_type = table_type
+
         self.schema = table_type.schema
-        dtype = pa.struct(table_type.schema)
+        if nullable:
+            # permit nulls in fields. This is necessary for the
+            # case where the field is not-nullable, but the table
+            # is nullable.
+            fields = []
+            for field in self.schema:
+                if field.nullable:
+                    fields.append(field)
+                else:
+                    fields.append(field.with_nullable(True))
+            self.schema = pa.schema(fields)
+
+        dtype = pa.struct(self.schema)
         super().__init__(dtype, nullable=nullable, metadata=metadata)
 
     def __set__(self, obj: tables.Table, value: T) -> None:

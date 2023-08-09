@@ -377,6 +377,15 @@ def test_from_kwargs_missing_nullable_subtable():
     assert have_sa.field("x").null_count == 0
     assert have_sa.field("pairs").null_count == 3
 
+    # Test that we can round-trip this.
+    have2 = Wrapper.from_kwargs(
+        x=have.x,
+        pairs=have.pairs,
+    )
+    assert have2.x.null_count == 0
+    assert have2.pairs.x.null_count == 3
+    assert have2.pairs.y.null_count == 3
+
 
 class TableWithAttributes(qv.Table):
     x = qv.Int64Column()
