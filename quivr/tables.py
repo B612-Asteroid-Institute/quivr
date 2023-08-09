@@ -217,7 +217,7 @@ class Table:
         else:
             attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
             if isinstance(data, pa.Table):
-                instance = cls.from_pyarrow(data, False, **attrib_kwargs)
+                instance = cls.from_pyarrow(data, False, False, **attrib_kwargs)
             elif isinstance(data, dict):
                 instance = cls.from_pydict(data, **attrib_kwargs)
             elif isinstance(data, list):
@@ -347,7 +347,7 @@ class Table:
 
         pyarrow_table = cls._build_arrow_table(arrays, metadata)
         attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
-        return cls.from_pyarrow(table=pyarrow_table, validate=validate, **attrib_kwargs)
+        return cls.from_pyarrow(table=pyarrow_table, validate=validate, permit_nulls=False, **attrib_kwargs)
 
     @classmethod
     def _build_arrow_table(cls, arrays: List[pa.Array], metadata: dict[bytes, bytes]) -> pa.Table:
@@ -379,7 +379,7 @@ class Table:
         if metadata is None:
             metadata = {}
         table = cls._build_arrow_table(arrays, metadata)
-        return cls.from_pyarrow(table=table, validate=False, **kwargs)
+        return cls.from_pyarrow(table=table, validate=False, permit_nulls=False, **kwargs)
 
     @classmethod
     def from_pydict(
@@ -387,7 +387,7 @@ class Table:
     ) -> Self:
         warnings.warn(DeprecationWarning("Table.from_pydict will be removed in quivr version 0.7"))
         table = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls.from_pyarrow(table=table, validate=False, **kwargs)
+        return cls.from_pyarrow(table=table, validate=False, permit_nulls=False, **kwargs)
 
     @classmethod
     def from_rows(cls, rows: list[dict[str, Any]], **kwargs: AttributeValueType) -> Self:
@@ -420,7 +420,7 @@ class Table:
         warnings.warn(DeprecationWarning("Table.from_lists will be removed in quivr version 0.7"))
         arrays = list(map(pa.array, lists))
         table = cls._build_arrow_table(arrays, {})
-        return cls.from_pyarrow(table=table, validate=False, **kwargs)
+        return cls.from_pyarrow(table=table, validate=False, permit_nulls=False, **kwargs)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, validate: bool = True, **kwargs: AttributeValueType) -> Self:
@@ -442,7 +442,7 @@ class Table:
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
-        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
 
     @classmethod
     def _unflatten_table(cls, table: pa.Table) -> pa.Table:
@@ -504,7 +504,7 @@ class Table:
 
         if len(struct_fields) == 0:
             table = pa.Table.from_pandas(df, schema=cls.schema)
-            return cls.from_pyarrow(table=table, validate=validate, **kwargs)
+            return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
 
         root = pa.field("", pa.struct(cls.schema))
 
@@ -572,7 +572,7 @@ class Table:
             table_arrays.append(sa.field(subfield.name))
 
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
-        return cls.from_pyarrow(table, validate=validate, **kwargs)
+        return cls.from_pyarrow(table, validate=validate, permit_nulls=False, **kwargs)
 
     def flattened_table(self) -> pa.Table:
         """Completely flatten the Table's underlying Arrow table,
@@ -798,7 +798,7 @@ class Table:
             filters=filters,
             column_name_map=column_name_map,
         )
-        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
 
     @classmethod
     def _load_parquet_table(
@@ -858,7 +858,7 @@ class Table:
         :param \\**kwargs: Additional keyword arguments to pass to Self's __init__ method.
         """
         table = pyarrow.feather.read_table(path)
-        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
 
     def to_csv(self, path: str, attribute_columns: bool = True) -> None:
         """Write the table to a CSV file. Any nested structure is flattened.
@@ -912,7 +912,7 @@ class Table:
         metadata = table.schema.metadata or {}
         metadata.update(attribute_meta)
         table = table.replace_schema_metadata(metadata)
-        return cls.from_pyarrow(table=table, validate=validate, **kwargs)
+        return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
 
     def is_valid(self) -> bool:
         """Validate the table against the schema."""
@@ -937,7 +937,7 @@ class Table:
         """
         data = [[] for _ in range(len(cls.schema))]  # type: ignore
         empty_table = pa.table(data, schema=cls.schema)
-        return cls.from_pyarrow(table=empty_table, validate=False, **kwargs)
+        return cls.from_pyarrow(table=empty_table, validate=False, permit_nulls=False, **kwargs)
 
     def attributes(self) -> dict[str, Any]:
         """Return a dictionary of the table's attributes."""
