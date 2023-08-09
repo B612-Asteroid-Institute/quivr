@@ -208,9 +208,19 @@ class SubTableColumn(Column, Generic[T]):
             for key, val in value_meta.items():
                 key = (self.name + "." + key.decode("utf-8")).encode("utf-8")
                 metadata[key] = val
+
         idx = obj.table.schema.get_field_index(self.name)
         obj.table = obj.table.replace_schema_metadata(metadata)
-        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value.to_structarray()])
+        data = value.to_structarray()
+        if self.nullable:
+            # rewrite the structarray's type to make all fields
+            # nullable. This is necessary for the case where the
+            # field is not-nullable, but the table is nullable.
+            fields = []
+            for field in data.type:
+                fields.append(field.with_nullable(True))
+            data = pa.StructArray.from_arrays(data.flatten(), fields=fields)
+        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [data])
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:

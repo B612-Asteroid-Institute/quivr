@@ -387,6 +387,22 @@ def test_from_kwargs_missing_nullable_subtable():
     assert have2.pairs.y.null_count == 3
 
 
+def test_set_missing_column_with_nullable_subtable():
+    class Pair(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+
+    class Wrapper(qv.Table):
+        x = qv.Int64Column()
+        pairs = Pair.as_column(nullable=True)
+
+    have = Wrapper.from_kwargs(x=[1, 2, 3])
+    have.pairs = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    assert have.x.null_count == 0
+    assert have.pairs.x.null_count == 0
+    assert have.pairs.y.null_count == 0
+
+
 class TableWithAttributes(qv.Table):
     x = qv.Int64Column()
     y = qv.Int64Column()
