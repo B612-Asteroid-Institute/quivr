@@ -691,6 +691,8 @@ class Table:
         :param idx: The row index or slice to return.
         """
         if isinstance(idx, int):
+            if idx < 0:
+                idx += len(self)
             table = self.table[idx : idx + 1]
         else:
             table = self.table[idx]
