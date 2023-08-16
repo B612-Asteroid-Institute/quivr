@@ -7,6 +7,10 @@ enforce types and expectations. They are backed by the
 high-performance Arrow memory model, making them well-suited for
 streaming IO, RPCs, and serialization/deserialization to Parquet.
 
+**Documentation** is at https://quivr.readthedocs.org. A
+[changelog](./CHANGELOG.md) is in this repository to document changes
+in each released version.
+
 ## why?
 
 Data engineering involves taking analysis code and algorithms which
