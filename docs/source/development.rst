@@ -322,7 +322,8 @@ To do a quivr release:
 2. Update ``CHANGELOG.md`` to label the current "Unreleased" changes
    as ``$NEW_VERSION`` with the current date. Do a check of commits
    since the last release to be sure all significant changes are
-   documented.
+   documented. Remember to update the list of links at the very bottom
+   of the changelog.
 3. Commit the above two changes with a commit message in the form
    ``Version $NEW_VERSION``.
 4. Tag the commit with ``v$NEW_VERSION`` (eg "``v1.2.3``", not
