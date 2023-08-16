@@ -4,6 +4,10 @@ This file documents notable changes between versions of quivr.
 
 ## [Unreleased]
 
+Nothing yet!
+
+## [0.6.3] - 2023-08-16
+
 ### Fixed
 
 - Indexing a table with a negative integer (`table[-1]`, for example)
