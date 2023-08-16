@@ -90,6 +90,26 @@ def test_table__eq__():
     assert b_table != b_table_attr_diff
 
 
+def test_table__getitem__():
+    # Test indexing with positive and negative integers
+    table = Pair.from_kwargs(
+        x=[1, 2, 3],
+        y=[4, 5, 6],
+    )
+    assert table[0] == Pair.from_kwargs(x=[1], y=[4])
+    assert table[1] == Pair.from_kwargs(x=[2], y=[5])
+    assert table[2] == Pair.from_kwargs(x=[3], y=[6])
+    assert table[-1] == Pair.from_kwargs(x=[3], y=[6])
+    assert table[-2] == Pair.from_kwargs(x=[2], y=[5])
+    assert table[-3] == Pair.from_kwargs(x=[1], y=[4])
+
+    # Test indexing with slices
+    assert table[0:2] == Pair.from_kwargs(x=[1, 2], y=[4, 5])
+    assert table[1:3] == Pair.from_kwargs(x=[2, 3], y=[5, 6])
+    assert table[-2:] == Pair.from_kwargs(x=[2, 3], y=[5, 6])
+    assert table[:-1] == Pair.from_kwargs(x=[1, 2], y=[4, 5])
+
+
 def test_table_to_structarray():
     xs = pa.array([1, 2, 3], pa.int64())
     ys = pa.array([4, 5, 6], pa.int64())
