@@ -1055,3 +1055,39 @@ class Table:
         if type is None:
             return array
         return array.cast(type)
+
+    def _column_obj(self, name: str) -> columns.Column:
+        """Return the Column object for a column."""
+        return getattr(self.__class__, name)  # type: ignore
+
+    def set_column(self, name: str, data: DataSourceType) -> Self:
+        """
+        Return a copy of the table with a particular column replaced with new data.
+
+        :param name: The name of the column to replace.
+        :param data: The new column data.
+        """
+        if "." in name:
+            name, subkey = name.split(".", 1)
+            # name should reference a subtable.
+            subtable = getattr(self, name)
+            subtable_new = subtable.set_column(subkey, data)
+            return self.set_column(name, subtable_new)
+
+        column = self._column_obj(name)
+        idx = self.table.schema.get_field_index(name)
+
+        if isinstance(data, Table):
+            data = data.to_structarray()
+
+            if column.nullable:
+                # rewrite the structarray's type to make all fields
+                # nullable. This is necessary for the case where the
+                # field is not-nullable, but the table is nullable.
+                fields = []
+                for field in data.type:
+                    fields.append(field.with_nullable(True))
+                data = pa.StructArray.from_arrays(data.flatten(), fields=fields)
+
+        table = self.table.set_column(idx, column.pyarrow_field(), [data])
+        return self.from_pyarrow(table=table, validate=True, permit_nulls=False)
