@@ -97,9 +97,7 @@ class Column:
 
         This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
         """
-        idx = obj.table.schema.get_field_index(self.name)
-        value = self.fill_default(value)
-        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [value])
+        obj.table = self._set_on_pyarrow_table(obj.table, value)
 
     def __set_name__(self, owner: type, name: str) -> None:
         """
@@ -168,6 +166,12 @@ class Column:
         """Return an array of nulls of the appropriate size."""
         return pa.nulls(n, type=self.dtype)
 
+    def _set_on_pyarrow_table(self, table: pa.Table, data: pa.Array) -> pa.Table:
+        """Set the data for this column on a pyarrow Table."""
+        idx = table.schema.get_field_index(self.name)
+        value = self.fill_default(data)
+        return table.set_column(idx, self.pyarrow_field(), [value])
+
 
 T = TypeVar("T", bound=tables.Table)
 
@@ -200,17 +204,21 @@ class SubTableColumn(Column, Generic[T]):
         dtype = pa.struct(self.schema)
         super().__init__(dtype, nullable=nullable, metadata=metadata)
 
-    def __set__(self, obj: tables.Table, value: T) -> None:
+    def _set_on_pyarrow_table(self, table: pa.Table, value: T) -> pa.Table:
+        """Set the data for this column on a pyarrow Table. This
+        includes setting metadata which encodes the subtable's
+        attributes.
+        """
         # Propagate the value's metadata through to the parent
-        metadata = obj.table.schema.metadata
+        metadata = table.schema.metadata
         value_meta = value.table.schema.metadata
         if value_meta is not None:
             for key, val in value_meta.items():
                 key = (self.name + "." + key.decode("utf-8")).encode("utf-8")
                 metadata[key] = val
 
-        idx = obj.table.schema.get_field_index(self.name)
-        obj.table = obj.table.replace_schema_metadata(metadata)
+        idx = table.schema.get_field_index(self.name)
+        table = table.replace_schema_metadata(metadata)
         data = value.to_structarray()
         if self.nullable:
             # rewrite the structarray's type to make all fields
@@ -220,7 +228,12 @@ class SubTableColumn(Column, Generic[T]):
             for field in data.type:
                 fields.append(field.with_nullable(True))
             data = pa.StructArray.from_arrays(data.flatten(), fields=fields)
-        obj.table = obj.table.set_column(idx, self.pyarrow_field(), [data])
+
+        table = table.set_column(idx, self.pyarrow_field(), data)
+        return table
+
+    def __set__(self, obj: tables.Table, value: T) -> None:
+        obj.table = self._set_on_pyarrow_table(obj.table, value)
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:

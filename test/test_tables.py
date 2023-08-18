@@ -856,3 +856,22 @@ def test_set_column_none():
     assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
     # new table should have new column
     assert t2.x.equals(pa.array([None, None, None], pa.int64()))
+
+
+def test_set_column_changes_subtable_attribute():
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        name = qv.StringAttribute()
+
+    class Outer(qv.Table):
+        inner = Inner.as_column()
+
+    i = Inner.from_kwargs(x=[1, 2, 3], name="a")
+    o = Outer.from_kwargs(inner=i)
+
+    i2 = Inner.from_kwargs(x=[4, 5, 6], name="b")
+
+    o2 = o.set_column("inner", i2)
+
+    assert o2.inner.x.equals(pa.array([4, 5, 6], pa.int64()))
+    assert o2.inner.name == "b"

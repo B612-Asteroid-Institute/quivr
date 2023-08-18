@@ -1075,22 +1075,9 @@ class Table:
             return self.set_column(name, subtable_new)
 
         column = self._column_obj(name)
-        idx = self.table.schema.get_field_index(name)
 
         if data is None:
             data = column._nulls(len(self))
 
-        if isinstance(data, Table):
-            data = data.to_structarray()
-
-            if column.nullable:
-                # rewrite the structarray's type to make all fields
-                # nullable. This is necessary for the case where the
-                # field is not-nullable, but the table is nullable.
-                fields = []
-                for field in data.type:
-                    fields.append(field.with_nullable(True))
-                data = pa.StructArray.from_arrays(data.flatten(), fields=fields)
-
-        table = self.table.set_column(idx, column.pyarrow_field(), [data])
+        table = column._set_on_pyarrow_table(self.table, data)
         return self.from_pyarrow(table=table, validate=True, permit_nulls=False)
