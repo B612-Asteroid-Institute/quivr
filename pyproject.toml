@@ -112,11 +112,11 @@ benchmark = [
 
 [tool.hatch.envs.docs]
 dependencies = [
-  "sphinx==7.0.1",
+  "sphinx==7.2.2",
   "sphinx-autodoc-typehints",
   "sphinx-copybutton",
   "sphinx-toolbox",
-  "furo",
+  "furo==2023.08.17",
 ]
 
 [tool.hatch.envs.docs.scripts]
