@@ -79,6 +79,7 @@ Miscellaneous
 .. automethod:: Table.__repr__
 .. automethod:: Table.__len__
 .. automethod:: Table.__eq__
+.. automethod:: Table.set_column
 
 Utility Functions
 +++++++++++++++++

@@ -77,7 +77,8 @@ class Table:
 
     Table instances are immutable, but can be sliced, filtered,
     sorted, or otherwise manipulated, resulting in new Table
-    instances.
+    instances. In particular, see the :meth:`Table.set_column` method,
+    which returns a copy of the Table with a single column replaced.
 
     :cvar schema: The pyarrow schema for this table.
     :vartype schema: pyarrow.Schema
@@ -1055,3 +1056,29 @@ class Table:
         if type is None:
             return array
         return array.cast(type)
+
+    def _column_obj(self, name: str) -> columns.Column:
+        """Return the Column object for a column."""
+        return getattr(self.__class__, name)  # type: ignore
+
+    def set_column(self, name: str, data: DataSourceType) -> Self:
+        """
+        Return a copy of the table with a particular column replaced with new data.
+
+        :param name: The name of the column to replace.
+        :param data: The new column data.
+        """
+        if "." in name:
+            name, subkey = name.split(".", 1)
+            # name should reference a subtable.
+            subtable = getattr(self, name)
+            subtable_new = subtable.set_column(subkey, data)
+            return self.set_column(name, subtable_new)
+
+        column = self._column_obj(name)
+
+        if data is None:
+            data = column._nulls(len(self))
+
+        table = column._set_on_pyarrow_table(self.table, data)
+        return self.from_pyarrow(table=table, validate=True, permit_nulls=False)

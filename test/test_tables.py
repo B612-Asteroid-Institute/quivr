@@ -776,3 +776,102 @@ def test_no_forbidden_column_names():
 
         class T5(qv.Table):
             _column_validators = qv.StringColumn()
+
+
+def test_set_column():
+    t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    t2 = t.set_column("x", [7, 8, 9])
+
+    # original should be unchanged
+    assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # new table should have new column
+    assert t2.x.equals(pa.array([7, 8, 9], pa.int64()))
+
+
+def test_set_column_nested():
+    w = Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    w2 = w.set_column("pair.x", [7, 8, 9])
+
+    # original should be unchanged
+    assert w.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # new table should have new column
+    assert w2.pair.x.equals(pa.array([7, 8, 9], pa.int64()))
+
+
+def test_set_column_nested_doubly():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.from_kwargs(
+        inner=Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    )
+    dn2 = dn.set_column("inner.pair.x", [7, 8, 9])
+
+    # original should be unchanged
+    assert dn.inner.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # new table should have new column
+    assert dn2.inner.pair.x.equals(pa.array([7, 8, 9], pa.int64()))
+
+    dn3 = dn.set_column("inner.pair", Pair.from_kwargs(x=[7, 8, 9], y=[10, 11, 12]))
+    assert dn3.inner.pair.x.equals(pa.array([7, 8, 9], pa.int64()))
+    assert dn3.inner.pair.y.equals(pa.array([10, 11, 12], pa.int64()))
+
+
+def test_set_column_subtable():
+    w = Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    w2 = w.set_column("pair", Pair.from_kwargs(x=[7, 8, 9], y=[10, 11, 12]))
+
+    # original should be unchanged
+    assert w.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert w.pair.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    # new table should have new column
+    assert w2.pair.x.equals(pa.array([7, 8, 9], pa.int64()))
+    assert w2.pair.y.equals(pa.array([10, 11, 12], pa.int64()))
+
+
+def test_set_column_null():
+    class PairWithNulls(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
+    t = PairWithNulls.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    t2 = t.set_column("x", pa.nulls(3, pa.int64()))
+
+    # original should be unchanged
+    assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # new table should have new column
+    assert t2.x.equals(pa.array([None, None, None], pa.int64()))
+
+
+def test_set_column_none():
+    class PairWithNulls(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
+    t = PairWithNulls.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    t2 = t.set_column("x", None)
+
+    # original should be unchanged
+    assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # new table should have new column
+    assert t2.x.equals(pa.array([None, None, None], pa.int64()))
+
+
+def test_set_column_changes_subtable_attribute():
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        name = qv.StringAttribute()
+
+    class Outer(qv.Table):
+        inner = Inner.as_column()
+
+    i = Inner.from_kwargs(x=[1, 2, 3], name="a")
+    o = Outer.from_kwargs(inner=i)
+
+    i2 = Inner.from_kwargs(x=[4, 5, 6], name="b")
+
+    o2 = o.set_column("inner", i2)
+
+    assert o2.inner.x.equals(pa.array([4, 5, 6], pa.int64()))
+    assert o2.inner.name == "b"

@@ -4,7 +4,16 @@ This file documents notable changes between versions of quivr.
 
 ## [Unreleased]
 
-Nothing yet!
+### Added
+
+- `Table.set_column` was added. This is a new method that returns a
+  copy of the table, but with a single column replaced.
+
+### Removed
+
+- Setting columns through normal Python assignment statements
+  (`table.x = ...`) is no longer possible. It was an accident that it
+  worked in the first place. Instead, use `Table.set_column`.
 
 ## [0.6.3] - 2023-08-16
 

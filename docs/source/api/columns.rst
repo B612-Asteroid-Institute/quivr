@@ -22,8 +22,10 @@ The ``Person`` Table defined above has three columns: a string name, a
 uint8 age, and a list of strings for books.
 
 All of the column types below inherit from :class:`Column`, and so
-they are Descriptors: they all have :meth:`Column.__get__`,
-:meth:`Column.__set__`, and :meth:`Column.__set_name__` methods.
+they are Descriptors: they all have :meth:`Column.__get__` and
+:meth:`Column.__set_name__` methods. They do _not_ have a
+``Column.__set__`` attribute. If you want to set a column value on a
+Table instance, use :meth:`Table.set_column`.
 
 
 .. _simple_types:
