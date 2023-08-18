@@ -1077,6 +1077,9 @@ class Table:
         column = self._column_obj(name)
         idx = self.table.schema.get_field_index(name)
 
+        if data is None:
+            data = column._nulls(len(self))
+
         if isinstance(data, Table):
             data = data.to_structarray()
 

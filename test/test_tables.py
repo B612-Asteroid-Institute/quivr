@@ -842,3 +842,17 @@ def test_set_column_null():
     assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
     # new table should have new column
     assert t2.x.equals(pa.array([None, None, None], pa.int64()))
+
+
+def test_set_column_none():
+    class PairWithNulls(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
+    t = PairWithNulls.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    t2 = t.set_column("x", None)
+
+    # original should be unchanged
+    assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # new table should have new column
+    assert t2.x.equals(pa.array([None, None, None], pa.int64()))
