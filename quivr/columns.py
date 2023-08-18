@@ -232,8 +232,15 @@ class SubTableColumn(Column, Generic[T]):
     def __get__(self, obj: tables.Table, objtype: type) -> T:
         ...
 
-    def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, T]:
-        if obj is None:
+    @overload
+    def __get__(self, obj: SubTableListColumn[T], objtype: type) -> Self:
+        # SubTableColumns are attached as an instance attribute for
+        # SubTableListColumn instances in order to use this class's
+        # logic for schema analysis.
+        ...
+
+    def __get__(self, obj: Union[None, tables.Table, SubTableListColumn[T]], objtype: type) -> Union[Self, T]:
+        if obj is None or isinstance(obj, SubTableListColumn):
             return self
         array = obj.table.column(self.name)
 
@@ -1214,8 +1221,6 @@ class NullColumn(Column):
 
 
 # Complex types follow
-
-
 class ListColumn(Column):
     """A column for storing variably-sized lists of values.
 
@@ -1231,6 +1236,8 @@ class ListColumn(Column):
 
     """
 
+    list_of_subtables: bool
+
     def __init__(
         self,
         value_type: Union[pa.DataType, pa.Field, Column],
@@ -1240,6 +1247,7 @@ class ListColumn(Column):
     ):
         if isinstance(value_type, Column):
             value_type = value_type.dtype
+
         super().__init__(pa.list_(value_type, -1), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
@@ -1250,10 +1258,101 @@ class ListColumn(Column):
     def __get__(self, obj: tables.Table, objtype: type) -> pa.ListArray:
         ...
 
-    def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.ListArray]:
+    def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Array, list[T]]:
         if obj is None:
             return self
         return obj.table[self.name].combine_chunks()
+
+
+class SubTableListColumn(ListColumn, Generic[T]):
+    """
+    A column for storing lists of subtables.
+
+    """
+
+    subtable_column_type: SubTableColumn[T]
+
+    def __init__(
+        self,
+        value_type: type[T],
+        nullable: bool = False,
+        metadata: Optional[MetadataDict] = None,
+        validator: Optional[validators.Validator] = None,
+    ):
+        self.subtable_column_type = value_type.as_column()
+        super().__init__(
+            self.subtable_column_type.dtype, nullable=nullable, metadata=metadata, validator=validator
+        )
+
+    @overload
+    def __get__(self, obj: None, objtype: type) -> Self:
+        ...
+
+    @overload
+    def __get__(self, obj: tables.Table, objtype: type) -> list[T]:
+        ...
+
+    def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, list[T]]:
+        if obj is None:
+            return self
+        array = obj.table[self.name].combine_chunks()
+
+        # convert the lists of structs into Table instances
+        metadata = self.metadata
+        if metadata is None:
+            metadata = {}
+        metadata.update(obj._metadata_for_column(self.name))  # type: ignore
+
+        schema = self.subtable_column_type.schema.with_metadata(metadata)
+        table_maker = self.subtable_column_type.table_type.from_pyarrow
+        result = [
+            table_maker(pa.Table.from_arrays(list_scalar.values.flatten(), schema=schema))
+            for list_scalar in array
+        ]
+        return result
+
+    def _load(self, data: Union[tables.DataSourceType, None], size_hint: Optional[int]) -> Optional[pa.Array]:
+        """
+        Load the data source as a pyarrow Array of data which matches the schema
+        """
+        if data is None:
+            return super()._load(data, size_hint)
+
+        if not isinstance(data, list):
+            raise TypeError(f"Expected a list of {self.subtable_column_type.table_type}, got {type(data)}")
+
+        if len(data) == 0:
+            # Treat an empty list like None
+            return super()._load(None, size_hint)
+
+        # Should be a list of subtables. Do a check for consistency:
+        # - all must be Table of the expected type
+        # - all must have identical attributes
+        expected_type = self.subtable_column_type.table_type
+        first_entry = data[0]
+        if not isinstance(first_entry, expected_type):
+            raise TypeError(f"Expected a list of {expected_type}, got {type(first_entry)} at index=0")
+        for i, entry in enumerate(data[1:]):
+            if not isinstance(entry, expected_type):
+                raise TypeError(f"Expected a list of {expected_type}, got {type(entry)} at index={i}")
+            if not entry._attr_equal(first_entry):
+                raise ValueError(
+                    f"Expected all entries to have identical attributes, got mismatch at index={i}"
+                )
+
+        # Looks legit. Convert from a list of Tables to a ListArray containing StructArrays.p
+        # First, convert the Tables to StructArrays
+        struct_arrays = [t.to_structarray() for t in data]
+        # Now make a ListArray from the StructArrays. This is harder than it should be.
+        offset = 0
+        offsets = [offset]
+        for sa in struct_arrays:
+            offset += len(sa)
+            offsets.append(offset)
+        offsets = pa.array(offsets, type=pa.int32())
+        combined_data = pa.concat_arrays(struct_arrays)
+        list_array = pa.ListArray.from_arrays(offsets, combined_data)
+        return list_array
 
 
 class FixedSizeListColumn(Column):

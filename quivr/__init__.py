@@ -32,6 +32,7 @@ from .columns import (
     StringColumn,
     StructColumn,
     SubTableColumn,
+    SubTableListColumn,
     Time32Column,
     Time64Column,
     TimestampColumn,
@@ -132,4 +133,5 @@ __all__ = [
     "lt",
     "InvalidColumnDataError",
     "ArrowArrayProvider",
+    "SubTableListColumn",
 ]

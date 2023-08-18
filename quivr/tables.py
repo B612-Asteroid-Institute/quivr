@@ -57,6 +57,7 @@ _FORBIDDEN_COLUMN_NAMES = {
     "table",
     "schema",
     "_quivr_subtables",
+    "_quivr_subtable_lists",
     "_quivr_attributes",
     "_column_validators",
 }
@@ -92,6 +93,7 @@ class Table:
     table: pa.Table
 
     _quivr_subtables: ClassVar[dict[str, columns.SubTableColumn[Any]]]
+    _quivr_subtable_lists: ClassVar[dict[str, columns.SubTableListColumn[Any]]]
     _quivr_attributes: ClassVar[dict[str, attributes.Attribute[Any]]]
     _column_validators: ClassVar[dict[str, validators.Validator]]
 
@@ -99,6 +101,7 @@ class Table:
         fields = []
         column_validators = {}
         subtables = {}
+        subtable_lists = {}
         attrs = {}
         for name, obj in cls.__dict__.items():
             if name in _FORBIDDEN_COLUMN_NAMES:
@@ -111,6 +114,8 @@ class Table:
                     column_validators[name] = obj.validator
                 if isinstance(obj, columns.SubTableColumn):
                     subtables[name] = obj
+                if isinstance(obj, columns.SubTableListColumn):
+                    subtable_lists[name] = obj
             elif isinstance(obj, attributes.Attribute):
                 attrs[name] = obj
 
@@ -120,6 +125,9 @@ class Table:
 
         # Keep track of subtables
         cls._quivr_subtables = subtables
+
+        # And also lists of subtables
+        cls._quivr_subtable_lists = subtable_lists
 
         # Add attributes
         cls._quivr_attributes = attrs
@@ -323,6 +331,13 @@ class Table:
                 )
 
             arrays.append(array)
+
+            # Special case: gather metadata for a list of Tables from
+            # the first instance. The column._load call above was
+            # responsible for ensuring that the tables have identical
+            # metadata.
+            if isinstance(value, list) and len(value) > 0 and isinstance(value[0], Table):
+                value = value[0]
 
             if isinstance(value, Table):
                 field_meta = value.table.schema.metadata
@@ -743,6 +758,16 @@ class Table:
                 return False
             if not self_subtable._attr_equal(other_subtable):
                 return False
+
+        for subtable_list_name in self._quivr_subtable_lists.keys():
+            self_subtable_list = getattr(self, subtable_list_name)
+            other_subtable_list = getattr(other, subtable_list_name)
+
+            if len(self_subtable_list) > 0 and len(other_subtable_list) > 0:
+                self_first_entry = self_subtable_list[0]
+                other_first_entry = other_subtable_list[0]
+                if not self_first_entry._attr_equal(other_first_entry):
+                    return False
         return True
 
     def take(self, row_indices: Union[list[int], pa.IntegerArray]) -> Self:

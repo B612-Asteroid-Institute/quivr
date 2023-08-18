@@ -875,3 +875,155 @@ def test_set_column_changes_subtable_attribute():
 
     assert o2.inner.x.equals(pa.array([4, 5, 6], pa.int64()))
     assert o2.inner.name == "b"
+
+
+class TestListOfSubtables:
+    def test_simple(self):
+        class Outer(qv.Table):
+            inner = qv.SubTableListColumn(Pair)
+
+        p1 = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+        p2 = Pair.from_kwargs(x=[7, 8, 9], y=[10, 11, 12])
+        t = Outer.from_kwargs(inner=[p1, p2])
+
+        assert len(t.inner) == 2
+        assert len(t.inner[0]) == 3
+        assert len(t[0].inner) == 1
+        assert len(t[0].inner[0]) == 3
+
+        assert t.inner[0].x.equals(pa.array([1, 2, 3], pa.int64()))
+
+    def test_inner_attribute(self):
+        class Inner(qv.Table):
+            name = qv.StringAttribute()
+            x = qv.Float64Column()
+
+        class Outer(qv.Table):
+            inner = qv.SubTableListColumn(Inner)
+            name = qv.StringAttribute()
+
+        i1 = Inner.from_kwargs(name="foo", x=[1.0, 2.0, 3.0])
+        i2 = Inner.from_kwargs(name="foo", x=[4.0, 5.0, 6.0])
+
+        o = Outer.from_kwargs(inner=[i1, i2], name="bar")
+
+        assert len(o.inner) == 2
+        assert len(o.inner[0]) == 3
+        assert len(o[0].inner) == 1
+        assert len(o[0].inner[0]) == 3
+
+        assert o.inner[0].x.equals(pa.array([1.0, 2.0, 3.0], pa.float64()))
+        assert o.inner[0].name == "foo"
+
+    def test_inner_attribute_not_equal(self):
+        class Inner(qv.Table):
+            name = qv.StringAttribute()
+            x = qv.Float64Column()
+
+        class Outer(qv.Table):
+            inner = qv.SubTableListColumn(Inner)
+            name = qv.StringAttribute()
+
+        i1 = Inner.from_kwargs(name="foo", x=[1.0, 2.0, 3.0])
+        i2 = Inner.from_kwargs(name="bar", x=[4.0, 5.0, 6.0])
+
+        with pytest.raises(ValueError):
+            Outer.from_kwargs(inner=[i1, i2], name="bar")
+
+    def test_doubly_nested(self):
+        class Inner(qv.Table):
+            name = qv.StringAttribute()
+            x = qv.Float64Column()
+
+        class Middle(qv.Table):
+            inner = qv.SubTableListColumn(Inner)
+            name = qv.StringAttribute()
+
+        class Outer(qv.Table):
+            middle = qv.SubTableListColumn(Middle)
+            name = qv.StringAttribute()
+
+        i1 = Inner.from_kwargs(name="i", x=[1.0, 2.0, 3.0])
+        i2 = Inner.from_kwargs(name="i", x=[4.0, 5.0, 6.0])
+        m1 = Middle.from_kwargs(inner=[i1, i2], name="m")
+
+        i3 = Inner.from_kwargs(name="i", x=[7.0, 8.0, 9.0])
+        i4 = Inner.from_kwargs(name="i", x=[10.0, 11.0, 12.0])
+        m2 = Middle.from_kwargs(inner=[i3, i4], name="m")
+
+        o = Outer.from_kwargs(middle=[m1, m2], name="o")
+
+        assert len(o.middle) == 2
+        assert len(o.middle[0]) == 2
+        assert len(o.middle[0].inner) == 2
+        assert len(o.middle[0].inner[0]) == 3
+        assert o.middle[0].name == "m"
+        assert o.middle[0].inner[0].name == "i"
+        assert o.middle[0].inner[1].name == "i"
+
+        assert o.middle[1].name == "m"
+        assert o.middle[1].inner[0].name == "i"
+        assert o.middle[1].inner[1].name == "i"
+
+    def test_doubly_nested_different_attributes(self):
+        class Inner(qv.Table):
+            name = qv.StringAttribute()
+            x = qv.Float64Column()
+
+        class Middle(qv.Table):
+            inner = qv.SubTableListColumn(Inner)
+            name = qv.StringAttribute()
+
+        class Outer(qv.Table):
+            middle = qv.SubTableListColumn(Middle)
+            name = qv.StringAttribute()
+
+        i1 = Inner.from_kwargs(name="i_m1", x=[1.0, 2.0, 3.0])
+        i2 = Inner.from_kwargs(name="i_m1", x=[4.0, 5.0, 6.0])
+
+        m1 = Middle.from_kwargs(inner=[i1, i2], name="m1")
+
+        i3 = Inner.from_kwargs(name="i_m2", x=[7.0, 8.0, 9.0])
+        i4 = Inner.from_kwargs(name="i_m2", x=[10.0, 11.0, 12.0])
+        m2 = Middle.from_kwargs(inner=[i3, i4], name="m2")
+
+        with pytest.raises(ValueError):
+            Outer.from_kwargs(middle=[m1, m2], name="o")
+
+        m3 = Middle.from_kwargs(inner=[i3, i4], name="m1")
+        with pytest.raises(ValueError):
+            # m1 and m3 ave the same attribute, but the inner i3 and
+            # i4 are different from i1 and i2.
+            Outer.from_kwargs(middle=[m1, m3], name="o")
+
+
+def test_attr_equal():
+    class Inner(qv.Table):
+        name = qv.StringAttribute()
+        x = qv.Float64Column()
+
+    class Outer(qv.Table):
+        inner = Inner.as_column()
+        name = qv.StringAttribute()
+
+    i1 = Inner.from_kwargs(name="foo", x=[1.0, 2.0, 3.0])
+    i2 = Inner.from_kwargs(name="foo", x=[4.0, 5.0, 6.0])
+
+    assert i1._attr_equal(i2)
+
+    i3 = Inner.from_kwargs(name="bar", x=[1.0, 2.0, 3.0])
+
+    assert not i1._attr_equal(i3)
+
+    o1 = Outer.from_kwargs(inner=i1, name="bar")
+    o2 = Outer.from_kwargs(inner=i2, name="bar")
+
+    assert o1._attr_equal(o2)
+
+    o3 = Outer.from_kwargs(inner=i1, name="baz")
+
+    assert not o1._attr_equal(o3)
+
+    o4 = Outer.from_kwargs(inner=i3, name="bar")
+
+    assert not o1._attr_equal(o4)
