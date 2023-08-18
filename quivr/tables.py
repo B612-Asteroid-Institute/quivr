@@ -77,7 +77,8 @@ class Table:
 
     Table instances are immutable, but can be sliced, filtered,
     sorted, or otherwise manipulated, resulting in new Table
-    instances.
+    instances. In particular, see the :meth:`Table.set_column` method,
+    which returns a copy of the Table with a single column replaced.
 
     :cvar schema: The pyarrow schema for this table.
     :vartype schema: pyarrow.Schema

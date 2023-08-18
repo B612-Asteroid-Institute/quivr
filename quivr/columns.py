@@ -91,14 +91,6 @@ class Column:
             return self
         return obj.table.column(self.name)
 
-    def __set__(self, obj: tables.Table, value: pa.Array) -> None:
-        """
-        Sets the data for this column on a Table instance.
-
-        This method is part of the `descriptor protocol <https://docs.python.org/3/howto/descriptor.html>`_.
-        """
-        obj.table = self._set_on_pyarrow_table(obj.table, value)
-
     def __set_name__(self, owner: type, name: str) -> None:
         """
         Sets the name of the column.
@@ -231,9 +223,6 @@ class SubTableColumn(Column, Generic[T]):
 
         table = table.set_column(idx, self.pyarrow_field(), data)
         return table
-
-    def __set__(self, obj: tables.Table, value: T) -> None:
-        obj.table = self._set_on_pyarrow_table(obj.table, value)
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:
