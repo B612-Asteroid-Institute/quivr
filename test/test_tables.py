@@ -875,3 +875,67 @@ def test_set_column_changes_subtable_attribute():
 
     assert o2.inner.x.equals(pa.array([4, 5, 6], pa.int64()))
     assert o2.inner.name == "b"
+
+
+@pytest.mark.benchmark(group="column-access")
+class TestColumnAccessBenchmark:
+
+    def test_access_f64(self, benchmark):
+        class Table(qv.Table):
+            x = qv.Float64Column()
+
+        t = Table.from_kwargs(x=np.random.random(1_000_000))
+
+        benchmark(getattr, t, "x")
+
+
+    def test_access_subtable_f64(self, benchmark):
+        class Inner(qv.Table):
+            x = qv.Float64Column()
+
+        class Outer(qv.Table):
+            inner = Inner.as_column()
+
+        t = Outer.from_kwargs(
+            inner=Inner.from_kwargs(x=np.random.random(1_000_000))
+        )
+
+        def access():
+            return t.inner.x
+
+        benchmark(access)
+
+    def test_access_f64_from_csv(self, tmp_path, benchmark):
+        class Table(qv.Table):
+            x = qv.Float64Column()
+
+        t = Table.from_kwargs(x=np.random.random(1_000_000))
+        t.to_csv(tmp_path / "test.csv")
+
+        t2 = Table.from_csv(tmp_path / "test.csv")
+
+        benchmark(getattr, t2, "x")
+
+    def test_access_f64_raw(self, benchmark):
+        class Table(qv.Table):
+            x = qv.Float64Column()
+
+        t = Table.from_kwargs(x=np.random.random(1_000_000))
+
+        def raw_access():
+            return t.table["x"]
+        benchmark(raw_access)
+
+    def test_access_f64_raw_and_combine(self, benchmark):
+        class Table(qv.Table):
+            x = qv.Float64Column()
+
+        t = Table.from_kwargs(x=np.random.random(1_000_000))
+        def raw_access():
+            if t.table["x"].num_chunks == 1:
+                return t.table["x"].chunk(0)
+            else:
+                return t.table["x"].combine_chunks()
+
+        benchmark(raw_access)
+

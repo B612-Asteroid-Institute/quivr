@@ -384,3 +384,5 @@ def test_default_values(test_case):
 
     t = MyTable4.from_kwargs(col=[None, test_case.valid_value])
     assert t.col.to_pylist() == [test_case.expected_value, test_case.valid_value]
+
+
