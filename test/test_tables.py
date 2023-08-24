@@ -879,7 +879,6 @@ def test_set_column_changes_subtable_attribute():
 
 @pytest.mark.benchmark(group="column-access")
 class TestColumnAccessBenchmark:
-
     def test_access_f64(self, benchmark):
         class Table(qv.Table):
             x = qv.Float64Column()
@@ -888,7 +887,6 @@ class TestColumnAccessBenchmark:
 
         benchmark(getattr, t, "x")
 
-
     def test_access_subtable_f64(self, benchmark):
         class Inner(qv.Table):
             x = qv.Float64Column()
@@ -896,9 +894,7 @@ class TestColumnAccessBenchmark:
         class Outer(qv.Table):
             inner = Inner.as_column()
 
-        t = Outer.from_kwargs(
-            inner=Inner.from_kwargs(x=np.random.random(1_000_000))
-        )
+        t = Outer.from_kwargs(inner=Inner.from_kwargs(x=np.random.random(1_000_000)))
 
         def access():
             return t.inner.x
@@ -924,6 +920,7 @@ class TestColumnAccessBenchmark:
 
         def raw_access():
             return t.table["x"]
+
         benchmark(raw_access)
 
     def test_access_f64_raw_and_combine(self, benchmark):
@@ -931,6 +928,7 @@ class TestColumnAccessBenchmark:
             x = qv.Float64Column()
 
         t = Table.from_kwargs(x=np.random.random(1_000_000))
+
         def raw_access():
             if t.table["x"].num_chunks == 1:
                 return t.table["x"].chunk(0)
@@ -938,4 +936,3 @@ class TestColumnAccessBenchmark:
                 return t.table["x"].combine_chunks()
 
         benchmark(raw_access)
-
