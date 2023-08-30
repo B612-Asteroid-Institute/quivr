@@ -287,7 +287,7 @@ class Int8Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int8Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Int16Column(Column):
@@ -319,7 +319,7 @@ class Int16Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int16Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Int32Column(Column):
@@ -351,7 +351,7 @@ class Int32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int32Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Int64Column(Column):
@@ -383,7 +383,7 @@ class Int64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int64Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class UInt8Column(Column):
@@ -415,7 +415,7 @@ class UInt8Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt8Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class UInt16Column(Column):
@@ -447,7 +447,7 @@ class UInt16Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt16Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class UInt32Column(Column):
@@ -479,7 +479,7 @@ class UInt32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt32Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class UInt64Column(Column):
@@ -511,7 +511,7 @@ class UInt64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt64Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Float16Column(Column):
@@ -551,7 +551,7 @@ class Float16Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.HalfFloatArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Float32Column(Column):
@@ -583,7 +583,7 @@ class Float32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.FloatArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Float64Column(Column):
@@ -615,7 +615,7 @@ class Float64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.DoubleArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class BooleanColumn(Column):
@@ -645,7 +645,7 @@ class BooleanColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[pa.BooleanArray, Self]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class StringColumn(Column):
@@ -681,7 +681,7 @@ class StringColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[pa.StringArray, Self]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class LargeBinaryColumn(Column):
@@ -712,7 +712,7 @@ class LargeBinaryColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeBinaryArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class LargeStringColumn(Column):
@@ -743,7 +743,7 @@ class LargeStringColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeStringArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Date32Column(Column):
@@ -773,7 +773,7 @@ class Date32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Date32Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Date64Column(Column):
@@ -803,7 +803,7 @@ class Date64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Date64Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class TimestampColumn(Column):
@@ -856,7 +856,7 @@ class TimestampColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.TimestampArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Time32Column(Column):
@@ -900,7 +900,7 @@ class Time32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Time32Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Time64Column(Column):
@@ -944,7 +944,7 @@ class Time64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Time64Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class DurationColumn(Column):
@@ -978,7 +978,7 @@ class DurationColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.DurationArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class MonthDayNanoIntervalColumn(Column):
@@ -1016,7 +1016,7 @@ class MonthDayNanoIntervalColumn(Column):
     ) -> Union[Self, pa.MonthDayNanoIntervalArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class BinaryColumn(Column):
@@ -1044,7 +1044,7 @@ class BinaryColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.BinaryArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class FixedSizeBinaryColumn(Column):
@@ -1082,7 +1082,7 @@ class FixedSizeBinaryColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.FixedSizeBinaryArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Decimal128Column(Column):
@@ -1136,7 +1136,7 @@ class Decimal128Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Decimal128Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class Decimal256Column(Column):
@@ -1180,7 +1180,7 @@ class Decimal256Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Decimal256Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class NullColumn(Column):
@@ -1210,7 +1210,7 @@ class NullColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.NullArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 # Complex types follow
@@ -1253,7 +1253,7 @@ class ListColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.ListArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class FixedSizeListColumn(Column):
@@ -1298,7 +1298,7 @@ class FixedSizeListColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.FixedSizeListArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class LargeListColumn(Column):
@@ -1340,7 +1340,7 @@ class LargeListColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeListArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class MapColumn(Column):
@@ -1383,7 +1383,7 @@ class MapColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.MapArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class DictionaryColumn(Column):
@@ -1431,7 +1431,7 @@ class DictionaryColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.DictionaryArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])  # type: ignore
+        return _fast_combine_chunks(obj.table[self.name])
 
 
 class StructColumn(Column):
