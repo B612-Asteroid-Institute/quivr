@@ -4,6 +4,10 @@ This file documents notable changes between versions of quivr.
 
 ## [Unreleased]
 
+Nothing yet!
+
+## [0.6.5] - 2023-08-30
+
 ### Fixed
 
 - Concatenating empty tables no longer returns a ValueError.
@@ -223,7 +227,8 @@ First tagged release. Many, many changes to the core concept.
 
 Initial commit of the original idea, implemented via metaclasses.
 
-[Unreleased]: https://github.com/spenczar/quivr/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/spenczar/quivr/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/spenczar/quivr/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/spenczar/quivr/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/spenczar/quivr/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/spenczar/quivr/compare/v0.6.1...v0.6.2
