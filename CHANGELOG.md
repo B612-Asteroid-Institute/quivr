@@ -4,7 +4,9 @@ This file documents notable changes between versions of quivr.
 
 ## [Unreleased]
 
-Nothing yet!
+### Fixed
+
+- Concatenating empty tables no longer returns a ValueError.
 
 ## [0.6.4] - 2023-08-24
 

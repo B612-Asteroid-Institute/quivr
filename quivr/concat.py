@@ -38,8 +38,12 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
                     "All tables must have the same attribute values to concatenate"
                 )
 
-    if len(batches) == 0:
+    if first:
         raise ValueError("No values to concatenate")
+
+    if len(batches) == 0:
+        return first_cls.empty()
+
     table = pa.Table.from_batches(batches)
     result = first_cls.from_pyarrow(table=table)
     if defrag:

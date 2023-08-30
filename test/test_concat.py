@@ -52,9 +52,19 @@ def test_concatenate_nested():
     np.testing.assert_array_equal(have.id, ["v1", "v2", "v3", "v4", "v5", "v6"])
 
 
-def test_concatenate_empty():
+def test_concatenate_empty_list():
     with pytest.raises(ValueError, match="No values to concatenate"):
         qv.concatenate([])
+
+
+def test_concatenate_empty_tables():
+    t1 = Pair.empty()
+    t2 = Pair.empty()
+    have = qv.concatenate([t1, t2])
+    assert len(have) == 0
+
+    have = qv.concatenate([t1])
+    assert len(have) == 0
 
 
 @pytest.mark.benchmark(group="ops")
