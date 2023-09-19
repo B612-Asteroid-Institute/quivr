@@ -1090,7 +1090,7 @@ class Table:
         self,
         func: Callable[[Self], T],
         chunk_size: int = 10000,
-            max_workers: Optional[int] = None,
+        max_workers: Optional[int] = None,
     ) -> Iterator[T]:
         """Call func on self's data in parallel.
 
