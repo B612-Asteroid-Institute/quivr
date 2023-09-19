@@ -10,8 +10,10 @@ if sys.version_info < (3, 11):
 else:
     from typing import Self
 
+import concurrent.futures
 from typing import (
     Any,
+    Callable,
     ClassVar,
     Iterator,
     List,
@@ -50,6 +52,7 @@ DataSourceType: TypeAlias = Union[
     pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any], ArrowArrayProvider
 ]
 AnyTable = TypeVar("AnyTable", bound="Table")
+T = TypeVar("T")
 
 # If a table uses any of the following names, it will break quivr
 # internals entirely, so they must be rejected.
@@ -1082,3 +1085,36 @@ class Table:
 
         table = column._set_on_pyarrow_table(self.table, data)
         return self.from_pyarrow(table=table, validate=True, permit_nulls=False)
+
+    def parallel_apply(
+        self,
+        func: Callable[[Self], T],
+        chunk_size: int = 10000,
+    ) -> Iterator[T]:
+        """Call func on self's data in parallel.
+
+        :param func: A function that takes a Table and returns a value.
+
+        :param chunk_size: The number of rows to process in each
+        chunk. One chunk may be smaller than this if the table has
+        fewer rows.
+
+        :return: An iterable of the return values of func. The order of
+        the values is not guaranteed to match the order of the rows in
+        the table.
+        """
+        futures = []
+
+        def actual_func(batch: pa.RecordBatch) -> T:
+            table = pa.Table.from_batches([batch], schema=self.table.schema)
+            # Assume the table remains valid for batches
+            instance = self.from_pyarrow(table, validate=False)
+            return func(instance)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for batch in self.table.to_batches(chunk_size):
+                future = executor.submit(actual_func, batch)
+                futures.append(future)
+
+            for future in concurrent.futures.as_completed(futures):
+                yield future.result()
