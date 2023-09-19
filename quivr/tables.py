@@ -1090,19 +1090,27 @@ class Table:
         self,
         func: Callable[[Self], T],
         chunk_size: int = 10000,
+            max_workers: Optional[int] = None,
     ) -> Iterator[T]:
         """Call func on self's data in parallel.
 
         :param func: A function that takes a Table and returns a value.
-
         :param chunk_size: The number of rows to process in each
         chunk. One chunk may be smaller than this if the table has
         fewer rows.
 
+        :param max_workers: The maximum number of threads to use. If
+        None, the number of threads is chosen automatically to be the
+        number of CPU cores.
+
         :return: An iterable of the return values of func. The order of
         the values is not guaranteed to match the order of the rows in
         the table.
+
         """
+        if max_workers is None:
+            max_workers = os.cpu_count()
+
         futures = []
 
         def actual_func(batch: pa.RecordBatch) -> T:
@@ -1111,7 +1119,7 @@ class Table:
             instance = self.from_pyarrow(table, validate=False)
             return func(instance)
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             for batch in self.table.to_batches(chunk_size):
                 future = executor.submit(actual_func, batch)
                 futures.append(future)
