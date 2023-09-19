@@ -2,7 +2,7 @@ import abc
 import concurrent.futures
 import mmap
 from multiprocessing import managers, shared_memory
-from typing import Any, Callable, Iterator, TypeVar
+from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, TypeVar
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -55,7 +55,13 @@ def from_shared_memory(shm: shared_memory.SharedMemory, table_class: type[T]) ->
     return instance
 
 
-def _run_on_shared_memory(shm_name: str, table_class: type[T], func: Callable[[T], Any]) -> Any:
+def _run_on_shared_memory(
+    shm_name: str,
+    table_class: type[T],
+    func: Callable[[T, ...], Any],
+    args: Sequence[Any],
+    kwargs: Mapping[str, Any],
+) -> Any:
     """
     Run a function on a table stored in shared memory.
     """
@@ -65,7 +71,7 @@ def _run_on_shared_memory(shm_name: str, table_class: type[T], func: Callable[[T
 
     # Run the function
     instance = from_shared_memory(shm, table_class)
-    return func(instance)
+    return func(instance, *args, **kwargs)
 
 
 class Partitioning(abc.ABC):
@@ -129,24 +135,47 @@ class GroupedPartitioning(Partitioning):
 
 def execute_parallel(
     table: T,
-    func: Callable[[T], Any],
+    func: Callable[[T, ...], Any],
     max_workers: int = 4,
     partitioning: Partitioning = ChunkedPartitioning(chunk_size=1000),
+    args: Optional[Sequence[Any]] = None,
+    kwargs: Optional[Mapping[str, Any]] = None,
 ) -> Iterator[Any]:
-    """
-    Execute a function in parallel on a Table.
+    """Execute a function in parallel on a Table.
 
     This function partitions the Table into multiple Tables, and executes the function
     on each partition in parallel. The results are returned as a Python list.
 
     :param table: The Table to execute the function on.
-    :param func: The function to execute.
+
+    :param func: The function to execute. The function takes a slice
+        of the Table as its first argument, and can optionally take
+        additional arguments and keyword arguments, which must be
+        passed in to ``execute_parallel`` as ``args`` and ``kwargs``.
+
     :param max_workers: The maximum number of workers to use.
-    :param partitioning: The partitioning strategy to use. The default is to partition
-        the Table into chunks of 1000 rows. The partitioning's ``partition`` method
-        will be called with the Table as its only argument, and the values from the
-        iterator will be fed to a worker pool one-by-one.
+
+    :param partitioning: The partitioning strategy to use. The default
+        is to partition the Table into chunks of 1000 rows. The
+        partitioning's ``partition`` method will be called with the
+        Table as its only argument, and the values from the iterator
+        will be fed to a worker pool one-by-one.
+
+    :param args: Additional arguments to pass to the function. These
+        must be pickleable.
+
+    :param kwargs: Additional keyword arguments to pass to the
+        function. The values must be pickleable.
+
+    :return: An iterator over the results of the function, as applied
+        to each partition of the table. The results are returned in
+        an arbitrary order as they are completed.
+
     """
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
 
     # Create a pool of workers
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -165,6 +194,8 @@ def execute_parallel(
                     shm.name,
                     table.__class__,
                     func,
+                    args,
+                    kwargs,
                 )
                 futures.append(future)
 

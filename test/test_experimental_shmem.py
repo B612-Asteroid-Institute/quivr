@@ -118,3 +118,55 @@ def test_execute_parallel_nested_attributes():
     assert len(results_list) == 4
     sorted_results = sorted(results_list)
     assert sorted_results == [True, True, True, True]
+
+
+def multiply_by_n(pairs: Pair, n: float) -> Pair:
+    x = pairs.x.to_numpy() * n
+    y = pairs.y.to_numpy() * n
+    return Pair.from_kwargs(x=x, y=y)
+
+
+def test_execute_parallel_extra_args():
+    pairs = Pair.from_kwargs(
+        x=[1, 2, 3, 4, 5, 6, 7, 8],
+        y=[8, 7, 6, 5, 4, 3, 2, 1],
+    )
+    partitioning = qv_shmem.ChunkedPartitioning(chunk_size=2)
+
+    results_iter = qv_shmem.execute_parallel(
+        pairs, multiply_by_n, partitioning=partitioning, max_workers=2, args=[2.0]
+    )
+    results_list = list(results_iter)
+
+    assert len(results_list) == 4
+    sorted_results = sorted(results_list, key=lambda p: p.x[0].as_py())
+
+    combined = qv.concatenate(sorted_results)
+
+    assert combined.x.to_pylist() == [2, 4, 6, 8, 10, 12, 14, 16]
+    assert combined.y.to_pylist() == [16, 14, 12, 10, 8, 6, 4, 2]
+
+
+def test_execute_parallel_extra_kwargs():
+    pairs = Pair.from_kwargs(
+        x=[1, 2, 3, 4, 5, 6, 7, 8],
+        y=[8, 7, 6, 5, 4, 3, 2, 1],
+    )
+    partitioning = qv_shmem.ChunkedPartitioning(chunk_size=2)
+
+    results_iter = qv_shmem.execute_parallel(
+        pairs,
+        multiply_by_n,
+        partitioning=partitioning,
+        max_workers=2,
+        kwargs={"n": 2.0},
+    )
+    results_list = list(results_iter)
+
+    assert len(results_list) == 4
+    sorted_results = sorted(results_list, key=lambda p: p.x[0].as_py())
+
+    combined = qv.concatenate(sorted_results)
+
+    assert combined.x.to_pylist() == [2, 4, 6, 8, 10, 12, 14, 16]
+    assert combined.y.to_pylist() == [16, 14, 12, 10, 8, 6, 4, 2]
