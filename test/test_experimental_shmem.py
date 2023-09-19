@@ -1,7 +1,9 @@
 import concurrent.futures.process
+import multiprocessing.managers
 import os
 import signal
 
+import pyarrow as pa
 import pytest
 
 import quivr as qv
@@ -210,3 +212,29 @@ def test_execute_parallel_crash():
 
     with pytest.raises(concurrent.futures.process.BrokenProcessPool):
         list(results_iter)
+
+
+def test_shared_memory_roundtrip():
+    bytes1 = pa.total_allocated_bytes()
+
+    pairs = Pair.from_kwargs(
+        x=list(range(100000)),
+        y=list(range(100000)),
+    )
+
+    bytes2 = pa.total_allocated_bytes()
+
+    assert bytes2 > bytes1, "creating a new Table should allocate memory"
+
+    with multiprocessing.managers.SharedMemoryManager() as mgr:
+        shm_table = qv_shmem.to_shared_memory(pairs, mgr)
+
+        bytes3 = pa.total_allocated_bytes()
+        assert bytes3 == bytes2, "converting to shared memory should not allocate memory"
+
+        pairs2 = qv_shmem.from_shared_memory(shm_table, Pair)
+
+        bytes4 = pa.total_allocated_bytes()
+        assert bytes4 == bytes2, "loading from shared memory should not allocate memory"
+
+        assert pairs2 == pairs
