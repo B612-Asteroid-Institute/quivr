@@ -1,3 +1,9 @@
+import concurrent.futures.process
+import os
+import signal
+
+import pytest
+
 import quivr as qv
 from quivr.experimental import shmem as qv_shmem
 
@@ -170,3 +176,37 @@ def test_execute_parallel_extra_kwargs():
 
     assert combined.x.to_pylist() == [2, 4, 6, 8, 10, 12, 14, 16]
     assert combined.y.to_pylist() == [16, 14, 12, 10, 8, 6, 4, 2]
+
+
+def raise_exception(pairs: Pair):
+    raise ValueError("foo")
+
+
+def test_execute_parallel_raise_exception():
+    pairs = Pair.from_kwargs(
+        x=[1, 2, 3, 4, 5, 6, 7, 8],
+        y=[8, 7, 6, 5, 4, 3, 2, 1],
+    )
+    partitioning = qv_shmem.ChunkedPartitioning(chunk_size=2)
+
+    results_iter = qv_shmem.execute_parallel(pairs, raise_exception, partitioning=partitioning, max_workers=2)
+
+    with pytest.raises(ValueError):
+        list(results_iter)
+
+
+def crash_process(pairs: Pair):
+    os.kill(os.getpid(), signal.SIGKILL)
+
+
+def test_execute_parallel_crash():
+    pairs = Pair.from_kwargs(
+        x=[1, 2, 3, 4, 5, 6, 7, 8],
+        y=[8, 7, 6, 5, 4, 3, 2, 1],
+    )
+    partitioning = qv_shmem.ChunkedPartitioning(chunk_size=2)
+
+    results_iter = qv_shmem.execute_parallel(pairs, crash_process, partitioning=partitioning, max_workers=2)
+
+    with pytest.raises(concurrent.futures.process.BrokenProcessPool):
+        list(results_iter)
