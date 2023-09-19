@@ -142,7 +142,11 @@ def test_execute_parallel_extra_args():
     partitioning = qv_shmem.ChunkedPartitioning(chunk_size=2)
 
     results_iter = qv_shmem.execute_parallel(
-        pairs, multiply_by_n, partitioning=partitioning, max_workers=2, args=[2.0]
+        pairs,
+        multiply_by_n,
+        2.0,
+        partitioning=partitioning,
+        max_workers=2,
     )
     results_list = list(results_iter)
 
@@ -165,9 +169,9 @@ def test_execute_parallel_extra_kwargs():
     results_iter = qv_shmem.execute_parallel(
         pairs,
         multiply_by_n,
+        n=2.0,
         partitioning=partitioning,
         max_workers=2,
-        kwargs={"n": 2.0},
     )
     results_list = list(results_iter)
 
@@ -267,9 +271,9 @@ def test_share_auxiliary_table():
     results_iter = qv_shmem.execute_parallel(
         pairs,
         min_pair,
+        pairs2,
         partitioning=partitioning,
         max_workers=2,
-        args=[pairs2],
     )
     results_list = list(results_iter)
 
@@ -286,9 +290,9 @@ def test_share_auxiliary_table():
     results_iter = qv_shmem.execute_parallel(
         pairs,
         min_pair,
+        p2=pairs2,
         partitioning=partitioning,
         max_workers=2,
-        kwargs={"p2": pairs2},
     )
 
     sorted_results_2 = sorted(list(results_iter), key=lambda p: p.x[0].as_py())
