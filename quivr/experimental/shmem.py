@@ -4,17 +4,15 @@ import abc
 import concurrent.futures
 import dataclasses
 import mmap
+import sys
 from multiprocessing import managers, shared_memory
-from typing import (
-    Any,
-    Callable,
-    Concatenate,
-    Generic,
-    Iterator,
-    ParamSpec,
-    Self,
-    TypeVar,
-)
+
+if sys.version_info < (3, 11):
+    from typing_extensions import Self
+else:
+    from typing import Self
+
+from typing import Any, Callable, Concatenate, Generic, Iterator, ParamSpec, TypeVar
 
 import pyarrow as pa
 import pyarrow.compute as pc
