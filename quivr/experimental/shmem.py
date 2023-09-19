@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import abc
 import concurrent.futures
+import dataclasses
 import mmap
 from multiprocessing import managers, shared_memory
-from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, TypeVar
+from typing import Any, Callable, Iterator, Mapping, Optional, Self, Sequence, TypeVar
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -56,8 +59,7 @@ def from_shared_memory(shm: shared_memory.SharedMemory, table_class: type[T]) ->
 
 
 def _run_on_shared_memory(
-    shm_name: str,
-    table_class: type[T],
+    ref: TableReference,
     func: Callable[[T, ...], Any],
     args: Sequence[Any],
     kwargs: Mapping[str, Any],
@@ -65,12 +67,12 @@ def _run_on_shared_memory(
     """
     Run a function on a table stored in shared memory.
     """
+    # Load the shared memory object
+    instance = ref.load()
 
-    # Create a shared memory object
-    shm = shared_memory.SharedMemory(name=shm_name)
-
-    # Run the function
-    instance = from_shared_memory(shm, table_class)
+    # Load from args and kwargs
+    args = [arg.load() if isinstance(arg, TableReference) else arg for arg in args]
+    kwargs = {k: v.load() if isinstance(v, TableReference) else v for k, v in kwargs.items()}
     return func(instance, *args, **kwargs)
 
 
@@ -181,18 +183,23 @@ def execute_parallel(
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         # Create a shared memory object
         with managers.SharedMemoryManager() as mgr:
-            partitions = []
-            for partition in partitioning.partition(table):
-                shm = to_shared_memory(partition, mgr)
-                partitions.append(shm)
+            # If there are tables in the args or kwargs, convert them to
+            # shared memory objects.
+            for i, arg in enumerate(args):
+                if isinstance(arg, qv.Table):
+                    args[i] = TableReference.from_instance(arg, mgr)
+
+            for key, value in kwargs.items():
+                if isinstance(value, qv.Table):
+                    kwargs[key] = TableReference.from_instance(value, mgr)
 
             # Execute the function in parallel
             futures = []
-            for shm in partitions:
+            for partition in partitioning.partition(table):
+                ref = TableReference.from_instance(partition, mgr)
                 future = executor.submit(
                     _run_on_shared_memory,
-                    shm.name,
-                    table.__class__,
+                    ref,
                     func,
                     args,
                     kwargs,
@@ -202,3 +209,36 @@ def execute_parallel(
             # Wait for the results
             for future in concurrent.futures.as_completed(futures):
                 yield future.result()
+
+
+@dataclasses.dataclass
+class TableReference:
+    """
+    A reference to a Table in shared memory.
+
+    This class is used to pass a reference to a Table to a worker
+    process, without actually copying the Table into the worker
+    process's memory. The worker process can then load the Table from
+    shared memory using the ``load`` method.
+    """
+
+    shm_name: str
+    table_class: type[T]
+
+    def load(self) -> T:
+        """
+        Load the Table from shared memory.
+        """
+        shm = shared_memory.SharedMemory(name=self.shm_name)
+        return from_shared_memory(shm, self.table_class)
+
+    @classmethod
+    def from_instance(cls, instance: T, mgr: managers.SharedMemoryManager) -> Self:
+        """
+        Create a TableReference from a Table instance.
+        """
+        shm = to_shared_memory(instance, mgr)
+        return cls(
+            shm.name,
+            instance.__class__,
+        )

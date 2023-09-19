@@ -238,3 +238,59 @@ def test_shared_memory_roundtrip():
         assert bytes4 == bytes2, "loading from shared memory should not allocate memory"
 
         assert pairs2 == pairs
+
+
+def min_pair(p1: Pair, p2: Pair) -> Pair:
+    """Function which requires two Tables, in order to
+    demonstrate shmem sharing of auxiliary tables
+
+    """
+    xmin = min(p1.x.to_numpy().min(), p2.x.to_numpy().min())
+    ymin = min(p1.y.to_numpy().min(), p2.y.to_numpy().min())
+    return Pair.from_kwargs(x=[xmin], y=[ymin])
+
+
+def test_share_auxiliary_table():
+    pairs = Pair.from_kwargs(
+        x=[1, 2, 3, 4],
+        y=[2, 3, 4, 5],
+    )
+
+    pairs2 = Pair.from_kwargs(
+        x=[2, 3, 4],
+        y=[3, 4, 5],
+    )
+
+    partitioning = qv_shmem.ChunkedPartitioning(chunk_size=2)
+
+    # Passed in as arg
+    results_iter = qv_shmem.execute_parallel(
+        pairs,
+        min_pair,
+        partitioning=partitioning,
+        max_workers=2,
+        args=[pairs2],
+    )
+    results_list = list(results_iter)
+
+    assert len(results_list) == 2
+    sorted_results = sorted(results_list, key=lambda p: p.x[0].as_py())
+
+    assert sorted_results[0].x.to_pylist() == [1]
+    assert sorted_results[0].y.to_pylist() == [2]
+
+    assert sorted_results[1].x.to_pylist() == [2]
+    assert sorted_results[1].y.to_pylist() == [3]
+
+    # Passed in as kwarg
+    results_iter = qv_shmem.execute_parallel(
+        pairs,
+        min_pair,
+        partitioning=partitioning,
+        max_workers=2,
+        kwargs={"p2": pairs2},
+    )
+
+    sorted_results_2 = sorted(list(results_iter), key=lambda p: p.x[0].as_py())
+
+    assert sorted_results == sorted_results_2
