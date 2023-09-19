@@ -132,7 +132,7 @@ def execute_parallel(
     func: Callable[[T], Any],
     max_workers: int = 4,
     partitioning: Partitioning = ChunkedPartitioning(chunk_size=1000),
-) -> list[Any]:
+) -> Iterator[Any]:
     """
     Execute a function in parallel on a Table.
 
@@ -169,9 +169,5 @@ def execute_parallel(
                 futures.append(future)
 
             # Wait for the results
-            results = []
-            for future in futures:
-                results.append(future.result())
-
-    # Return the results
-    return results
+            for future in concurrent.futures.as_completed(futures):
+                yield future.result()
