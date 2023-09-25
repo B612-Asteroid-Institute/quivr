@@ -4,7 +4,26 @@ This file documents notable changes between versions of quivr.
 
 ## [Unreleased]
 
-Nothing yet!
+### Added
+
+`quivr.experimental.shmem` provides new utilities for run functions
+against quivr Tables with multiple processes in shared memory:
+
+ - `to_shared_memory` and `from_shared_memory` can be used to read and
+   write a quivr Table in shared memory. This allows separate
+   processes to work off of slices of a Table without a copy of any
+   data, or with redundant memory usage.
+ - `execute_parallel` is a function that simplifies running a function
+   against a Table's data with multiple processes. The Table's data
+   will be split up using a configurable partitioning strategy, and
+   each partition will be passed to a separate worker. Results are
+   returned as they are completed in a streaming iterator.
+ - `ChunkedPartitioning` and `GroupedPartitioning` are classes which
+   represent two possible partitioning strategies: uniform chunks of
+   fixed size, or partitions which share a common particular
+   value. Additional partitioning strategies can be provided by
+   providing a subclass implementation of the `Partitioning` class.
+
 
 ## [0.6.5] - 2023-08-30
 
