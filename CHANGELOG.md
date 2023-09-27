@@ -2,7 +2,7 @@
 
 This file documents notable changes between versions of quivr.
 
-## [Unreleased]
+## Unreleased
 
 ### Added
 
@@ -24,6 +24,11 @@ against quivr Tables with multiple processes in shared memory:
    value. Additional partitioning strategies can be provided by
    providing a subclass implementation of the `Partitioning` class.
 
+## [0.6.6] - 2023-09-27
+
+### Fixed
+
+- Columns which are masked to hide all data now can be accessed (#51).
 
 ## [0.6.5] - 2023-08-30
 
