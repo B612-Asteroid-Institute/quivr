@@ -1,8 +1,10 @@
 import pyarrow as pa
+
 import quivr as qv
 
 
 def test_fast_combine_chunks_masked_array():
+    # Regression test for github.com/spenczar/quivr/issues/51
     # Create a ChunkedArray with entirely masked values
     class MyTable(qv.Table):
         col = qv.Int64Column()

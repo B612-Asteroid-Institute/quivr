@@ -8,6 +8,7 @@ import pyarrow as pa
 import pytest
 
 import quivr as qv
+import quivr.columns
 
 current_id = 0
 
@@ -384,3 +385,29 @@ def test_default_values(test_case):
 
     t = MyTable4.from_kwargs(col=[None, test_case.valid_value])
     assert t.col.to_pylist() == [test_case.expected_value, test_case.valid_value]
+
+
+class TestFastCombineChunks:
+    def test_no_chunks(self):
+        no_chunks = pa.chunked_array([], type=pa.int64())
+
+        have = quivr.columns._fast_combine_chunks(no_chunks)
+        want = pa.array([], type=pa.int64())
+
+        assert have.equals(want)
+
+    def test_one_chunk(self):
+        one_chunk = pa.chunked_array([[1, 2, 3]], type=pa.int64())
+
+        have = quivr.columns._fast_combine_chunks(one_chunk)
+        want = pa.array([1, 2, 3], type=pa.int64())
+
+        assert have.equals(want)
+
+    def test_two_chunks(self):
+        two_chunks = pa.chunked_array([[1, 2, 3], [4, 5, 6]], type=pa.int64())
+
+        have = quivr.columns._fast_combine_chunks(two_chunks)
+        want = pa.array([1, 2, 3, 4, 5, 6], type=pa.int64())
+
+        assert have.equals(want)

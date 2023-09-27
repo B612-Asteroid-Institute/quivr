@@ -1498,6 +1498,6 @@ class RunEndEncodedColumn(Column):
 
 def _fast_combine_chunks(chunked_array: pa.ChunkedArray) -> pa.Array:
     """Combine a chunked array into a single array."""
-    if chunked_array.num_chunks == 0:
+    if chunked_array.num_chunks == 1:
         return chunked_array.chunk(0)
     return chunked_array.combine_chunks()
