@@ -594,8 +594,7 @@ class Table:
         :param column_name: The name of the column to select on.
         :param value: The value to match.
         """
-        table = self.table.filter(pc.field(column_name) == value)
-        return self.__class__(table)
+        return self.apply_mask(pc.equal(self.column(column_name), value))
 
     def sort_by(self, by: Union[str, list[tuple[str, str]]]) -> Self:
         """Sorts the Table by the given column name (or multiple
