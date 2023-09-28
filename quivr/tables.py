@@ -647,18 +647,46 @@ class Table:
         """
         return self.apply_mask(pc.equal(self.column(column_name), value))
 
-    def sort_by(self, by: Union[str, list[tuple[str, str]]]) -> Self:
+    def sort_by(self, by: Union[str, list[str], list[tuple[str, str]]]) -> Self:
         """Sorts the Table by the given column name (or multiple
         columns). This operation requires a copy, and returns a new
-        Table using the copied data.
+        Table using the copied data. Supports dot-delimited nested columns.
 
-        by should be a column name to sort by, or a list of (column,
-        order) tuples, where order can be "ascending" or "descending".
+        by should be a column name to sort by, a list of column names, or a list (column,
+        order) tuples, where order can be "ascending" or "descending". If no order is
+        specified, "ascending" is used.
 
-        :param by: The column name or list of (column, order) tuples to sort by.
+        :param by: The column name or list of names, or list of (column, order) tuples to sort by.
         """
-        table = self.table.sort_by(by)
-        return self.__class__(table)
+        if isinstance(by, str):
+            by = [(by, "ascending")]
+
+        columns = []
+        names = []
+        by_formatted = []
+        for by_i in by:
+            if isinstance(by_i, tuple):
+                column, order = by_i
+
+                # Check if the sort order for this tuple is valid
+                if order != "ascending" and order != "descending":
+                    raise ValueError(f"Invalid sort order: {order}")
+
+            elif isinstance(by_i, str):
+                # If the sort order is not specified, default to ascending
+                column = by_i
+                order = "ascending"
+
+            else:
+                raise ValueError(f"Invalid sort key: {by_i}")
+
+            by_formatted.append((column, order))
+            columns.append(self.column(column))
+            names.append(column)
+
+        table = pa.table(columns, names=names)
+        indices = pc.sort_indices(table, sort_keys=by_formatted)
+        return self.take(indices)
 
     def chunk_counts(self) -> dict[str, int]:
         """Returns the number of discrete memory chunks that make up
