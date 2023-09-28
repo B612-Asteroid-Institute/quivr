@@ -668,9 +668,16 @@ class Table:
     def column(self, column_name: str) -> pa.ChunkedArray:
         """
         Returns the column with the given name as a raw pyarrow ChunkedArray.
+        Column can be a nested column, in which case, this function will recursively
+        search for the column through the nested subtables.
 
         :param column_name: The name of the column to return.
         """
+        if "." in column_name:
+            column_name, subkey = column_name.split(".", 1)
+            subtable = getattr(self, column_name)
+            return subtable.column(subkey)
+
         return self.table.column(column_name)
 
     def __repr__(self) -> str:
