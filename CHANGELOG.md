@@ -25,7 +25,7 @@ against quivr Tables with multiple processes in shared memory:
 
 
 - Conversion of Tables to and from pandas DataFrames now can preserve
-  Table attributes. Three possible approaches are available:
+  Table attributes (#56). Three possible approaches are available:
   - "add_columns": Store attribute values by repeating them in every
     row of the dataframe. Each attribute gets a separate column. For
     subtables, attributes are stored under a dot-delimited prefix.
@@ -37,6 +37,8 @@ against quivr Tables with multiple processes in shared memory:
   dataframe is loaded with `from_dataframe` or `from_flat_dataframe`,
   attributes are inferred.
 
+- Column names can be dot-delimited in `Table.select` and
+  `Table.column` to reference subtables (#53).
 
 ## [0.6.6] - 2023-09-27
 
