@@ -13,8 +13,10 @@ else:
 from typing import (
     Any,
     ClassVar,
+    Hashable,
     Iterator,
     List,
+    Literal,
     Optional,
     Protocol,
     Type,
@@ -33,7 +35,8 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
-from . import attributes, columns, errors, schemagraph, validators
+from . import attributes as attr_module
+from . import columns, errors, schemagraph, validators
 
 
 class ArrowArrayProvider(Protocol):
@@ -92,7 +95,7 @@ class Table:
     table: pa.Table
 
     _quivr_subtables: ClassVar[dict[str, columns.SubTableColumn[Any]]]
-    _quivr_attributes: ClassVar[dict[str, attributes.Attribute[Any]]]
+    _quivr_attributes: ClassVar[dict[str, attr_module.Attribute[Any]]]
     _column_validators: ClassVar[dict[str, validators.Validator]]
 
     def __init_subclass__(cls: Type["Table"], **kwargs: Any):
@@ -111,7 +114,7 @@ class Table:
                     column_validators[name] = obj.validator
                 if isinstance(obj, columns.SubTableColumn):
                     subtables[name] = obj
-            elif isinstance(obj, attributes.Attribute):
+            elif isinstance(obj, attr_module.Attribute):
                 attrs[name] = obj
 
         # Generate a pyarrow schema
@@ -443,6 +446,21 @@ class Table:
         """
 
         table = pa.Table.from_pandas(df, schema=cls.schema)
+        # If attributes are present on the dataframe, use them.
+        if df.attrs:
+            for k, v in df.attrs.items():
+                if k not in kwargs and k in cls._quivr_attributes:
+                    kwargs[str(k)] = v
+
+        for attr_name, descriptor in cls._quivr_attributes.items():
+            if attr_name not in kwargs:
+                # Maybe there is a column that has the value?
+                if attr_name in df.columns:
+                    column = df[attr_name]
+                    if len(column) > 0:
+                        # We need to take care with types here, since the
+                        # pandas series might be a non-python-native type.
+                        kwargs[attr_name] = descriptor._type(column[0])
         return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
 
     @classmethod
@@ -504,8 +522,7 @@ class Table:
                 struct_fields.append(field)
 
         if len(struct_fields) == 0:
-            table = pa.Table.from_pandas(df, schema=cls.schema)
-            return cls.from_pyarrow(table=table, validate=validate, permit_nulls=False, **kwargs)
+            return cls.from_dataframe(df, validate=validate, **kwargs)
 
         root = pa.field("", pa.struct(cls.schema))
 
@@ -521,8 +538,11 @@ class Table:
         #
         # Then the struct array for the inner struct will be stored in
         # the dictionary at the key "foo.bar".
-
         struct_arrays: dict[str, pa.StructArray] = {}
+
+        # Columns might also store scalar attribute data. Gather that as we go, if it's present.
+        attr_keys = cls._attribute_metadata_keys()
+        attr_dict = {}
 
         def visitor(field: pa.Field, ancestors: list[pa.Field]) -> None:
             # Modify the dataframe in place, trimming out the columns we
@@ -538,6 +558,11 @@ class Table:
             # Pull out just the columns relevant to this field
             field_columns = df.columns[df.columns.str.startswith(df_key)]
             field_df = df[field_columns]
+
+            # Grab onto any scalar metadata stored in columns.
+            for col in field_columns:
+                if col in attr_keys:
+                    attr_dict[col] = field_df[col].iloc[0]
 
             # Replace column names like "foo.bar.baz" with "baz", the
             # last component.
@@ -572,7 +597,16 @@ class Table:
             # Pull out the fields of that root-level struct array.
             table_arrays.append(sa.field(subfield.name))
 
+        # If attributes are present on the dataframe, use them.
+        if df.attrs:
+            attr_dict.update(cls._schema_attrs_from_pandas(df.attrs))
+
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
+
+        # Absorb attr metadata from columnar values
+        attr_metadata = cls._encode_attr_dict(attr_dict)
+        schema = table.schema.with_metadata(attr_metadata)
+        table = table.replace_schema_metadata(schema.metadata)
         return cls.from_pyarrow(table, validate=validate, permit_nulls=False, **kwargs)
 
     def flattened_table(self) -> pa.Table:
@@ -660,7 +694,9 @@ class Table:
         arrays = [chunked_array.chunks[0] for chunked_array in self.table.columns]
         return pa.StructArray.from_arrays(arrays, fields=list(self.schema))
 
-    def to_dataframe(self, flatten: bool = True) -> pd.DataFrame:
+    def to_dataframe(
+        self, flatten: bool = True, attr_handling: Literal["drop", "add_columns", "attrs"] = "attrs"
+    ) -> pd.DataFrame:
         """Returns self as a pandas DataFrame.
 
         If flatten is true, then any nested hierarchy is flattened: if
@@ -673,13 +709,32 @@ class Table:
         "foo" column, and the values will of the column will be
         dictionaries representing the struct values.
 
+        Scalar Table attributes are handled according to
+        attr_handling.
+
         :param flatten: Whether to flatten the table's structure.
+        :param attr_handling: How to handle attributes. If "drop",
+        then attributes are dropped. If "add_columns", then attributes
+        are added as regular columns, with the attribute value
+        repeated for every row. If "attrs", then atributes are added
+        to the DataFrame.attrs attribute as a dictionary.
+
         """
         table = self.table
         if flatten:
             table = self.flattened_table()
         df: pd.DataFrame = table.to_pandas()
-        return df
+        if attr_handling == "drop":
+            return df
+        elif attr_handling == "add_columns":
+            for name, val in self._flattened_attributes().items():
+                df[name] = pa.repeat(val, len(self))
+            return df
+        elif attr_handling == "attrs":
+            df.attrs = self._attrs_to_pandas()  # type: ignore
+            return df
+        else:
+            raise ValueError(f"Unknown attr_handling value {attr_handling}")
 
     def column(self, column_name: str) -> pa.ChunkedArray:
         """
@@ -984,6 +1039,62 @@ class Table:
         """Return a dictionary of the table's attributes."""
         return {name: getattr(self, name) for name in self._quivr_attributes}
 
+    def _attrs_to_pandas(self) -> dict[str, Any]:
+        """Return a dictionary of the table's attributes, suitable
+        for passing to pandas as DataFrame attrs.
+        """
+        d = {}
+        for name, descriptor in self._quivr_attributes.items():
+            value = getattr(self, name)
+            d[name] = value
+
+        for name in self._quivr_subtables.keys():
+            d[name] = getattr(self, name)._attrs_to_pandas()
+
+        return d
+
+    @classmethod
+    def _schema_attrs_from_pandas(cls, pd_attrs: dict[Hashable, Any]) -> dict[str, Any]:
+        """Load attributes from a pandas DataFrame attrs dict into the
+        pyarrow schema metadata format.
+
+        """
+        d = {}
+        for name, descriptor in cls._quivr_attributes.items():
+            value = pd_attrs.get(name)
+            if value is not None:
+                d[name] = value
+
+        for name in cls._quivr_subtables.keys():
+            subattrs = pd_attrs.get(name)
+            if subattrs is not None:
+                subtable_type = cls._quivr_subtables[name].table_type
+                subattr_values = subtable_type._schema_attrs_from_pandas(subattrs)
+                for k, v in subattr_values.items():
+                    d[f"{name}.{k}"] = v
+
+        return d
+
+    def _flattened_attributes(self) -> dict[str, Any]:
+        """
+        Return a dictionary of the table's attributes, including those of subtables.
+
+        Subtable attributes are flattened into the dictionary, with the subtable name
+        prepended to the attribute name, separated by a period. For example, if the
+        table has a subtable called "subtable", and that subtable has an attribute
+        called "attribute", then the returned dictionary will have an entry called
+        "subtable.attribute".
+        """
+        d = {}
+        for name, descriptor in self._quivr_attributes.items():
+            value = getattr(self, name)
+            d[name] = value
+        for name in self._quivr_subtables.keys():
+            subattribs = getattr(self, name)._flattened_attributes()
+            for subname, subval in subattribs.items():
+                d[f"{name}.{subname}"] = subval
+        return d
+
     def _string_attributes(self) -> dict[str, str]:
         """Return a dictionary of the table's attributes.
 
@@ -1042,6 +1153,32 @@ class Table:
             children = column.table_type._attribute_metadata_keys()
             for key in children:
                 result.add(f"{column.name}.{key}")
+        return result
+
+    @classmethod
+    def _attribute_descriptor(cls, metadata_key: str) -> attr_module.Attribute[Any]:
+        """Return an attribute descriptor associated with a
+        particular (possibly dot-delimited, nested) metadata key.
+
+        """
+        if "." not in metadata_key:
+            return cls._quivr_attributes[metadata_key]
+        subtable_name, subtable_key = metadata_key.split(".", 1)
+        subtable: type[Table] = cls._quivr_subtables[subtable_name].table_type
+        return subtable._attribute_descriptor(subtable_key)
+
+    @classmethod
+    def _encode_attr_dict(cls, attrs: dict[str, Any]) -> dict[bytes, bytes]:
+        """Encode a dictionary of attributes into a dictionary of
+        bytes. This is the only format permitted by pyarrow. Keys
+        should be dot-delimited to indicate subtable attributes.
+
+        """
+        result: dict[bytes, bytes] = {}
+        for k, v in attrs.items():
+            descriptor = cls._attribute_descriptor(k)
+            pytyped = descriptor._type(v)
+            result[k.encode("utf8")] = descriptor.to_bytes(pytyped)
         return result
 
     def apply_mask(self, mask: pa.BooleanArray | np.ndarray[bool, Any] | list[bool]) -> Self:

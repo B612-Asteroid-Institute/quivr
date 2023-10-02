@@ -99,8 +99,55 @@ behavior set by the PyArrow library. If a numeric column has any null
 values, the column is converted to 64-bit floating point values and
 the nulls are converted into ``NaN`` values.
 
-Table :ref:`Attributes <attributes>` aren't preserved in the
-conversion to a DataFrame, since there is nowhere to store them.
+Table :ref:`Attributes <attributes>` can be preserved in this
+conversion to a DataFrame. By default, attributes are stored on the
+:obj:`pandas.DataFrame.attrs` attribute, which is a dictionary of
+global attributes for the DataFrame.
+
+.. code-block:: py
+
+   df = measurements.to_dataframe()
+   print(df.attrs)
+
+.. code-block:: text
+
+   {"dataset": "atlas"}
+
+If attributes are set on sub-tables, they'll be stored in a
+dot-delimited fashion:
+
+.. code-block:: py
+
+   class Detections(qv.Table):
+       measure = Measurements.as_column()
+       label = qv.IntAttribute()
+
+   dets = Detections.from_kwargs(measure=measurements, label=42)
+
+   df = dets.to_dataframe()
+   print(df.attrs)
+
+.. code-block:: text
+
+   {"measure.dataset": "atlas", "label": 42}
+
+Alternatively, you can represent attributes with an additional column
+in the DataFrame. The value will be repeated for every row:
+
+.. code-block:: py
+
+   df = measurements.to_dataframe(attr_handling="add_columns")
+   print(df)
+
+.. code-block:: text
+
+	position.x  position.y  measurer.id measurer.name  dataset
+  0         4.8         3.1          0.0         Alice      atlas
+  1         4.9         NaN          1.0           Bob      atlas
+  2         NaN         3.2          1.0           Bob      atlas
+  3         8.0         3.2          NaN          None      atlas
+  4         5.3         3.3          0.0         Alice      atlas
+
 
 From Pandas
 ###########
@@ -110,14 +157,18 @@ You can read from Pandas using these methods
 :meth:`Table.from_flat_dataframe`. Loading from flat dataframes is
 only needed when loading a Table that contains subtables.
 
-You need to specify any attributes in the constructor explicitly when
-loading from a DataFrame. There's nowhere on the DataFrame itself
-where they could be stored.
+You can specify any attributes in the constructor explicitly when
+loading from a DataFrame if they are not present:
 
 .. code-block:: py
 
    measurements2 = Measurements.from_flat_dataframe(df, dataset="atlas")
 
+:meth:`Table.from_dataframe` and :meth:`Table.from_flat_dataframe`
+will attempt to infer attribute values if they are not explicitly
+passed. They will look for columns which match attribute names, and
+will also check in the dataframe's `attrs` property, expecting the
+same serialization as described above in the previous section.
 
 In addition, :meth:`Table.from_kwargs` can handle :obj:`pandas.Series`
 objects as input parameters, so you can do something like this:

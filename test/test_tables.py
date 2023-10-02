@@ -1212,3 +1212,223 @@ class TestColumnAccessBenchmark:
                 return t.table["x"].combine_chunks()
 
         benchmark(raw_access)
+
+
+class PairAttributed(qv.Table):
+    x = qv.Int64Column()
+    y = qv.Int64Column()
+    name = qv.StringAttribute()
+    id = qv.IntAttribute()
+
+
+class WrapperAttributed(qv.Table):
+    pair = PairAttributed.as_column()
+    name = qv.StringAttribute()
+    id = qv.IntAttribute()
+
+
+class TestDataFrameAttributeHandling:
+    def test_to_df_drop_attrs(self):
+        t = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
+        df = t.to_dataframe(attr_handling="drop")
+
+        want = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        assert df.equals(want)
+
+    def test_to_df_drop_attrs_wrapped(self):
+        p = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
+        t = WrapperAttributed.from_kwargs(pair=p, name="b", id=2)
+
+        df = t.to_dataframe(attr_handling="drop")
+
+        want = pd.DataFrame({"pair.x": [1, 2, 3], "pair.y": [4, 5, 6]})
+        assert df.equals(want)
+
+    def test_to_df_add_columns(self):
+        t = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
+        df = t.to_dataframe(attr_handling="add_columns")
+
+        want = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6], "name": ["a", "a", "a"], "id": [1, 1, 1]})
+        # sort_index is necessary because the order of the columns is not guaranteed
+        assert df.sort_index(axis=1).equals(want.sort_index(axis=1))
+
+    def test_to_df_add_columns_wrapped(self):
+        p = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
+        t = WrapperAttributed.from_kwargs(pair=p, name="b", id=2)
+
+        df = t.to_dataframe(attr_handling="add_columns")
+
+        want = pd.DataFrame(
+            {
+                "pair.x": [1, 2, 3],
+                "pair.y": [4, 5, 6],
+                "pair.name": ["a", "a", "a"],
+                "pair.id": [1, 1, 1],
+                "name": ["b", "b", "b"],
+                "id": [2, 2, 2],
+            }
+        )
+        # sort_index is necessary because the order of the columns is not guaranteed
+        assert df.sort_index(axis=1).equals(want.sort_index(axis=1))
+
+    def test_to_df_attrs(self):
+        t = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
+        df = t.to_dataframe(attr_handling="attrs")
+
+        want = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        want.attrs = {"name": "a", "id": 1}
+        assert df.equals(want)
+        assert df.attrs == want.attrs
+
+    def test_to_df_attrs_wrapped(self):
+        p = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
+        t = WrapperAttributed.from_kwargs(pair=p, name="b", id=2)
+
+        df = t.to_dataframe(attr_handling="attrs")
+
+        want = pd.DataFrame({"pair.x": [1, 2, 3], "pair.y": [4, 5, 6]})
+        want.attrs = {"pair": {"name": "a", "id": 1}, "name": "b", "id": 2}
+
+        assert df.equals(want)
+        assert df.attrs == want.attrs
+
+    def test_from_dataframe_missing_attrs(self):
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+
+        with pytest.raises(AttributeError):
+            PairAttributed.from_dataframe(df)
+
+        have = PairAttributed.from_dataframe(df, name="a", id=1)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "a"
+        assert have.id == 1
+
+    def test_from_flat_dataframe_missing_attrs(self):
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+
+        with pytest.raises(AttributeError):
+            PairAttributed.from_flat_dataframe(df)
+
+        have = PairAttributed.from_flat_dataframe(df, name="a", id=1)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "a"
+        assert have.id == 1
+
+    def test_from_dataframe_column_attrs(self):
+        df = pd.DataFrame(
+            {
+                "x": [1, 2, 3],
+                "y": [4, 5, 6],
+                "name": ["a", "a", "a"],
+                "id": [1, 1, 1],
+            }
+        )
+        have = PairAttributed.from_dataframe(df)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "a"
+        assert have.id == 1
+
+    def test_from_flat_dataframe_column_attrs_wrapped(self):
+        df = pd.DataFrame(
+            {
+                "pair.x": [1, 2, 3],
+                "pair.y": [4, 5, 6],
+                "pair.name": ["a", "a", "a"],
+                "pair.id": [1, 1, 1],
+                "name": ["b", "b", "b"],
+                "id": [2, 2, 2],
+            }
+        )
+        have = WrapperAttributed.from_flat_dataframe(df)
+
+        assert have.pair.x.to_pylist() == [1, 2, 3]
+        assert have.pair.y.to_pylist() == [4, 5, 6]
+        assert have.pair.name == "a"
+        assert have.pair.id == 1
+        assert have.name == "b"
+        assert have.id == 2
+
+    def test_from_dataframe_attrs(self):
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.attrs = {"name": "a", "id": 1}
+
+        have = PairAttributed.from_dataframe(df)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "a"
+        assert have.id == 1
+
+    def test_from_dataframe_attrs_overridden(self):
+        # Prefer explicitly passed attributes over those in the dataframe
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.attrs = {"name": "a", "id": 1}
+
+        have = PairAttributed.from_dataframe(df, name="b", id=2)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "b"
+        assert have.id == 2
+
+    def test_from_dataframe_attrs_unexpected_value(self):
+        # Ignore unexpected attributes
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.attrs = {"name": "a", "id": 1, "unexpected": "value"}
+
+        have = PairAttributed.from_dataframe(df)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "a"
+        assert have.id == 1
+
+    def test_from_flat_dataframe_attrs(self):
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        df.attrs = {"name": "a", "id": 1}
+
+        have = PairAttributed.from_flat_dataframe(df)
+
+        assert have.x.to_pylist() == [1, 2, 3]
+        assert have.y.to_pylist() == [4, 5, 6]
+        assert have.name == "a"
+        assert have.id == 1
+
+    def test_from_flat_dataframe_wrapped_attrs(self):
+        df = pd.DataFrame({"pair.x": [1, 2, 3], "pair.y": [4, 5, 6]})
+        df.attrs = {"pair": {"name": "a", "id": 1}, "name": "b", "id": 2}
+
+        have = WrapperAttributed.from_flat_dataframe(df)
+
+        assert have.pair.x.to_pylist() == [1, 2, 3]
+        assert have.pair.y.to_pylist() == [4, 5, 6]
+        assert have.pair.name == "a"
+        assert have.pair.id == 1
+        assert have.name == "b"
+        assert have.id == 2
+
+    def test_from_flat_dataframe_columnar_attrs(self):
+        df = pd.DataFrame(
+            {
+                "pair.x": [1, 2, 3],
+                "pair.y": [4, 5, 6],
+                "pair.name": ["a", "a", "a"],
+                "pair.id": [1, 1, 1],
+                "name": ["b", "b", "b"],
+                "id": [2, 2, 2],
+            }
+        )
+        have = WrapperAttributed.from_flat_dataframe(df)
+
+        assert have.pair.x.to_pylist() == [1, 2, 3]
+        assert have.pair.y.to_pylist() == [4, 5, 6]
+        assert have.pair.name == "a"
+        assert have.pair.id == 1
+        assert have.name == "b"
+        assert have.id == 2
