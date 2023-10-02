@@ -168,9 +168,137 @@ def test_select():
     assert have.y[0].as_py() == 6
 
 
-def test_select_empty():
+def test_select_nested():
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2", "3"],
+        pair=pair,
+    )
+    have = wrapper.select("pair.x", 3)
+    assert len(have) == 1
+    assert have.id[0].as_py() == "3"
+    assert have.pair.y[0].as_py() == 6
+
+
+def test_select_nested_doubly():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.from_kwargs(
+        inner=Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    )
+    have = dn.select("inner.pair.x", 3)
+    assert len(have) == 1
+    assert have.inner.id[0].as_py() == "c"
+    assert have.inner.pair.y[0].as_py() == 6
+
+
+def test_select_attributes():
+    class PairWithAttributes(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+        label = qv.StringAttribute()
+
+    pair = PairWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], label="foo")
+    have = pair.select("x", 3)
+    assert len(have) == 1
+    assert have.y[0].as_py() == 6
+    assert have.label == "foo"
+
+
+def test_select_nested_attributes():
+    class PairWithAttributes(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+        label = qv.StringAttribute()
+
+    class WrapperWithAttributes(qv.Table):
+        pair = PairWithAttributes.as_column()
+        id = qv.StringColumn()
+        label = qv.StringAttribute()
+
+    pair = PairWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], label="foo")
+    wrapper = WrapperWithAttributes.from_kwargs(
+        id=["1", "2", "3"],
+        pair=pair,
+        label="bar",
+    )
+    have = wrapper.select("pair.x", 3)
+    assert len(have) == 1
+    assert have.id[0].as_py() == "3"
+    assert have.pair.y[0].as_py() == 6
+    assert have.label == "bar"
+    assert have.pair.label == "foo"
+
+
+def test_select_nested_doubly_attributes():
+    class PairWithAttributes(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+        label = qv.StringAttribute()
+
+    class WrapperWithAttributes(qv.Table):
+        pair = PairWithAttributes.as_column()
+        id = qv.StringColumn()
+        label = qv.StringAttribute()
+
+    class DoublyNestedWithAttributes(qv.Table):
+        inner = WrapperWithAttributes.as_column()
+        label = qv.StringAttribute()
+
+    dn = DoublyNestedWithAttributes.from_kwargs(
+        inner=WrapperWithAttributes.from_kwargs(
+            id=["a", "b", "c"],
+            pair=PairWithAttributes.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], label="foo"),
+            label="bar",
+        ),
+        label="baz",
+    )
+
+    have = dn.select("inner.pair.x", 3)
+    assert len(have) == 1
+    assert have.inner.id[0].as_py() == "c"
+    assert have.inner.pair.y[0].as_py() == 6
+    assert have.inner.label == "bar"
+    assert have.inner.pair.label == "foo"
+    assert have.label == "baz"
+
+
+def test_select_invalid_value():
     pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     have = pair.select("x", 4)
+    assert len(have) == 0
+
+
+def test_select_nested_invalid_value():
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2", "3"],
+        pair=pair,
+    )
+    have = wrapper.select("pair.x", 4)
+    assert len(have) == 0
+
+    have = wrapper.select("id", "4")
+    assert len(have) == 0
+
+
+def test_select_nested_doubly_invalid_value():
+    class DoublyNested(qv.Table):
+        id = qv.StringColumn()
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.from_kwargs(
+        id=["1", "2", "3"],
+        inner=Wrapper.from_kwargs(id=["1", "2", "3"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])),
+    )
+    have = dn.select("inner.pair.x", 4)
+    assert len(have) == 0
+
+    have = dn.select("inner.id", "4")
+    assert len(have) == 0
+
+    have = dn.select("id", "d")
     assert len(have) == 0
 
 
@@ -776,6 +904,154 @@ def test_no_forbidden_column_names():
 
         class T5(qv.Table):
             _column_validators = qv.StringColumn()
+
+
+def test_column():
+    t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    assert pc.all(pc.equal(t.x, t.column("x")))
+
+
+def test_column_nested():
+    w = Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    assert pc.all(pc.equal(w.pair.x, w.column("pair.x")))
+    assert pc.all(pc.equal(w.pair.y, w.column("pair.y")))
+    assert pc.all(pc.equal(w.id, w.column("id")))
+
+
+def test_column_nested_doubly():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.from_kwargs(
+        inner=Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    )
+    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
+    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
+    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
+
+
+def test_column_nulls():
+    class PairWithNulls(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
+    t = PairWithNulls.from_kwargs(y=[4, 5, 6])
+    assert pc.all(pc.equal(t.x, t.column("x")))
+    assert pc.all(pc.equal(t.y, t.column("y")))
+
+    t = PairWithNulls.from_kwargs(x=[1, 2, 3])
+    assert pc.all(pc.equal(t.x, t.column("x")))
+    assert pc.all(pc.equal(t.y, t.column("y")))
+
+
+def test_column_nested_nulls():
+    class PairWithNulls(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
+    class WrapperWithNulls(qv.Table):
+        id = qv.StringColumn()
+        pair = PairWithNulls.as_column(nullable=True)
+
+    # Null grandchild
+    w = WrapperWithNulls.from_kwargs(id=["a", "b", "c"], pair=PairWithNulls.from_kwargs(y=[4, 5, 6]))
+    assert pc.all(pc.equal(w.pair.x, w.column("pair.x")))
+    assert pc.all(pc.equal(w.pair.y, w.column("pair.y")))
+    assert pc.all(pc.equal(w.id, w.column("id")))
+
+    # Null child
+    w = WrapperWithNulls.from_kwargs(id=["a", "b", "c"])
+    assert pc.all(pc.equal(w.pair.x, w.column("pair.x")))
+    assert pc.all(pc.equal(w.pair.y, w.column("pair.y")))
+    assert pc.all(pc.equal(w.id, w.column("id")))
+
+
+def test_column_nested_doubly_nulls():
+    class PairWithNulls(qv.Table):
+        x = qv.Int64Column(nullable=True)
+        y = qv.Int64Column(nullable=True)
+
+    class WrapperWithNulls(qv.Table):
+        id = qv.StringColumn(nullable=True)
+        pair = PairWithNulls.as_column(nullable=True)
+
+    class DoublyNestedWithNulls(qv.Table):
+        id = qv.StringColumn()
+        inner = WrapperWithNulls.as_column(nullable=True)
+
+    # Null great-grandchild
+    dn = DoublyNestedWithNulls.from_kwargs(
+        id=["a", "b", "c"],
+        inner=WrapperWithNulls.from_kwargs(id=["a", "b", "c"], pair=PairWithNulls.from_kwargs(y=[4, 5, 6])),
+    )
+    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
+    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
+    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
+    assert pc.all(pc.equal(dn.id, dn.column("id")))
+
+    # Null grandchild
+    dn = DoublyNestedWithNulls.from_kwargs(
+        id=["a", "b", "c"], inner=WrapperWithNulls.from_kwargs(id=["a", "b", "c"])
+    )
+    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
+    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
+    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
+    assert pc.all(pc.equal(dn.id, dn.column("id")))
+
+    # Null child
+    dn = DoublyNestedWithNulls.from_kwargs(id=["a", "b", "c"])
+    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
+    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
+    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
+    assert pc.all(pc.equal(dn.id, dn.column("id")))
+
+
+def test_column_empty():
+    t = Pair.empty()
+    assert len(t.column("x")) == 0
+    assert len(t.column("y")) == 0
+
+
+def test_column_nested_empty():
+    w = Wrapper.empty()
+    assert len(w.column("pair.x")) == 0
+    assert len(w.column("pair.y")) == 0
+
+
+def test_column_nested_doubly_empty():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.empty()
+    assert len(dn.column("inner.pair.x")) == 0
+    assert len(dn.column("inner.pair.y")) == 0
+
+
+def test_column_invalid_name():
+    t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    with pytest.raises(KeyError):
+        t.column("z")
+
+
+def test_column_nested_invalid_name():
+    w = Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    with pytest.raises(KeyError):
+        w.column("pair.z")
+    with pytest.raises(AttributeError):
+        w.column("wrong.x")
+
+
+def test_column_nested_doubly_invalid_name():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.from_kwargs(
+        inner=Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    )
+    with pytest.raises(KeyError):
+        dn.column("inner.pair.z")
+    with pytest.raises(AttributeError):
+        dn.column("inner.wrong.x")
 
 
 def test_set_column():

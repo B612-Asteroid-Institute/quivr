@@ -589,13 +589,29 @@ class Table:
     def select(self, column_name: str, value: Any) -> Self:
         """Select from the table by exact match, returning a new
         Table which only contains rows for which the value in
-        column_name equals value.
+        column_name equals value. Column_name can be a nested column,
+        in which case, this function will recursively search for
+        the column through the nested subtables using dot-delimited notation.
 
         :param column_name: The name of the column to select on.
+            Use dot-delimited notation for nested columns.
         :param value: The value to match.
+
+        Examples:
+            >>> import quivr as qv
+            >>> import pyarrow.compute as pc
+            >>> class MySubTable(qv.Table):
+            ...     x = qv.Int64Column()
+            ...     y = qv.Int64Column()
+            >>> class MyWrapperTable(qv.Table):
+            ...     child = MySubTable.as_column()
+            >>> c = MySubTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+            >>> p = MyWrapperTable.from_kwargs(child=c)
+            >>> p_select = p.select("child.x", 2)
+            >>> print(p_select.child.x.to_pylist())
+            [2]
         """
-        table = self.table.filter(pc.field(column_name) == value)
-        return self.__class__(table)
+        return self.apply_mask(pc.equal(self.column(column_name), value))
 
     def sort_by(self, by: Union[str, list[tuple[str, str]]]) -> Self:
         """Sorts the Table by the given column name (or multiple
@@ -668,9 +684,31 @@ class Table:
     def column(self, column_name: str) -> pa.ChunkedArray:
         """
         Returns the column with the given name as a raw pyarrow ChunkedArray.
+        Column_name can be a nested column, in which case, this function will recursively
+        search for the column through the nested subtables using dot-delimited notation.
 
         :param column_name: The name of the column to return.
+            Use dot-delimited notation for nested columns.
+
+        Examples:
+            >>> import quivr as qv
+            >>> import pyarrow.compute as pc
+            >>> class MySubTable(qv.Table):
+            ...     x = qv.Int64Column()
+            ...     y = qv.Int64Column()
+            >>> class MyWrapperTable(qv.Table):
+            ...     child = MySubTable.as_column()
+            >>> c = MySubTable.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+            >>> p = MyWrapperTable.from_kwargs(child=c)
+            >>> column_x = p.column("child.x")
+            >>> print(column_x.to_pylist())
+            [1, 2, 3]
         """
+        if "." in column_name:
+            column_name, subkey = column_name.split(".", 1)
+            subtable = getattr(self, column_name)
+            return subtable.column(subkey)
+
         return self.table.column(column_name)
 
     def __repr__(self) -> str:
