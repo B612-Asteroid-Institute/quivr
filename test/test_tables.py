@@ -1124,6 +1124,19 @@ class TestDataFrameAttributeHandling:
         assert have.name == "a"
         assert have.id == 1
 
+    def test_from_flat_dataframe_wrapped_attrs(self):
+        df = pd.DataFrame({"pair.x": [1, 2, 3], "pair.y": [4, 5, 6]})
+        df.attrs = {"pair": {"name": "a", "id": 1}, "name": "b", "id": 2}
+
+        have = WrapperAttributed.from_flat_dataframe(df)
+
+        assert have.pair.x.to_pylist() == [1, 2, 3]
+        assert have.pair.y.to_pylist() == [4, 5, 6]
+        assert have.pair.name == "a"
+        assert have.pair.id == 1
+        assert have.name == "b"
+        assert have.id == 2
+
     def test_from_flat_dataframe_columnar_attrs(self):
         df = pd.DataFrame(
             {

@@ -541,7 +541,7 @@ class Table:
 
         # Columns might also store scalar attribute data. Gather that as we go, if it's present.
         attr_keys = cls._attribute_metadata_keys()
-        attr_metadata = {}
+        attr_dict = {}
 
         def visitor(field: pa.Field, ancestors: list[pa.Field]) -> None:
             # Modify the dataframe in place, trimming out the columns we
@@ -561,9 +561,7 @@ class Table:
             # Grab onto any scalar metadata stored in columns.
             for col in field_columns:
                 if col in attr_keys:
-                    descriptor = cls._attribute_descriptor(col)
-                    val = descriptor._type(field_df[col].iloc[0])
-                    attr_metadata[col] = descriptor.to_bytes(val)
+                    attr_dict[col] = field_df[col].iloc[0]
 
             # Replace column names like "foo.bar.baz" with "baz", the
             # last component.
@@ -600,13 +598,12 @@ class Table:
 
         # If attributes are present on the dataframe, use them.
         if df.attrs:
-            for k, v in df.attrs.items():
-                if k not in kwargs and k in cls._quivr_attributes:
-                    kwargs[str(k)] = v
+            attr_dict.update(cls._schema_attrs_from_pandas(df.attrs))
 
         table = pa.Table.from_arrays(table_arrays, schema=cls.schema)
 
         # Absorb attr metadata from columnar values
+        attr_metadata = cls._encode_attr_dict(attr_dict)
         schema = table.schema.with_metadata(attr_metadata)
         table = table.replace_schema_metadata(schema.metadata)
         return cls.from_pyarrow(table, validate=validate, permit_nulls=False, **kwargs)
@@ -717,7 +714,7 @@ class Table:
                 df[name] = pa.repeat(val, len(self))
             return df
         elif attr_handling == "attrs":
-            df.attrs = self._all_attributes()  # type: ignore
+            df.attrs = self._attrs_to_pandas()  # type: ignore
             return df
         else:
             raise ValueError(f"Unknown attr_handling value {attr_handling}")
@@ -1003,11 +1000,9 @@ class Table:
         """Return a dictionary of the table's attributes."""
         return {name: getattr(self, name) for name in self._quivr_attributes}
 
-    def _all_attributes(self) -> dict[str, Any]:
-        """
-        Return a dictionary of the table's attributes, including those of subtables.
-
-        Subtable attributes are represented with nested dictionaries.
+    def _attrs_to_pandas(self) -> dict[str, Any]:
+        """Return a dictionary of the table's attributes, suitable
+        for passing to pandas as DataFrame attrs.
         """
         d = {}
         for name, descriptor in self._quivr_attributes.items():
@@ -1015,7 +1010,29 @@ class Table:
             d[name] = value
 
         for name in self._quivr_subtables.keys():
-            d[name] = getattr(self, name)._all_attributes()
+            d[name] = getattr(self, name)._attrs_to_pandas()
+
+        return d
+
+    @classmethod
+    def _schema_attrs_from_pandas(cls, pd_attrs: dict[Hashable, Any]) -> dict[str, Any]:
+        """Load attributes from a pandas DataFrame attrs dict into the
+        pyarrow schema metadata format.
+
+        """
+        d = {}
+        for name, descriptor in cls._quivr_attributes.items():
+            value = pd_attrs.get(name)
+            if value is not None:
+                d[name] = value
+
+        for name in cls._quivr_subtables.keys():
+            subattrs = pd_attrs.get(name)
+            if subattrs is not None:
+                subtable_type = cls._quivr_subtables[name].table_type
+                subattr_values = subtable_type._schema_attrs_from_pandas(subattrs)
+                for k, v in subattr_values.items():
+                    d[f"{name}.{k}"] = v
 
         return d
 
@@ -1110,6 +1127,20 @@ class Table:
         subtable_name, subtable_key = metadata_key.split(".", 1)
         subtable: type[Table] = cls._quivr_subtables[subtable_name].table_type
         return subtable._attribute_descriptor(subtable_key)
+
+    @classmethod
+    def _encode_attr_dict(cls, attrs: dict[str, Any]) -> dict[bytes, bytes]:
+        """Encode a dictionary of attributes into a dictionary of
+        bytes. This is the only format permitted by pyarrow. Keys
+        should be dot-delimited to indicate subtable attributes.
+
+        """
+        result: dict[bytes, bytes] = {}
+        for k, v in attrs.items():
+            descriptor = cls._attribute_descriptor(k)
+            pytyped = descriptor._type(v)
+            result[k.encode("utf8")] = descriptor.to_bytes(pytyped)
+        return result
 
     def apply_mask(self, mask: pa.BooleanArray | np.ndarray[bool, Any] | list[bool]) -> Self:
         """
