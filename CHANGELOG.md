@@ -6,23 +6,37 @@ This file documents notable changes between versions of quivr.
 
 ### Added
 
-`quivr.experimental.shmem` provides new utilities for run functions
+- `quivr.experimental.shmem` provides new utilities for run functions
 against quivr Tables with multiple processes in shared memory:
+  - `to_shared_memory` and `from_shared_memory` can be used to read and
+	write a quivr Table in shared memory. This allows separate
+	processes to work off of slices of a Table without a copy of any
+	data, or with redundant memory usage.
+  - `execute_parallel` is a function that simplifies running a function
+    against a Table's data with multiple processes. The Table's data
+    will be split up using a configurable partitioning strategy, and
+    each partition will be passed to a separate worker. Results are
+    returned as they are completed in a streaming iterator.
+  - `ChunkedPartitioning` and `GroupedPartitioning` are classes which
+    represent two possible partitioning strategies: uniform chunks of
+    fixed size, or partitions which share a common particular
+    value. Additional partitioning strategies can be provided by
+    providing a subclass implementation of the `Partitioning` class.
 
- - `to_shared_memory` and `from_shared_memory` can be used to read and
-   write a quivr Table in shared memory. This allows separate
-   processes to work off of slices of a Table without a copy of any
-   data, or with redundant memory usage.
- - `execute_parallel` is a function that simplifies running a function
-   against a Table's data with multiple processes. The Table's data
-   will be split up using a configurable partitioning strategy, and
-   each partition will be passed to a separate worker. Results are
-   returned as they are completed in a streaming iterator.
- - `ChunkedPartitioning` and `GroupedPartitioning` are classes which
-   represent two possible partitioning strategies: uniform chunks of
-   fixed size, or partitions which share a common particular
-   value. Additional partitioning strategies can be provided by
-   providing a subclass implementation of the `Partitioning` class.
+
+- Conversion of Tables to and from pandas DataFrames now can preserve
+  Table attributes. Three possible approaches are available:
+  - "add_columns": Store attribute values by repeating them in every
+    row of the dataframe. Each attribute gets a separate column. For
+    subtables, attributes are stored under a dot-delimited prefix.
+  - "attrs": Use the experimental
+    [pandas.DataFrame.attrs](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.attrs.html)
+    API to store attributes directly on the DataFrame as a dictionary.
+  - "drop": remove the attributes entirely. This was the old behavior.
+  These are enabled in the `Table.to_dataframe` method. When a
+  dataframe is loaded with `from_dataframe` or `from_flat_dataframe`,
+  attributes are inferred.
+
 
 ## [0.6.6] - 2023-09-27
 
