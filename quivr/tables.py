@@ -13,6 +13,7 @@ else:
 from typing import (
     Any,
     ClassVar,
+    Hashable,
     Iterator,
     List,
     Literal,
