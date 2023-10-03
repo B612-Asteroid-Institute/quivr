@@ -4,6 +4,10 @@ This file documents notable changes between versions of quivr.
 
 ## Unreleased
 
+Nothing yet!
+
+## [0.7.0] - 2023-10-03
+
 ### Added
 
 - `quivr.experimental.shmem` provides new utilities for run functions
@@ -270,7 +274,9 @@ First tagged release. Many, many changes to the core concept.
 
 Initial commit of the original idea, implemented via metaclasses.
 
-[Unreleased]: https://github.com/spenczar/quivr/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/spenczar/quivr/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/spenczar/quivr/compare/v0.6.6...v0.7.0
+[0.6.6]: https://github.com/spenczar/quivr/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/spenczar/quivr/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/spenczar/quivr/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/spenczar/quivr/compare/v0.6.2...v0.6.3
