@@ -305,15 +305,264 @@ def test_select_nested_doubly_invalid_value():
 def test_sort_by():
     pair = Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2])
 
-    sorted1 = pair.sort_by("y")
-    assert sorted1.x[0].as_py() == 2
-    assert sorted1.x[1].as_py() == 3
-    assert sorted1.x[2].as_py() == 1
+    sorted1 = pair.sort_by([("y", "ascending")])
+    assert sorted1.x.to_pylist() == [2, 3, 1]
+    assert sorted1.y.to_pylist() == [1, 2, 5]
 
-    sorted2 = pair.sort_by([("x", "descending")])
-    assert sorted2.x[0].as_py() == 3
-    assert sorted2.x[1].as_py() == 2
-    assert sorted2.x[2].as_py() == 1
+    sorted2 = pair.sort_by([("y", "descending")])
+    assert sorted2.x.to_pylist() == [1, 3, 2]
+    assert sorted2.y.to_pylist() == [5, 2, 1]
+
+    sorted3 = pair.sort_by([("x", "ascending")])
+    assert sorted3.x.to_pylist() == [1, 2, 3]
+    assert sorted3.y.to_pylist() == [5, 1, 2]
+
+    sorted4 = pair.sort_by([("x", "descending")])
+    assert sorted4.x.to_pylist() == [3, 2, 1]
+    assert sorted4.y.to_pylist() == [2, 1, 5]
+
+
+def test_sort_by_with_column_names():
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2])
+
+    sorted1 = pair.sort_by("y")
+    assert sorted1.x.to_pylist() == [2, 3, 1]
+    assert sorted1.y.to_pylist() == [1, 2, 5]
+
+    sorted2 = pair.sort_by("x")
+    assert sorted2.x.to_pylist() == [1, 2, 3]
+    assert sorted2.y.to_pylist() == [5, 1, 2]
+
+
+def test_sort_by_multiple_columns():
+    pair = Pair.from_kwargs(x=[2, 1, 2, 3], y=[6, 4, 5, 6])
+
+    # Column order: y first then x (alternating ascending/descending)
+    sorted1 = pair.sort_by([("y", "ascending"), ("x", "ascending")])
+    assert sorted1.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted1.y.to_pylist() == [4, 5, 6, 6]
+
+    sorted2 = pair.sort_by([("y", "ascending"), ("x", "descending")])
+    assert sorted2.x.to_pylist() == [1, 2, 3, 2]
+    assert sorted2.y.to_pylist() == [4, 5, 6, 6]
+
+    sorted3 = pair.sort_by([("y", "descending"), ("x", "ascending")])
+    assert sorted3.x.to_pylist() == [2, 3, 2, 1]
+    assert sorted3.y.to_pylist() == [6, 6, 5, 4]
+
+    sorted4 = pair.sort_by([("y", "descending"), ("x", "descending")])
+    assert sorted4.x.to_pylist() == [3, 2, 2, 1]
+    assert sorted4.y.to_pylist() == [6, 6, 5, 4]
+
+    # Column order: x first then y (alternating ascending/descending)
+    sorted5 = pair.sort_by([("x", "ascending"), ("y", "ascending")])
+    assert sorted5.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted5.y.to_pylist() == [4, 5, 6, 6]
+
+    sorted6 = pair.sort_by([("x", "ascending"), ("y", "descending")])
+    assert sorted6.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted6.y.to_pylist() == [4, 6, 5, 6]
+
+    sorted7 = pair.sort_by([("x", "descending"), ("y", "ascending")])
+    assert sorted7.x.to_pylist() == [3, 2, 2, 1]
+    assert sorted7.y.to_pylist() == [6, 5, 6, 4]
+
+    sorted8 = pair.sort_by([("x", "descending"), ("y", "descending")])
+    assert sorted8.x.to_pylist() == [3, 2, 2, 1]
+    assert sorted8.y.to_pylist() == [6, 6, 5, 4]
+
+
+def test_sort_by_multiple_columns_with_column_names():
+    pair = Pair.from_kwargs(x=[2, 1, 2, 3], y=[6, 4, 5, 6])
+
+    # Column order: y first then x
+    sorted1 = pair.sort_by(["y", "x"])
+    assert sorted1.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted1.y.to_pylist() == [4, 5, 6, 6]
+
+    sorted2 = pair.sort_by(["x", "y"])
+    assert sorted2.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted2.y.to_pylist() == [4, 5, 6, 6]
+
+
+def test_sort_by_nested():
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2])
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2", "3"],
+        pair=pair,
+    )
+
+    sorted1 = wrapper.sort_by("pair.y")
+    assert sorted1.id.to_pylist() == ["2", "3", "1"]
+    assert sorted1.pair.x.to_pylist() == [2, 3, 1]
+    assert sorted1.pair.y.to_pylist() == [1, 2, 5]
+
+    sorted2 = wrapper.sort_by([("pair.x", "descending")])
+    assert sorted2.id.to_pylist() == ["3", "2", "1"]
+    assert sorted2.pair.x.to_pylist() == [3, 2, 1]
+    assert sorted2.pair.y.to_pylist() == [2, 1, 5]
+
+    # Sort by id (same as original)
+    sorted3 = wrapper.sort_by([("id", "ascending")])
+    assert sorted3.id.to_pylist() == ["1", "2", "3"]
+    assert sorted3.pair.x.to_pylist() == [1, 2, 3]
+    assert sorted3.pair.y.to_pylist() == [5, 1, 2]
+
+    sorted4 = wrapper.sort_by([("id", "descending")])
+    assert sorted4.id.to_pylist() == ["3", "2", "1"]
+    assert sorted4.pair.x.to_pylist() == [3, 2, 1]
+    assert sorted4.pair.y.to_pylist() == [2, 1, 5]
+
+
+def test_sort_by_nested_multiple_columns():
+    pair = Pair.from_kwargs(x=[2, 1, 2, 3], y=[6, 4, 5, 6])
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2", "3", "4"],
+        pair=pair,
+    )
+
+    # Column order: y first then x
+    sorted1 = wrapper.sort_by([("pair.y", "ascending"), ("pair.x", "ascending")])
+    assert sorted1.id.to_pylist() == ["2", "3", "1", "4"]
+    assert sorted1.pair.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted1.pair.y.to_pylist() == [4, 5, 6, 6]
+
+    sorted2 = wrapper.sort_by([("pair.y", "descending"), ("pair.x", "descending")])
+    assert sorted2.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted2.pair.x.to_pylist() == [3, 2, 2, 1]
+    assert sorted2.pair.y.to_pylist() == [6, 6, 5, 4]
+
+    # Column order: x first then y
+    sorted3 = wrapper.sort_by([("pair.x", "ascending"), ("pair.y", "ascending")])
+    assert sorted3.id.to_pylist() == ["2", "3", "1", "4"]
+    assert sorted3.pair.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted3.pair.y.to_pylist() == [4, 5, 6, 6]
+
+    sorted4 = wrapper.sort_by([("pair.x", "descending"), ("pair.y", "descending")])
+    assert sorted4.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted4.pair.x.to_pylist() == [3, 2, 2, 1]
+    assert sorted4.pair.y.to_pylist() == [6, 6, 5, 4]
+
+    # Column order: id then x
+    sorted5 = wrapper.sort_by([("pair.x", "ascending"), ("id", "ascending")])
+    assert sorted5.id.to_pylist() == ["2", "1", "3", "4"]
+    assert sorted5.pair.x.to_pylist() == [1, 2, 2, 3]
+    assert sorted5.pair.y.to_pylist() == [4, 6, 5, 6]
+
+    sorted6 = wrapper.sort_by([("pair.x", "descending"), ("id", "ascending")])
+    assert sorted6.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted6.pair.x.to_pylist() == [3, 2, 2, 1]
+    assert sorted6.pair.y.to_pylist() == [6, 6, 5, 4]
+
+
+def test_sort_by_nested_doubly():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+
+    dn = DoublyNested.from_kwargs(
+        inner=Wrapper.from_kwargs(id=["1", "2", "3"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2]))
+    )
+
+    sorted1 = dn.sort_by([("inner.pair.y", "ascending")])
+    assert sorted1.inner.id.to_pylist() == ["2", "3", "1"]
+    assert sorted1.inner.pair.x.to_pylist() == [2, 3, 1]
+    assert sorted1.inner.pair.y.to_pylist() == [1, 2, 5]
+
+    sorted2 = dn.sort_by([("inner.pair.x", "descending")])
+    assert sorted2.inner.id.to_pylist() == ["3", "2", "1"]
+    assert sorted2.inner.pair.x.to_pylist() == [3, 2, 1]
+    assert sorted2.inner.pair.y.to_pylist() == [2, 1, 5]
+
+    # Sort by id (same as original)
+    sorted3 = dn.sort_by([("inner.id", "ascending")])
+    assert sorted3.inner.id.to_pylist() == ["1", "2", "3"]
+    assert sorted3.inner.pair.x.to_pylist() == [1, 2, 3]
+    assert sorted3.inner.pair.y.to_pylist() == [5, 1, 2]
+
+    sorted4 = dn.sort_by([("inner.id", "descending")])
+    assert sorted4.inner.id.to_pylist() == ["3", "2", "1"]
+    assert sorted4.inner.pair.x.to_pylist() == [3, 2, 1]
+    assert sorted4.inner.pair.y.to_pylist() == [2, 1, 5]
+
+
+def test_sort_by_nested_doubly_multiple_columns():
+    class DoublyNested(qv.Table):
+        inner = Wrapper.as_column()
+        id = qv.StringColumn()
+
+    dn = DoublyNested.from_kwargs(
+        id=["1", "2", "3", "4"],
+        inner=Wrapper.from_kwargs(
+            id=["1", "2", "3", "4"], pair=Pair.from_kwargs(x=[2, 1, 2, 3], y=[6, 4, 5, 6])
+        ),
+    )
+
+    # Column order: y first then x
+    sorted1 = dn.sort_by([("inner.pair.y", "ascending"), ("inner.pair.x", "ascending")])
+    assert sorted1.id.to_pylist() == ["2", "3", "1", "4"]
+    assert sorted1.inner.id.to_pylist() == ["2", "3", "1", "4"]
+    assert sorted1.inner.pair.x.to_pylist() == [1, 2, 2, 3]
+
+    sorted2 = dn.sort_by([("inner.pair.y", "descending"), ("inner.pair.x", "descending")])
+    assert sorted2.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted2.inner.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted2.inner.pair.x.to_pylist() == [3, 2, 2, 1]
+
+    # Column order: x first then y
+    sorted3 = dn.sort_by([("inner.pair.x", "ascending"), ("inner.pair.y", "ascending")])
+    assert sorted3.id.to_pylist() == ["2", "3", "1", "4"]
+    assert sorted3.inner.id.to_pylist() == ["2", "3", "1", "4"]
+    assert sorted3.inner.pair.x.to_pylist() == [1, 2, 2, 3]
+
+    sorted4 = dn.sort_by([("inner.pair.x", "descending"), ("inner.pair.y", "descending")])
+    assert sorted4.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted4.inner.id.to_pylist() == ["4", "1", "3", "2"]
+    assert sorted4.inner.pair.x.to_pylist() == [3, 2, 2, 1]
+
+    # Column order: id then x
+    sorted5 = dn.sort_by([("id", "ascending"), ("inner.pair.x", "ascending")])
+    assert sorted5.id.to_pylist() == ["1", "2", "3", "4"]
+    assert sorted5.inner.id.to_pylist() == ["1", "2", "3", "4"]
+    assert sorted5.inner.pair.x.to_pylist() == [2, 1, 2, 3]
+
+    sorted6 = dn.sort_by([("id", "descending"), ("inner.pair.x", "descending")])
+    assert sorted6.id.to_pylist() == ["4", "3", "2", "1"]
+    assert sorted6.inner.id.to_pylist() == ["4", "3", "2", "1"]
+    assert sorted6.inner.pair.x.to_pylist() == [3, 2, 1, 2]
+
+
+def test_sort_by_invalid_column():
+    # Test that we raise an error if we try to sort by a column that
+    # doesn't exist.
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2])
+    with pytest.raises(KeyError):
+        pair.sort_by("z")
+
+    # Test that we raise an error if we try to sort by a nested column
+    # that doesn't exist.
+    wrapper = Wrapper.from_kwargs(
+        id=["1", "2", "3"],
+        pair=pair,
+    )
+    with pytest.raises(KeyError):
+        wrapper.sort_by("pair.z")
+
+
+def test_sort_by_invalid_order():
+    # Test that we raise an error if we try to sort with an
+    # unrecognized order.
+    pair = Pair.from_kwargs(x=[1, 2, 3], y=[5, 1, 2])
+    with pytest.raises(ValueError):
+        pair.sort_by([("x", "ascending"), ("y", "sideways")])
+
+
+def test_sort_by_empty():
+    # Test that we don't crash when sorting an empty table
+    pair = Pair.empty()
+
+    sorted1 = pair.sort_by("x")
+    assert len(sorted1) == 0
+    assert sorted1.x.to_pylist() == []
 
 
 def test_to_csv():
