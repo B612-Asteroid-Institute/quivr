@@ -657,6 +657,24 @@ class Table:
         specified, "ascending" is used.
 
         :param by: The column name or list of names, or list of (column, order) tuples to sort by.
+
+        Examples:
+            >>> import quivr as qv
+            >>> class MySubTable(qv.Table):
+            ...     x = qv.Int64Column()
+            ...     y = qv.Int64Column()
+            >>> class MyWrapperTable(qv.Table):
+            ...     child = MySubTable.as_column()
+            >>> c = MySubTable.from_kwargs(x=[2, 1, 2], y=[4, 5, 6])
+            >>> p = MyWrapperTable.from_kwargs(child=c)
+            >>> p_sort = p.sort_by("child.x")
+            >>> print(p_sort.child.x.to_pylist())
+            [1, 2, 2]
+            >>> p_sort = p.sort_by([("child.x", "descending"), ("child.y", "ascending")])
+            >>> print(p_sort.child.x.to_pylist())
+            [2, 2, 1]
+            >>> print(p_sort.child.y.to_pylist())
+            [4, 6, 5]
         """
         if isinstance(by, str):
             by = [(by, "ascending")]
