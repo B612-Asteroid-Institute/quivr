@@ -40,6 +40,9 @@ against quivr Tables with multiple processes in shared memory:
 - Column names can be dot-delimited in `Table.select` and
   `Table.column` to reference subtables (#53).
 
+- Column names can be dot-delimited in `Table.sort_by` to reference
+  subtables (#54).
+
 ## [0.6.6] - 2023-09-27
 
 ### Fixed
