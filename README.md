@@ -9,7 +9,9 @@ streaming IO, RPCs, and serialization/deserialization to Parquet.
 
 **Documentation** is at https://quivr.readthedocs.org. A
 [changelog](./CHANGELOG.md) is in this repository to document changes
-in each released version.
+in each released version. [This blog
+post](https://journal.spencerwnelson.com/entries/quivr.html)
+introduces some of the motivation for quivr.
 
 ## why?
 
