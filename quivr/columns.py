@@ -1193,11 +1193,10 @@ class NullColumn(Column):
 
     def __init__(
         self,
-        nullable: bool = False,
         metadata: Optional[MetadataDict] = None,
         validator: Optional[validators.Validator] = None,
     ):
-        super().__init__(pa.null(), nullable=nullable, metadata=metadata, validator=validator)
+        super().__init__(pa.null(), nullable=True, metadata=metadata, validator=validator)
 
     @overload
     def __get__(self, obj: None, objtype: type) -> Self:

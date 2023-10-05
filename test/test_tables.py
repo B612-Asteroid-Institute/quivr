@@ -28,6 +28,90 @@ class Wrapper(qv.Table):
     id = qv.StringColumn()
 
 
+class OmniTable(qv.Table):
+    """A Table with every type of column"""
+
+    i64 = qv.Int64Column()
+    i32 = qv.Int32Column()
+    i16 = qv.Int16Column()
+    i8 = qv.Int8Column()
+    u64 = qv.UInt64Column()
+    u32 = qv.UInt32Column()
+    u16 = qv.UInt16Column()
+    u8 = qv.UInt8Column()
+    f64 = qv.Float64Column()
+    f32 = qv.Float32Column()
+    bool = qv.BooleanColumn()
+    string = qv.StringColumn()
+    binary = qv.BinaryColumn()
+    large_string = qv.LargeStringColumn()
+    large_binary = qv.LargeBinaryColumn()
+    fixed_binary = qv.FixedSizeBinaryColumn(byte_width=8)
+    date32 = qv.Date32Column()
+    date64 = qv.Date64Column()
+    timestamp = qv.TimestampColumn(unit="s")
+    time32 = qv.Time32Column(unit="s")
+    time64 = qv.Time64Column(unit="us")
+    duration = qv.DurationColumn(unit="s")
+    mdni = qv.MonthDayNanoIntervalColumn()
+    decimal128 = qv.Decimal128Column(precision=38, scale=9)
+    decimal256 = qv.Decimal256Column(precision=76, scale=18)
+    nulls = qv.NullColumn()
+
+    list_i64 = qv.ListColumn(pa.int64())
+    fixed_list_i64 = qv.FixedSizeListColumn(pa.int64(), list_size=2)
+    large_list_i64 = qv.LargeListColumn(pa.int64())
+
+    map_i64_i64 = qv.MapColumn(pa.int64(), pa.int64())
+
+    dict_i64 = qv.DictionaryColumn(pa.int64(), pa.int64())
+
+    subtable = Pair.as_column()
+
+    @classmethod
+    def create(cls, length: int) -> "OmniTable":
+        """
+        Create a new instance of the OmniTable. Values are increasing sequences up to length.
+        """
+        return cls.from_kwargs(
+            i64=np.arange(length, dtype=np.int64),
+            i32=np.arange(length, dtype=np.int32),
+            i16=np.arange(length, dtype=np.int16),
+            i8=np.arange(length, dtype=np.int8),
+            u64=np.arange(length, dtype=np.uint64),
+            u32=np.arange(length, dtype=np.uint32),
+            u16=np.arange(length, dtype=np.uint16),
+            u8=np.arange(length, dtype=np.uint8),
+            f64=np.arange(length, dtype=np.float64),
+            f32=np.arange(length, dtype=np.float32),
+            bool=(np.arange(length) % 2 == 0),
+            string=[f"string{i}" for i in range(length)],
+            binary=[f"binary{i}".encode("utf-8") for i in range(length)],
+            large_string=[f"large_string{i}" for i in range(length)],
+            large_binary=[f"large_binary{i}".encode("utf-8") for i in range(length)],
+            fixed_binary=["{:08}".format(i).encode("utf-8") for i in range(length)],
+            date32=pa.array(np.arange(length, dtype=np.int32), type=pa.date32()),
+            date64=pa.array(np.arange(length), type=pa.date64()),
+            timestamp=pa.array(np.arange(length), type=pa.timestamp("s")),
+            time32=pa.array(np.arange(length, dtype=np.int32), type=pa.time32("s")),
+            time64=pa.array(np.arange(length), type=pa.time64("us")),
+            duration=pa.array(np.arange(length), type=pa.duration("s")),
+            mdni=pa.array([(1, 1, i) for i in range(length)], type=pa.month_day_nano_interval()),
+            decimal128=pa.array(list(range(length)), type=pa.decimal128(38, 9)),
+            decimal256=pa.array(list(range(length)), type=pa.decimal256(76, 18)),
+            nulls=np.full(length, None),
+            list_i64=[np.arange(3) for _ in range(length)],
+            fixed_list_i64=[np.arange(2) for _ in range(length)],
+            large_list_i64=[np.arange(3) for _ in range(length)],
+            map_i64_i64=[{i: i} for i in range(length)],
+            dict_i64=list(range(length)),
+            subtable=Pair.from_kwargs(
+                x=np.arange(length),
+                y=np.arange(length),
+            ),
+        )
+
+
 def test_table__eq__():
     class A(qv.Table):
         x = qv.Int64Column()
@@ -1476,7 +1560,7 @@ class WrapperAttributed(qv.Table):
     id = qv.IntAttribute()
 
 
-class TestDataFrameAttributeHandling:
+class TestDataFrameConversions:
     def test_to_df_drop_attrs(self):
         t = PairAttributed.from_kwargs(x=[1, 2, 3], y=[4, 5, 6], name="a", id=1)
         df = t.to_dataframe(attr_handling="drop")
@@ -1681,3 +1765,23 @@ class TestDataFrameAttributeHandling:
         assert have.pair.id == 1
         assert have.name == "b"
         assert have.id == 2
+
+    def test_roundtrip(self):
+        t = OmniTable.create(5)
+        df = t.to_dataframe(flatten=True)
+
+        have = OmniTable.from_flat_dataframe(df)
+
+        # HACK: due to https://github.com/apache/arrow/issues/38050,
+        # the date64 column will not correctly round-trip.  So we
+        # drop it from the comparison.
+        have = have.set_column("date64", t.date64)
+        assert have == t
+
+    def test_roundtrip_empty(self):
+        t = OmniTable.empty()
+        df = t.to_dataframe(flatten=True)
+
+        have = OmniTable.from_flat_dataframe(df)
+
+        assert have == t

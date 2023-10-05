@@ -35,6 +35,7 @@ import pyarrow.csv
 import pyarrow.feather
 import pyarrow.parquet
 
+from . import _arrow_utils
 from . import attributes as attr_module
 from . import columns, errors, schemagraph, validators
 
@@ -582,7 +583,7 @@ class Table:
                     arrays.append(struct_arrays[sa_key])
                 else:
                     arrays.append(field_df[subfield.name])
-            sa = pa.StructArray.from_arrays(arrays, fields=list(field.type))
+            sa = _arrow_utils.build_struct_array(arrays, list(field.type))
             struct_arrays[df_key] = sa
 
             # Clean the fields out
@@ -769,7 +770,7 @@ class Table:
         table = self.table
         if flatten:
             table = self.flattened_table()
-        df: pd.DataFrame = table.to_pandas()
+        df: pd.DataFrame = table.to_pandas(date_as_object=False, timestamp_as_object=False)
         if attr_handling == "drop":
             return df
         elif attr_handling == "add_columns":
