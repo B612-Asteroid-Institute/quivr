@@ -4,7 +4,12 @@ This file documents notable changes between versions of quivr.
 
 ## Unreleased
 
-Nothing yet!
+### Fixed
+
+- Quivr tables will now round-trip correctly with all
+  types. Previously, FixedLengthLists, LargeStrings, LargeBinary, and
+  other unusual types could be incorrectly handled when loading from
+  flattened dataframes (#58).
 
 ## [0.7.0] - 2023-10-03
 
