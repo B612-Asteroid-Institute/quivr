@@ -112,7 +112,7 @@ orbits = AsteroidOrbit.from_kwargs(
     designation=np.array(["Ceres", "Pallas", "Vesta", "2023 DW"]),
     mass=np.array([9.393e20, 2.06e21, 2.59e20, None]),
     radius=np.array([4.6e6, 2.7e6, 2.6e6, None]),
-    coords=coords.to_structarray(),
+    coords=coords,
 )
 ```
 
@@ -136,7 +136,7 @@ computations using the Pyarrow compute kernels:
 ```python
 import pyarrow.compute as pc
 
-median_mass = pc.quantile(pc.add(orbits.column(mass, as_numpy=False), 10), q=0.5)
+median_mass = pc.quantile(pc.add(orbits.mass, 10), q=0.5)
 # median_mass is a pyarrow.Scalar, which you can get the value of with .as_py()
 print(median_mass.as_py())
 ```
