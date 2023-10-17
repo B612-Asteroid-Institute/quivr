@@ -4,7 +4,12 @@ This file documents notable changes between versions of quivr.
 
 ## Unreleased
 
-Nothing yet!
+### Removed
+
+- The `from_data`, `from_list`, `from_rows`, and `from_pydict`
+  constructors, which were deprecated in 0.6.0, have been removed;
+  `from_kwargs` is generally preferred when constructing from Python
+  values. (#33)
 
 ## [0.7.1] - 2023-10-05
 

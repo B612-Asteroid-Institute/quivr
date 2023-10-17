@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import sys
-import warnings
 from io import IOBase
 
 if sys.version_info < (3, 11):
@@ -196,54 +195,6 @@ class Table:
         return instance
 
     @classmethod
-    def from_data(
-        cls,
-        data: Union[pa.Table, dict[str, Any], list[Any], pd.DataFrame, None] = None,
-        validate: bool = True,
-        **kwargs: Union[AttributeValueType, DataSourceType],
-    ) -> Self:
-        """Create an instance of the Table and populate it with data.
-
-        This is a convenience method which tries to infer the right
-        underlying constructors to use based on the type of data. It
-        can also accept keyword-style arguments to pass data in. If
-        you know the data's structure well in advance, the more
-        precise constructors (from_arrays, from_pylist, etc) should be
-        preferred.
-
-        If the validate argument is True, the data will be validated
-        against the table's schema. If validation fails, a
-        :class:`ValidationError` will be raised.
-
-        """
-        warnings.warn(DeprecationWarning("Table.from_data will be removed in quivr version 0.7"))
-        if data is None:
-            instance = cls.from_kwargs(validate=validate, **kwargs)
-        else:
-            attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
-            if isinstance(data, pa.Table):
-                instance = cls.from_pyarrow(data, False, False, **attrib_kwargs)
-            elif isinstance(data, dict):
-                instance = cls.from_pydict(data, **attrib_kwargs)
-            elif isinstance(data, list):
-                if len(data) == 0:
-                    instance = cls.from_rows(data, **attrib_kwargs)
-                elif isinstance(data[0], dict):
-                    instance = cls.from_rows(data, **attrib_kwargs)
-                elif isinstance(data[0], list):
-                    instance = cls.from_lists(data, **attrib_kwargs)
-                else:
-                    raise TypeError(f"Unsupported type: {type(data[0])}")
-            elif isinstance(data, pd.DataFrame):
-                instance = cls.from_dataframe(data, validate, **attrib_kwargs)
-            else:
-                raise TypeError(f"Unsupported type: {type(data)}")
-
-        if validate:
-            instance.validate()
-        return instance
-
-    @classmethod
     def _attribute_kwargs_from_kwargs(
         cls, kwargs: dict[str, Union[AttributeValueType, DataSourceType]]
     ) -> dict[str, AttributeValueType]:
@@ -363,69 +314,6 @@ class Table:
         schema = cls.schema.with_metadata(metadata)
         table = pa.Table.from_arrays(arrays, schema=schema)
         return table
-
-    @classmethod
-    def from_arrays(
-        cls,
-        arrays: list[pa.Array],
-        metadata: Optional[dict[bytes, bytes]] = None,
-        **kwargs: AttributeValueType,
-    ) -> Self:
-        """
-        Create a Table object from a list of arrays.
-
-        :param arrays: A list of pyarrow.Array objects.
-        :param metadata: An optional dictionary of metadata to attach to the Table.
-        :param \\**kwargs: Additional keyword arguments for any Table attributes.
-        :type \\**kwargs: :obj:`AttributeValueType`
-        :return: A Table object.
-        """
-        warnings.warn(DeprecationWarning("Table.from_arrays will be removed in quivr version 0.7"))
-        if metadata is None:
-            metadata = {}
-        table = cls._build_arrow_table(arrays, metadata)
-        return cls.from_pyarrow(table=table, validate=False, permit_nulls=False, **kwargs)
-
-    @classmethod
-    def from_pydict(
-        cls, d: dict[str, Union[pa.array, list[Any], npt.NDArray[Any]]], **kwargs: AttributeValueType
-    ) -> Self:
-        warnings.warn(DeprecationWarning("Table.from_pydict will be removed in quivr version 0.7"))
-        table = pa.Table.from_pydict(d, schema=cls.schema)
-        return cls.from_pyarrow(table=table, validate=False, permit_nulls=False, **kwargs)
-
-    @classmethod
-    def from_rows(cls, rows: list[dict[str, Any]], **kwargs: AttributeValueType) -> Self:
-        """
-        Create a Table object from a list of dictionaries.
-
-        :param rows: A list of values. Each value corresponds to a row in the table.
-        :param \\**kwargs: Additional keyword arguments for any Table attributes.
-        :type \\**kwargs: :obj:`AttributeValueType`
-        :returns: A Table object.
-        """
-        warnings.warn(DeprecationWarning("Table.from_rows will be removed in quivr version 0.7"))
-        table = pa.Table.from_pylist(rows, schema=cls.schema)
-        return cls(table=table, **kwargs)
-
-    @classmethod
-    def from_lists(cls, lists: list[list[Any]], **kwargs: AttributeValueType) -> Self:
-        """Create a Table object from a list of lists.
-
-        Each inner list corresponds to a column in the Table. They
-        should be specified in the same order as the columns in the
-        class.
-
-        :param lists: A list of lists. Each inner list corresponds to a column in the table.
-        :param \\**kwargs: Additional keyword arguments for any Table attributes.
-        :type \\**kwargs: :obj:`AttributeValueType`
-        :returns: A Table object.
-
-        """
-        warnings.warn(DeprecationWarning("Table.from_lists will be removed in quivr version 0.7"))
-        arrays = list(map(pa.array, lists))
-        table = cls._build_arrow_table(arrays, {})
-        return cls.from_pyarrow(table=table, validate=False, permit_nulls=False, **kwargs)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, validate: bool = True, **kwargs: AttributeValueType) -> Self:
