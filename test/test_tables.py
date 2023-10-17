@@ -1785,3 +1785,41 @@ class TestDataFrameConversions:
         have = OmniTable.from_flat_dataframe(df)
 
         assert have == t
+
+
+class TestConstructors:
+    def test_bench_construct_from_pyarrow(self, benchmark):
+        N = 1_000_000
+        x = pa.array(np.random.randint(low=-1000, high=1000, size=N), type=pa.int64())
+        y = pa.array(np.random.randint(low=-1000, high=1000, size=N), type=pa.int64())
+        benchmark(Pair.from_kwargs, x=x, y=y)
+
+    def test_bench_construct_from_chunked_array(self, benchmark):
+        N = 1_000_000
+        N_CHUNKS = 1000
+        chunks_x = [
+            pa.array(np.random.randint(low=-1000, high=1000, size=N // N_CHUNKS), type=pa.int64())
+            for _ in range(N_CHUNKS)
+        ]
+        chunks_y = [
+            pa.array(np.random.randint(low=-1000, high=1000, size=N // N_CHUNKS), type=pa.int64())
+            for _ in range(N_CHUNKS)
+        ]
+        x = pa.chunked_array(chunks_x)
+        y = pa.chunked_array(chunks_y)
+
+        benchmark(Pair.from_kwargs, x=x, y=y)
+
+    def test_construct_from_chunked_array_wrong_type(self):
+        # Constructing a Table using Pair.from_kwargs should raise an
+        # error if one of the input data values is a Chunked Array
+        # with incorrect type:
+        chunks_x = [
+            pa.array([1.5, 2.5, 3.5], type=pa.float64()),
+            pa.array([4.5, 5.5, 6.5], type=pa.float64()),
+        ]
+        x = pa.chunked_array(chunks_x)
+        y = pa.array([1, 2, 3, 4, 5, 6], type=pa.int64())
+
+        with pytest.raises(ValueError):
+            Pair.from_kwargs(x=x, y=y)
