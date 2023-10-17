@@ -4,7 +4,10 @@ This file documents notable changes between versions of quivr.
 
 ## Unreleased
 
-Nothing yet!
+### Fixed
+
+- Loading Table data from pyarrow ChunkedArrays (like with
+  from_kwargs) is now less buggy and faster (#59)
 
 ## [0.7.1] - 2023-10-05
 
