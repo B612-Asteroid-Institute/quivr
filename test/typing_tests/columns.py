@@ -16,7 +16,7 @@ class MyTable(qv.Table):
     pair_col = Pair.as_column(nullable=True)
 
 
-instance = MyTable.from_data(string_col=["hello", "world"], int8_col=[1, 2], float64_col=[1.0, 2.0])
+instance = MyTable.from_kwargs(string_col=["hello", "world"], int8_col=[1, 2], float64_col=[1.0, 2.0])
 
 assert_type(instance, MyTable)
 
