@@ -151,7 +151,8 @@ class Column:
                 return None
 
             return self._nulls(size_hint)
-
+        if isinstance(data, pa.ChunkedArray) or isinstance(data, pa.Array):
+            return data.cast(self.dtype)
         return pa.array(data, type=self.dtype)
 
     def _nulls(self, n: int) -> pa.Array:
