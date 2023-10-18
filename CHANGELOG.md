@@ -2,21 +2,14 @@
 
 This file documents notable changes between versions of quivr.
 
-## Unreleased
+## [0.7.2] - Unreleased
 
-### Fixed
-
-- Loading Table data from pyarrow ChunkedArrays (like with
-  from_kwargs) is now less buggy and faster (#59)
-  
 ### Removed
 
 - The `from_data`, `from_list`, `from_rows`, and `from_pydict`
   constructors, which were deprecated in 0.6.0, have been removed;
   `from_kwargs` is generally preferred when constructing from Python
   values. (#33)
-
-## [0.7.1] - 2023-10-05
 
 ### Fixed
 
@@ -293,7 +286,7 @@ First tagged release. Many, many changes to the core concept.
 
 Initial commit of the original idea, implemented via metaclasses.
 
-[Unreleased]: https://github.com/spenczar/quivr/compare/v0.7.1...HEAD
+[0.7.2]: https://github.com/spenczar/quivr/compare/v0.7.1...HEAD
 [0.7.1]: https://github.com/spenczar/quivr/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/spenczar/quivr/compare/v0.6.6...v0.7.0
 [0.6.6]: https://github.com/spenczar/quivr/compare/v0.6.5...v0.6.6
