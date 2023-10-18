@@ -2,7 +2,7 @@
 
 This file documents notable changes between versions of quivr.
 
-## [0.7.2] - Unreleased
+## [0.7.2] - 2023-10-18
 
 ### Removed
 
@@ -286,7 +286,7 @@ First tagged release. Many, many changes to the core concept.
 
 Initial commit of the original idea, implemented via metaclasses.
 
-[0.7.2]: https://github.com/spenczar/quivr/compare/v0.7.1...HEAD
+[0.7.2]: https://github.com/spenczar/quivr/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/spenczar/quivr/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/spenczar/quivr/compare/v0.6.6...v0.7.0
 [0.6.6]: https://github.com/spenczar/quivr/compare/v0.6.5...v0.6.6
