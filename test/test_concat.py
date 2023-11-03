@@ -4,7 +4,7 @@ import pytest
 
 import quivr as qv
 
-from .test_tables import Pair, TableWithAttributes, Wrapper
+from .test_tables import Pair, TableWithAttributes, TableWithDefaultAttributes, Wrapper
 
 
 def test_concatenate():
@@ -96,9 +96,18 @@ def test_concatenate_different_attrs():
     t2 = TableWithAttributes.from_kwargs(x=[3], y=[4], attrib="bar")
 
     with pytest.raises(
-        qv.TablesNotCompatibleError, match="All tables must have the same attribute values to concatenate"
+        qv.TablesNotCompatibleError,
+        match="All non-empty tables must have the same attribute values to concatenate",
     ):
         qv.concatenate([t1, t2])
+
+
+def test_concatenate_default_attrs_empty():
+    t1 = TableWithDefaultAttributes.empty()  # This will default to attrib="foo"
+    t2 = TableWithDefaultAttributes.from_kwargs(x=[3], y=[4], attrib="bar")
+    t3 = TableWithDefaultAttributes.from_kwargs(x=[3], y=[4], attrib="bar")
+    have = qv.concatenate([t1, t2, t3])
+    assert have.attrib == "bar"
 
 
 def test_concatenate_same_attrs():
@@ -106,3 +115,8 @@ def test_concatenate_same_attrs():
     t2 = TableWithAttributes.from_kwargs(x=[3], y=[4], attrib="foo")
     have = qv.concatenate([t1, t2])
     assert have.attrib == "foo"
+
+
+def test_concatenate_no_values():
+    with pytest.raises(ValueError, match="No values to concatenate"):
+        qv.concatenate([])

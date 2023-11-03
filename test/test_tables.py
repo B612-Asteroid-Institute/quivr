@@ -890,6 +890,12 @@ class TableWithAttributes(qv.Table):
     attrib = qv.StringAttribute()
 
 
+class TableWithDefaultAttributes(qv.Table):
+    x = qv.Int64Column()
+    y = qv.Int64Column()
+    attrib = qv.StringAttribute(default="foo")
+
+
 class TestTableAttributes:
     def test_from_dataframe(self):
         have = TableWithAttributes.from_dataframe(

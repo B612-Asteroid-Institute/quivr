@@ -22,24 +22,36 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
         memory. Defaults to True.
 
     """
+    if len(values) == 0:
+        raise ValueError("No values to concatenate")
+
     batches = []
-    first = True
+    first_full = False
+
+    # Find the first non-empty table to get the class
     for v in values:
-        batches += v.table.to_batches()
-        if first:
+        if not first_full and len(v) > 0:
             first_cls = v.__class__
             first_val = v
-            first = False
-        else:
-            if v.__class__ != first_cls:
-                raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")
-            if not first_val._attr_equal(v):
-                raise errors.TablesNotCompatibleError(
-                    "All tables must have the same attribute values to concatenate"
-                )
+            first_full = True
+            break
 
-    if first:
-        raise ValueError("No values to concatenate")
+    # No non-empty tables found so lets pick the first table
+    # to get the class and attributes
+    if not first_full:
+        first_cls = values[0].__class__
+        first_val = values[0]
+
+    # Scan the values and now make sure they are all the same class
+    # as the first non-empty table
+    for v in values:
+        batches += v.table.to_batches()
+        if v.__class__ != first_cls:
+            raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")
+        if not first_val._attr_equal(v) and len(v) > 0:
+            raise errors.TablesNotCompatibleError(
+                "All non-empty tables must have the same attribute values to concatenate"
+            )
 
     if len(batches) == 0:
         return first_cls.empty()
