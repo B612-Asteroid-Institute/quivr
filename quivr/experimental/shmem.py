@@ -94,8 +94,7 @@ class Partitioning(abc.ABC):
     """
 
     @abc.abstractmethod
-    def partition(self, table: T) -> Iterator[T]:
-        ...
+    def partition(self, table: T) -> Iterator[T]: ...
 
 
 def partition_func(f: Callable[[T], Iterator[T]]) -> Partitioning:

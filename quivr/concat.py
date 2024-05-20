@@ -1,11 +1,11 @@
-from typing import Iterator
+from typing import Iterable, List
 
 import pyarrow as pa
 
 from . import defragment, errors, tables
 
 
-def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
+def concatenate(values: Iterable[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
     """Concatenate a collection of Tables into a single Table.
 
     All input Tables be of the same class, and have the same attribute
@@ -22,24 +22,38 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
         memory. Defaults to True.
 
     """
+    values_list: List[tables.AnyTable] = list(values)
+
+    if len(values_list) == 0:
+        raise ValueError("No values to concatenate")
+
     batches = []
-    first = True
-    for v in values:
-        batches += v.table.to_batches()
-        if first:
+    first_full = False
+
+    # Find the first non-empty table to get the class
+    for v in values_list:
+        if not first_full and len(v) > 0:
             first_cls = v.__class__
             first_val = v
-            first = False
-        else:
-            if v.__class__ != first_cls:
-                raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")
-            if not first_val._attr_equal(v):
-                raise errors.TablesNotCompatibleError(
-                    "All tables must have the same attribute values to concatenate"
-                )
+            first_full = True
+            break
 
-    if first:
-        raise ValueError("No values to concatenate")
+    # No non-empty tables found so lets pick the first table
+    # to get the class and attributes
+    if not first_full:
+        first_cls = values_list[0].__class__
+        first_val = values_list[0]
+
+    # Scan the values and now make sure they are all the same class
+    # as the first non-empty table
+    for v in values_list:
+        batches += v.table.to_batches()
+        if v.__class__ != first_cls:
+            raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")
+        if not first_val._attr_equal(v) and len(v) > 0:
+            raise errors.TablesNotCompatibleError(
+                "All non-empty tables must have the same attribute values to concatenate"
+            )
 
     if len(batches) == 0:
         return first_cls.empty()

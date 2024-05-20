@@ -72,12 +72,10 @@ class Column:
                     raise errors.InvalidColumnDefault(self.default, self.dtype) from e
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Array: ...
 
     def __get__(self, obj: Union[tables.Table, None], objtype: type) -> Union[Self, pa.Array]:
         """
@@ -226,12 +224,10 @@ class SubTableColumn(Column, Generic[T]):
         return table
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> T:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> T: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, T]:
         if obj is None:
@@ -278,12 +274,10 @@ class Int8Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int8Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int8Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int8Array]:
         if obj is None:
@@ -310,12 +304,10 @@ class Int16Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int16Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int16Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int16Array]:
         if obj is None:
@@ -342,12 +334,10 @@ class Int32Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int32Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int32Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int32Array]:
         if obj is None:
@@ -374,12 +364,10 @@ class Int64Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int64Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Int64Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int64Array]:
         if obj is None:
@@ -406,12 +394,10 @@ class UInt8Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt8Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt8Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt8Array]:
         if obj is None:
@@ -438,12 +424,10 @@ class UInt16Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt16Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt16Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt16Array]:
         if obj is None:
@@ -470,12 +454,10 @@ class UInt32Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt32Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt32Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt32Array]:
         if obj is None:
@@ -502,12 +484,10 @@ class UInt64Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt64Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.UInt64Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt64Array]:
         if obj is None:
@@ -542,12 +522,10 @@ class Float16Column(Column):
         super().__init__(pa.float16(), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.lib.HalfFloatArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.lib.HalfFloatArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.HalfFloatArray]:
         if obj is None:
@@ -574,12 +552,10 @@ class Float32Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.lib.FloatArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.lib.FloatArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.FloatArray]:
         if obj is None:
@@ -606,12 +582,10 @@ class Float64Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.lib.DoubleArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.lib.DoubleArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.DoubleArray]:
         if obj is None:
@@ -636,12 +610,10 @@ class BooleanColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.BooleanArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.BooleanArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[pa.BooleanArray, Self]:
         if obj is None:
@@ -672,12 +644,10 @@ class StringColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.StringArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.StringArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[pa.StringArray, Self]:
         if obj is None:
@@ -703,12 +673,10 @@ class LargeBinaryColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.LargeBinaryArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.LargeBinaryArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeBinaryArray]:
         if obj is None:
@@ -734,12 +702,10 @@ class LargeStringColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.LargeStringArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.LargeStringArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeStringArray]:
         if obj is None:
@@ -764,12 +730,10 @@ class Date32Column(Column):
         super().__init__(pa.date32(), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Date32Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Date32Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Date32Array]:
         if obj is None:
@@ -794,12 +758,10 @@ class Date64Column(Column):
         super().__init__(pa.date64(), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Date64Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Date64Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Date64Array]:
         if obj is None:
@@ -847,12 +809,10 @@ class TimestampColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.TimestampArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.TimestampArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.TimestampArray]:
         if obj is None:
@@ -891,12 +851,10 @@ class Time32Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Time32Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Time32Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Time32Array]:
         if obj is None:
@@ -935,12 +893,10 @@ class Time64Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Time64Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Time64Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Time64Array]:
         if obj is None:
@@ -969,12 +925,10 @@ class DurationColumn(Column):
         super().__init__(pa.duration(unit), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.DurationArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.DurationArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.DurationArray]:
         if obj is None:
@@ -1005,12 +959,10 @@ class MonthDayNanoIntervalColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.MonthDayNanoIntervalArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.MonthDayNanoIntervalArray: ...
 
     def __get__(
         self, obj: Optional[tables.Table], objtype: type
@@ -1035,12 +987,10 @@ class BinaryColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.BinaryArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.BinaryArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.BinaryArray]:
         if obj is None:
@@ -1073,12 +1023,10 @@ class FixedSizeBinaryColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.FixedSizeBinaryArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.FixedSizeBinaryArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.FixedSizeBinaryArray]:
         if obj is None:
@@ -1127,12 +1075,10 @@ class Decimal128Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Decimal128Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Decimal128Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Decimal128Array]:
         if obj is None:
@@ -1171,12 +1117,10 @@ class Decimal256Column(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.Decimal256Array:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.Decimal256Array: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Decimal256Array]:
         if obj is None:
@@ -1200,12 +1144,10 @@ class NullColumn(Column):
         super().__init__(pa.null(), nullable=True, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.NullArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.NullArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.NullArray]:
         if obj is None:
@@ -1243,12 +1185,10 @@ class ListColumn(Column):
         super().__init__(pa.list_(value_type, -1), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.ListArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.ListArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.ListArray]:
         if obj is None:
@@ -1288,12 +1228,10 @@ class FixedSizeListColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.FixedSizeListArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.FixedSizeListArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.FixedSizeListArray]:
         if obj is None:
@@ -1330,12 +1268,10 @@ class LargeListColumn(Column):
         super().__init__(pa.large_list(value_type), nullable=nullable, metadata=metadata, validator=validator)
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.LargeListArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.LargeListArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeListArray]:
         if obj is None:
@@ -1373,12 +1309,10 @@ class MapColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.MapArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.MapArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.MapArray]:
         if obj is None:
@@ -1421,12 +1355,10 @@ class DictionaryColumn(Column):
         )
 
     @overload
-    def __get__(self, obj: None, objtype: type) -> Self:
-        ...
+    def __get__(self, obj: None, objtype: type) -> Self: ...
 
     @overload
-    def __get__(self, obj: tables.Table, objtype: type) -> pa.DictionaryArray:
-        ...
+    def __get__(self, obj: tables.Table, objtype: type) -> pa.DictionaryArray: ...
 
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.DictionaryArray]:
         if obj is None:

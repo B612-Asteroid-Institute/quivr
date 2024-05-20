@@ -422,12 +422,12 @@ def _concatenate_linkage_components(
     right_keys: List[pa.Array],
 ) -> Tuple[LeftTable, RightTable, pa.Array, pa.Array]:
     try:
-        left_table: LeftTable = concat.concatenate(left_tables)  # type: ignore
+        left_table: LeftTable = concat.concatenate(left_tables)
     except errors.TablesNotCompatibleError as e:
         raise errors.LinkageCombinationError("Left tables are not compatible") from e
 
     try:
-        right_table: RightTable = concat.concatenate(right_tables)  # type: ignore
+        right_table: RightTable = concat.concatenate(right_tables)
     except errors.TablesNotCompatibleError as e:
         raise errors.LinkageCombinationError("Right tables are not compatible") from e
 

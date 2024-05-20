@@ -61,7 +61,7 @@ fix = [
   "ruff ./quivr ./test --fix"
 ]
 lint = [
-  "ruff ./quivr ./test",
+  "ruff check ./quivr ./test",
   "black --check ./quivr ./test",
   "isort --check-only ./quivr ./test"
 ]

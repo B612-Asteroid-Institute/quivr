@@ -44,15 +44,15 @@ class ArrowArrayProvider(Protocol):
     A Protocol which describes objects that support the Arrow custom array extension protocol.
     """
 
-    def __arrow_array__(self, type: Optional[pa.DataType] = None) -> pa.Array:
-        ...
+    def __arrow_array__(self, type: Optional[pa.DataType] = None) -> pa.Array: ...
 
 
 AttributeValueType: TypeAlias = Union[int, float, str]
 DataSourceType: TypeAlias = Union[
-    pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any], ArrowArrayProvider
+    pa.Array, list[Any], "Table", "pd.Series[Any]", npt.NDArray[Any], "ArrowArrayProvider"
 ]
 AnyTable = TypeVar("AnyTable", bound="Table")
+
 
 # If a table uses any of the following names, it will break quivr
 # internals entirely, so they must be rejected.
