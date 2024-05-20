@@ -2,6 +2,15 @@
 
 This file documents notable changes between versions of quivr.
 
+## [0.7.3] - 2024-05-20
+
+### Fixed
+
+- Concatenating empty quivr tables will no longer raise an error with 
+incompatible attributes. Instead, attributes will be taken from the first
+non-empty table.
+
+
 ## [0.7.2] - 2023-10-18
 
 ### Removed
