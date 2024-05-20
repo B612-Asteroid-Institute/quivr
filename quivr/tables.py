@@ -49,7 +49,7 @@ class ArrowArrayProvider(Protocol):
 
 AttributeValueType: TypeAlias = Union[int, float, str]
 DataSourceType: TypeAlias = Union[
-    pa.Array, list[Any], "Table", pd.Series[Any], npt.NDArray[Any], "ArrowArrayProvider"
+    pa.Array, list[Any], "Table", "pd.Series[Any]", npt.NDArray[Any], "ArrowArrayProvider"
 ]
 AnyTable = TypeVar("AnyTable", bound="Table")
 
