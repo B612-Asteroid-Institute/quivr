@@ -1,11 +1,11 @@
-from typing import Iterator, List
+from typing import Iterable, List
 
 import pyarrow as pa
 
 from . import defragment, errors, tables
 
 
-def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
+def concatenate(values: Iterable[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
     """Concatenate a collection of Tables into a single Table.
 
     All input Tables be of the same class, and have the same attribute
