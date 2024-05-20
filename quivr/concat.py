@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, List
 
 import pyarrow as pa
 
@@ -22,14 +22,16 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
         memory. Defaults to True.
 
     """
-    if len(values) == 0:
+    values_list: List[tables.AnyTable] = list(values)
+
+    if len(values_list) == 0:
         raise ValueError("No values to concatenate")
 
     batches = []
     first_full = False
 
     # Find the first non-empty table to get the class
-    for v in values:
+    for v in values_list:
         if not first_full and len(v) > 0:
             first_cls = v.__class__
             first_val = v
@@ -39,12 +41,12 @@ def concatenate(values: Iterator[tables.AnyTable], defrag: bool = True) -> table
     # No non-empty tables found so lets pick the first table
     # to get the class and attributes
     if not first_full:
-        first_cls = values[0].__class__
-        first_val = values[0]
+        first_cls = values_list[0].__class__
+        first_val = values_list[0]
 
     # Scan the values and now make sure they are all the same class
     # as the first non-empty table
-    for v in values:
+    for v in values_list:
         batches += v.table.to_batches()
         if v.__class__ != first_cls:
             raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")

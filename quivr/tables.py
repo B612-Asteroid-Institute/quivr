@@ -49,9 +49,10 @@ class ArrowArrayProvider(Protocol):
 
 AttributeValueType: TypeAlias = Union[int, float, str]
 DataSourceType: TypeAlias = Union[
-    pa.Array, list[Any], "Table", pd.Series, npt.NDArray[Any], ArrowArrayProvider
+    pa.Array, list[Any], "Table", pd.Series[Any], npt.NDArray[Any], ArrowArrayProvider
 ]
 AnyTable = TypeVar("AnyTable", bound="Table")
+
 
 # If a table uses any of the following names, it will break quivr
 # internals entirely, so they must be rejected.
