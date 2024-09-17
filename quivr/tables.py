@@ -1216,3 +1216,53 @@ class Table:
 
         table = column._set_on_pyarrow_table(self.table, data)
         return self.from_pyarrow(table=table, validate=True, permit_nulls=False)
+
+    def unique_indices(
+        self, subset: Optional[List[str]] = None, keep: Literal["first", "last"] = "first"
+    ) -> pa.Array:
+        """
+        Get the indices of the first or last occurrence of each unique row in the table. A subset of
+        columns can be specified to consider when determining uniqueness. If no subset is specified then
+        all columns are used.
+
+        :param subset: Subset of columns to consider when determining uniqueness.
+        :param keep: If there are duplicate rows then keep the first or last row.
+        """
+        # Flatten the table so nested columns are dot-delimited at the top level
+        flattened_table = self.flattened_table()
+
+        # If subset is not specified then use all the columns
+        if subset is None:
+            subset = [c for c in flattened_table.column_names]
+
+        # Add an index column to the flattened table
+        flattened_table = flattened_table.add_column(0, "index", pa.array(np.arange(len(flattened_table))))
+
+        if keep not in ["first", "last"]:
+            raise ValueError(f"keep must be 'first' or 'last', got {keep}.")
+
+        agg_func = keep
+        indices = (
+            flattened_table.group_by(subset, use_threads=False)
+            .aggregate([("index", agg_func)])
+            .column(f"index_{agg_func}")
+        ).combine_chunks()
+        return indices
+
+    def drop_duplicates(
+        self,
+        subset: Optional[List[str]] = None,
+        keep: Literal["first", "last"] = "first",
+    ) -> Self:
+        """
+        Drop duplicate rows from a `~quivr.Table`. This function is similar to
+        `~pandas.DataFrame.drop_duplicates` but it supports nested columns (representing
+        nested tables).
+
+        :param subset: Subset of columns to consider when dropping duplicates. If not specified then
+            all columns are used.
+        :param keep: If there are duplicate rows then keep the first or last row.
+
+        """
+        indices = self.unique_indices(subset=subset, keep=keep)
+        return self.take(indices)

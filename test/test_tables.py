@@ -1513,6 +1513,126 @@ def test_set_column_changes_subtable_attribute():
     assert o2.inner.name == "b"
 
 
+def test_get_unique_indices_first():
+    t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[4, 5, 6, 4, 5, 6])
+
+    indices = t.unique_indices(keep="first")
+    assert indices.equals(pa.array([0, 1, 2], pa.int64()))
+
+    indices = t.unique_indices(keep="last")
+    assert indices.equals(pa.array([3, 4, 5], pa.int64()))
+
+
+def test_get_unique_indices_subset():
+    t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[1, 1, 2, 2, 3, 3])
+
+    indices = t.unique_indices(subset=["y"], keep="first")
+    assert indices.equals(pa.array([0, 2, 4], pa.int64()))
+
+    indices = t.unique_indices(subset=["y"], keep="last")
+    assert indices.equals(pa.array([1, 3, 5], pa.int64()))
+
+    indices = t.unique_indices(subset=["x"], keep="first")
+    assert indices.equals(pa.array([0, 1, 2], pa.int64()))
+
+    indices = t.unique_indices(subset=["x"], keep="last")
+    assert indices.equals(pa.array([3, 4, 5], pa.int64()))
+
+    indices = t.unique_indices(subset=["x", "y"], keep="first")
+    assert indices.equals(pa.array([0, 1, 2, 3, 4, 5], pa.int64()))
+
+    indices = t.unique_indices(subset=["x", "y"], keep="last")
+    assert indices.equals(pa.array([0, 1, 2, 3, 4, 5], pa.int64()))
+
+
+def test_get_unique_indices_nested():
+    t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[4, 5, 6, 4, 5, 6])
+    w = Wrapper.from_kwargs(id=["a", "b", "c", "a", "b", "c"], pair=t)
+
+    indices = w.unique_indices(subset=["pair.x"], keep="first")
+    assert indices.equals(pa.array([0, 1, 2], pa.int64()))
+
+    indices = w.unique_indices(subset=["pair.x"], keep="last")
+    assert indices.equals(pa.array([3, 4, 5], pa.int64()))
+
+    indices = w.unique_indices(subset=["pair.y"], keep="first")
+    assert indices.equals(pa.array([0, 1, 2], pa.int64()))
+
+    indices = w.unique_indices(subset=["pair.y"], keep="last")
+    assert indices.equals(pa.array([3, 4, 5], pa.int64()))
+
+    indices = w.unique_indices(subset=["pair.x", "pair.y"], keep="first")
+    assert indices.equals(pa.array([0, 1, 2], pa.int64()))
+
+    indices = w.unique_indices(subset=["id"], keep="last")
+    assert indices.equals(pa.array([3, 4, 5], pa.int64()))
+
+
+def test_get_unique_indices_raises():
+    with pytest.raises(ValueError, match="keep must be 'first' or 'last', got invalid"):
+        t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[4, 5, 6, 4, 5, 6])
+        t.unique_indices(keep="invalid")
+
+
+def test_drop_duplicates():
+
+    t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[4, 5, 6, 4, 5, 6])
+
+    t2 = t.drop_duplicates(subset=["x"])
+    assert t2.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert t2.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    t2 = t.drop_duplicates(subset=["y"])
+    assert t2.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert t2.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    t2 = t.drop_duplicates(subset=["x", "y"])
+    assert t2.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert t2.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    t2 = t.drop_duplicates(subset=["x"], keep="last")
+    assert t2.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert t2.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    t2 = t.drop_duplicates(subset=["y"], keep="last")
+    assert t2.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert t2.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    t2 = t.drop_duplicates(subset=["x", "y"], keep="last")
+    assert t2.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert t2.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+
+def test_drop_duplicates_nested():
+
+    t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[4, 5, 6, 4, 5, 6])
+    w = Wrapper.from_kwargs(id=["a", "a", "b", "b", "c", "c"], pair=t)
+
+    w2 = w.drop_duplicates(subset=["pair.x"])
+    assert w2.id.equals(pa.array(["a", "a", "b"], pa.string()))
+    assert w2.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert w2.pair.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    w2 = w.drop_duplicates(subset=["pair.y"])
+    assert w2.id.equals(pa.array(["a", "a", "b"], pa.string()))
+    assert w2.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+
+    w2 = w.drop_duplicates(subset=["pair.x", "pair.y"])
+    assert w2.id.equals(pa.array(["a", "a", "b"], pa.string()))
+    assert w2.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    assert w2.pair.y.equals(pa.array([4, 5, 6], pa.int64()))
+
+    w2 = w.drop_duplicates(subset=["id"], keep="last")
+    assert w2.id.equals(pa.array(["a", "b", "c"], pa.string()))
+    assert w2.pair.x.equals(pa.array([2, 1, 3], pa.int64()))
+    assert w2.pair.y.equals(pa.array([5, 4, 6], pa.int64()))
+
+    w2 = w.drop_duplicates(subset=["id"], keep="first")
+    assert w2.id.equals(pa.array(["a", "b", "c"], pa.string()))
+    assert w2.pair.x.equals(pa.array([1, 3, 2], pa.int64()))
+    assert w2.pair.y.equals(pa.array([4, 6, 5], pa.int64()))
+
+
 @pytest.mark.benchmark(group="column-access")
 class TestColumnAccessBenchmark:
     def test_access_f64(self, benchmark):
