@@ -98,7 +98,7 @@ python = ["3.10", "3.11"]
 
 [tool.hatch.envs.test.scripts]
 all = [
-  "ruff ./quivr ./test",
+  "ruff check ./quivr ./test",
   "black --check ./quivr ./test",
   "isort --check-only ./quivr ./test",
   "mypy --strict ./quivr ./examples ./test/typing_tests",

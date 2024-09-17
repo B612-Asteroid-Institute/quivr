@@ -2,6 +2,21 @@
 
 This file documents notable changes between versions of quivr.
 
+## [0.7.4] - 2024-09-17
+
+### Removed
+
+- `experimental.shmem` has been removed. Users are encouraged to use tools
+such as `ray` for parallel processing and shared memory of pyarrow types.
+
+### Added
+
+- `Table.invalid_mask`, `Table.separate_invalid` have been added to allow users to select rows
+that fail validation checks.
+- `concatenate` now supports passing the `validate` argument, if you want to postpone automatic
+validation of a table until after concatenation.
+
+
 ## [0.7.3] - 2024-05-20
 
 ### Fixed

@@ -67,6 +67,20 @@ def test_concatenate_empty_tables():
     assert len(have) == 0
 
 
+def test_concatenate_no_validate():
+    class ValidationTable(qv.Table):
+        x = qv.Int64Column(validator=qv.ge(0))
+
+    t1 = ValidationTable.from_kwargs(x=[-1], validate=False)
+    t2 = ValidationTable.from_kwargs(x=[1], validate=False)
+
+    with pytest.raises(qv.ValidationError, match="Column x failed validation"):
+        qv.concatenate([t1, t2])
+
+    have = qv.concatenate([t1, t2], validate=False)
+    assert len(have) == 2
+
+
 @pytest.mark.benchmark(group="ops")
 def test_benchmark_concatenate_100(benchmark):
     xs1 = pa.array([1, 2, 3], pa.int64())
