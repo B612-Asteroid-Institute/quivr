@@ -18,6 +18,7 @@ from typing import (
     Literal,
     Optional,
     Protocol,
+    Tuple,
     Type,
     TypeAlias,
     TypeVar,
@@ -959,6 +960,29 @@ class Table:
                 validator.validate(self.table.column(name))
             except errors.ValidationError as e:
                 raise errors.ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e
+
+    def invalid_mask(self) -> pa.Array:
+        """Return a boolean mask indicating which rows are invalid."""
+        num_rows = self.table.num_rows
+        mask = np.zeros(num_rows, dtype=bool)
+        for name, validator in self._column_validators.items():
+            indices, _ = validator.failures(self.table.column(name))
+            mask[indices.to_numpy()] = True
+        return pa.array(mask, type=pa.bool_())
+
+    def separate_invalid(self) -> Tuple[Self, Self]:
+        """
+        Separates rows that have invalid data from those that have valid data.
+
+        Returns:
+            Tuple[Self, Self]: A tuple of two Tables. The first Table contains the rows that
+            passed validation, and the second Table contains the rows that failed validation.
+        """
+        # Separate the rows that do not validate
+        failure_indices = self.invalid_mask()
+        valid = self.apply_mask(pyarrow.compute.invert(failure_indices))
+        invalid = self.apply_mask(failure_indices)
+        return valid, invalid
 
     @classmethod
     def empty(cls, **kwargs: AttributeValueType) -> Self:

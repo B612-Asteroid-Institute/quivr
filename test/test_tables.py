@@ -15,7 +15,7 @@ import pyarrow.compute as pc
 import pytest
 
 import quivr as qv
-from quivr.validators import lt
+from quivr.validators import and_, gt, lt
 
 
 class Pair(qv.Table):
@@ -982,6 +982,27 @@ class TestValidation:
         table = MyTable.from_kwargs(x=[8, 9, 10], validate=False)
         with pytest.raises(qv.ValidationError):
             table.validate()
+
+
+def test_invalid_mask():
+    class MyTable(qv.Table):
+        x = qv.Int8Column(validator=and_(lt(15), gt(10)))
+
+    table = MyTable.from_kwargs(x=[8, 9, 10, 11, 12, 13, 14, 15, 16], validate=False)
+    invalid = table.invalid_mask()
+    np.testing.assert_array_equal(
+        invalid.to_pylist(), [True, True, True, False, False, False, False, True, True]
+    )
+
+
+def test_separate_invalid():
+    class MyTable(qv.Table):
+        x = qv.Int8Column(validator=and_(lt(15), gt(10)))
+
+    table = MyTable.from_kwargs(x=[8, 9, 10, 11, 12, 13, 14, 15, 16], validate=False)
+    valid, invalid = table.separate_invalid()
+    np.testing.assert_array_equal(valid.x, [11, 12, 13, 14])
+    np.testing.assert_array_equal(invalid.x, [8, 9, 10, 15, 16])
 
 
 class TestTableEqualityBenchmarks:

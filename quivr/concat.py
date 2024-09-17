@@ -5,7 +5,9 @@ import pyarrow as pa
 from . import defragment, errors, tables
 
 
-def concatenate(values: Iterable[tables.AnyTable], defrag: bool = True) -> tables.AnyTable:
+def concatenate(
+    values: Iterable[tables.AnyTable], defrag: bool = True, validate: bool = True
+) -> tables.AnyTable:
     """Concatenate a collection of Tables into a single Table.
 
     All input Tables be of the same class, and have the same attribute
@@ -59,7 +61,7 @@ def concatenate(values: Iterable[tables.AnyTable], defrag: bool = True) -> table
         return first_cls.empty()
 
     table = pa.Table.from_batches(batches)
-    result = first_cls.from_pyarrow(table=table)
+    result = first_cls.from_pyarrow(table=table, validate=validate)
     if defrag:
         result = defragment.defragment(result)
     return result
