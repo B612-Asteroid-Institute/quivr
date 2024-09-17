@@ -1140,7 +1140,7 @@ class Table:
             result[k.encode("utf8")] = descriptor.to_bytes(pytyped)
         return result
 
-    def apply_mask(self, mask: pa.BooleanArray | np.ndarray[bool, Any] | list[bool]) -> Self:
+    def apply_mask(self, mask: pa.BooleanArray | npt.NDArray[np.bool_] | list[bool]) -> Self:
         """
         Return a new table with rows filtered to match a boolean mask.
 
