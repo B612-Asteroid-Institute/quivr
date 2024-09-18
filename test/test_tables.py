@@ -995,6 +995,25 @@ def test_invalid_mask():
     )
 
 
+def test_invalid_mask_subtable():
+    class SubTable(qv.Table):
+        x = qv.Int8Column(validator=and_(lt(15), gt(10)))
+
+    class MyTable(qv.Table):
+        x = qv.Int8Column()
+        subtable = SubTable.as_column()
+
+    table = MyTable.from_kwargs(
+        x=[1, 2, 3, 4, 5, 6, 7, 8, 9],
+        subtable=SubTable.from_kwargs(x=[8, 9, 10, 11, 12, 13, 14, 15, 16], validate=False),
+        validate=False,
+    )
+    invalid = table.invalid_mask()
+    np.testing.assert_array_equal(
+        invalid.to_pylist(), [True, True, True, False, False, False, False, True, True]
+    )
+
+
 def test_separate_invalid():
     class MyTable(qv.Table):
         x = qv.Int8Column(validator=and_(lt(15), gt(10)))
@@ -1003,6 +1022,24 @@ def test_separate_invalid():
     valid, invalid = table.separate_invalid()
     np.testing.assert_array_equal(valid.x, [11, 12, 13, 14])
     np.testing.assert_array_equal(invalid.x, [8, 9, 10, 15, 16])
+
+
+def test_separate_invalid_subtable():
+    class SubTable(qv.Table):
+        x = qv.Int8Column(validator=and_(lt(15), gt(10)))
+
+    class MyTable(qv.Table):
+        x = qv.Int8Column()
+        subtable = SubTable.as_column()
+
+    table = MyTable.from_kwargs(
+        x=[1, 2, 3, 4, 5, 6, 7, 8, 9],
+        subtable=SubTable.from_kwargs(x=[8, 9, 10, 11, 12, 13, 14, 15, 16], validate=False),
+        validate=False,
+    )
+    valid, invalid = table.separate_invalid()
+    np.testing.assert_array_equal(valid.x, [4, 5, 6, 7])
+    np.testing.assert_array_equal(invalid.x, [1, 2, 3, 8, 9])
 
 
 class TestTableEqualityBenchmarks:
