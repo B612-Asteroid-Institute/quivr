@@ -71,13 +71,18 @@ def test_concatenate_no_validate():
 
     class OtherTable(qv.Table):
         y = qv.Int64Column(validator=qv.le(0))
+
     class ValidationTable(qv.Table):
         x = qv.Int64Column(validator=qv.ge(0))
         subtable = OtherTable.as_column(nullable=True)
 
-    valid = ValidationTable.from_kwargs(x=[1], subtable=OtherTable.from_kwargs(y=[-1], validate=False), validate=False)
+    valid = ValidationTable.from_kwargs(
+        x=[1], subtable=OtherTable.from_kwargs(y=[-1], validate=False), validate=False
+    )
     invalid_x = ValidationTable.from_kwargs(x=[-1], subtable=[None], validate=False)
-    invalid_subtable = ValidationTable.from_kwargs(x=[1], subtable=OtherTable.from_kwargs(y=[1], validate=False), validate=False)
+    invalid_subtable = ValidationTable.from_kwargs(
+        x=[1], subtable=OtherTable.from_kwargs(y=[1], validate=False), validate=False
+    )
 
     with pytest.raises(qv.ValidationError, match="Column x failed validation"):
         qv.concatenate([invalid_x, valid])
