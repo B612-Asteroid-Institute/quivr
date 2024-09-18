@@ -960,6 +960,9 @@ class Table:
                 validator.validate(self.table.column(name))
             except errors.ValidationError as e:
                 raise errors.ValidationError(f"Column {name} failed validation: {str(e)}", e.failures) from e
+        # Validate subtables
+        for name in self._quivr_subtables.keys():
+            getattr(self, name).validate()
 
     def invalid_mask(self) -> pa.Array:
         """Return a boolean mask indicating which rows are invalid."""
@@ -968,6 +971,12 @@ class Table:
         for name, validator in self._column_validators.items():
             indices, _ = validator.failures(self.table.column(name))
             mask[indices.to_numpy()] = True
+
+        # Get invalid rows from subtables
+        for name in self._quivr_subtables.keys():
+            subtable = getattr(self, name)
+            subtable_mask = subtable.invalid_mask().to_numpy(zero_copy_only=False)
+            mask = mask | subtable_mask
         return pa.array(mask, type=pa.bool_())
 
     def separate_invalid(self) -> Tuple[Self, Self]:

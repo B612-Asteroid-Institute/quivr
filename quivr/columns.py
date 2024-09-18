@@ -242,10 +242,10 @@ class SubTableColumn(Column, Generic[T]):
         schema = self.schema.with_metadata(metadata)
 
         subtable = pa.Table.from_arrays(array.flatten(), schema=schema)
-        # We don't validate the subtable. If the parent table were validated,
+        # We don't validate the subtable. If the parent table was validated,
         # then the subtable would have been validated as part of that process.
         # If the parent table is intentionally not validated, then we don't
-        # want to validate the subtable either as it will throw an error
+        # want to validate the subtable at this time as it will throw an error
         # when accessing the subtable as a column (e.g. during concatenation).
         return self.table_type.from_pyarrow(subtable, permit_nulls=self.nullable, validate=False)
 

@@ -166,8 +166,11 @@ class TestConstructors:
             name = qv.StringAttribute()
 
         df = pd.DataFrame({"inner.x": [1, 2, 3], "y": [4, 5, 6]})
+        # Set the dataframe attributes
+        df.attrs["inner"] = {"id": 10}
         table = Outer.from_flat_dataframe(df, name="foo")
         assert table.name == "foo"
+        assert table.inner.id == 10
 
     def test_from_kwargs(self):
         table = self.MyTable.from_kwargs(name="foo", vals=[1, 2, 3])

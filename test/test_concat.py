@@ -87,12 +87,10 @@ def test_concatenate_no_validate():
     with pytest.raises(qv.ValidationError, match="Column x failed validation"):
         qv.concatenate([invalid_x, valid])
 
-    have = qv.concatenate([invalid_x, valid], validate=False)
-    assert len(have) == 2
+    with pytest.raises(qv.ValidationError, match="Column y failed validation"):
+        qv.concatenate([valid, invalid_subtable])
 
-    # Subtables are not validated during concatenation, as the main table
-    # was initialized with validate=False
-    have = qv.concatenate([valid, invalid_subtable])
+    have = qv.concatenate([invalid_x, valid], validate=False)
     assert len(have) == 2
 
 
