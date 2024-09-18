@@ -2,7 +2,7 @@
 
 This file documents notable changes between versions of quivr.
 
-## [0.7.4] - 2024-09-17
+## [0.7.4] - 2024-09-18
 
 ### Removed
 
@@ -15,6 +15,9 @@ such as `ray` for parallel processing and shared memory of pyarrow types.
 that fail validation checks.
 - `concatenate` now supports passing the `validate` argument, if you want to postpone automatic
 validation of a table until after concatenation.
+- `Table.drop_duplicates` has been added to remove duplicate rows from a table.
+- `Table.unique_indices` has been added to return the indices of the first/last occurrence of each 
+unique row or subset of columns.
 
 
 ## [0.7.3] - 2024-05-20
