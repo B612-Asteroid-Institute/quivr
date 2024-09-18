@@ -68,16 +68,31 @@ def test_concatenate_empty_tables():
 
 
 def test_concatenate_no_validate():
+
+    class OtherTable(qv.Table):
+        y = qv.Int64Column(validator=qv.le(0))
+
     class ValidationTable(qv.Table):
         x = qv.Int64Column(validator=qv.ge(0))
+        subtable = OtherTable.as_column(nullable=True)
 
-    t1 = ValidationTable.from_kwargs(x=[-1], validate=False)
-    t2 = ValidationTable.from_kwargs(x=[1], validate=False)
+    valid = ValidationTable.from_kwargs(
+        x=[1], subtable=OtherTable.from_kwargs(y=[-1], validate=False), validate=False
+    )
+    invalid_x = ValidationTable.from_kwargs(x=[-1], subtable=[None], validate=False)
+    invalid_subtable = ValidationTable.from_kwargs(
+        x=[1], subtable=OtherTable.from_kwargs(y=[1], validate=False), validate=False
+    )
 
     with pytest.raises(qv.ValidationError, match="Column x failed validation"):
-        qv.concatenate([t1, t2])
+        qv.concatenate([invalid_x, valid])
 
-    have = qv.concatenate([t1, t2], validate=False)
+    have = qv.concatenate([invalid_x, valid], validate=False)
+    assert len(have) == 2
+
+    # Subtables are not validated during concatenation, as the main table
+    # was initialized with validate=False
+    have = qv.concatenate([valid, invalid_subtable])
     assert len(have) == 2
 
 
