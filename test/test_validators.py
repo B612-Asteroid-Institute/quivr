@@ -104,3 +104,9 @@ def test_validate_all_null():
     values = pa.array([None, None, None, None], type=pa.int64())
     checker = qv.eq(1)
     checker.validate(values)
+
+
+def test_validate_empty_array():
+    values = pa.array([], type=pa.int64())
+    checker = qv.eq(1)
+    checker.validate(values)
