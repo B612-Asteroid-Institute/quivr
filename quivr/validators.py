@@ -90,6 +90,12 @@ class Validator:
         """
         if self.func.kind == "scalar_aggregate":
             raise TypeError("Cannot get failures for scalar aggregate function")
+
+        # If we have an empty array, return early
+        # Otherwise we will get a segfault when calling pc.indices_nonzero
+        if len(array) == 0:
+            return pyarrow.array([], type=pyarrow.int64()), pyarrow.array([], type=array.type)
+
         invalid = pc.invert(self.evaluate(array))
         indices = pc.indices_nonzero(invalid)
         invalid_values = pc.filter(array, invalid)
