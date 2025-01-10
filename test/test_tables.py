@@ -1424,6 +1424,29 @@ def test_column_nested_doubly_empty():
     assert len(dn.column("inner.pair.y")) == 0
 
 
+def test_nulls():
+    t = Pair.nulls(3)
+    assert t.x.equals(pa.array([None, None, None], pa.int64()))
+    assert t.y.equals(pa.array([None, None, None], pa.int64()))
+
+
+def test_null_mask():
+    t = Pair.nulls(3)
+    assert t.null_mask().equals(pa.array([True, True, True], pa.bool_()))
+
+    t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    assert t.null_mask().equals(pa.array([False, False, False], pa.bool_()))
+
+    t = Pair.from_kwargs(x=[1, None, 3], y=[4, 5, 6], permit_nulls=True)
+    assert t.null_mask().equals(pa.array([False, False, False], pa.bool_()))
+
+    t = Pair.from_kwargs(x=[1, None, 3], y=[None, 5, 6], permit_nulls=True)
+    assert t.null_mask().equals(pa.array([False, False, False], pa.bool_()))
+
+    t = Pair.from_kwargs(x=[1, None, 3], y=[4, None, 6], permit_nulls=True)
+    assert t.null_mask().equals(pa.array([False, True, False], pa.bool_()))
+
+
 def test_column_invalid_name():
     t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
     with pytest.raises(KeyError):

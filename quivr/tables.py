@@ -228,7 +228,12 @@ class Table:
         return columns.SubTableColumn(cls, nullable=nullable, metadata=metadata)
 
     @classmethod
-    def from_kwargs(cls, validate: bool = True, **kwargs: Union[DataSourceType, AttributeValueType]) -> Self:
+    def from_kwargs(
+        cls,
+        validate: bool = True,
+        permit_nulls: bool = False,
+        **kwargs: Union[DataSourceType, AttributeValueType],
+    ) -> Self:
         """Create a Table instance from keyword arguments.
 
         Each keyword argument corresponds to a column in the Table.
@@ -304,7 +309,12 @@ class Table:
 
         pyarrow_table = cls._build_arrow_table(arrays, metadata)
         attrib_kwargs = cls._attribute_kwargs_from_kwargs(kwargs)
-        return cls.from_pyarrow(table=pyarrow_table, validate=validate, permit_nulls=False, **attrib_kwargs)
+        return cls.from_pyarrow(
+            table=pyarrow_table,
+            validate=validate,
+            permit_nulls=permit_nulls,
+            **attrib_kwargs,
+        )
 
     @classmethod
     def _build_arrow_table(cls, arrays: List[pa.Array], metadata: dict[bytes, bytes]) -> pa.Table:
@@ -992,6 +1002,15 @@ class Table:
         valid = self.apply_mask(pyarrow.compute.invert(failure_indices))
         invalid = self.apply_mask(failure_indices)
         return valid, invalid
+    
+    def null_mask(self) -> pa.Array:
+        """Return a boolean mask indicating which rows of the entire table are null."""
+        # Get the null mask for each column
+        flattened_table = self.flattened_table()
+        mask = pa.repeat(True, len(flattened_table ))
+        for name in flattened_table.column_names:
+            mask = pc.and_(mask, pc.is_null(flattened_table.column(name)))
+        return pa.array(mask, type=pa.bool_())
 
     @classmethod
     def empty(cls, **kwargs: AttributeValueType) -> Self:
@@ -1002,6 +1021,25 @@ class Table:
         data = [[] for _ in range(len(cls.schema))]  # type: ignore
         empty_table = pa.table(data, schema=cls.schema)
         return cls.from_pyarrow(table=empty_table, validate=False, permit_nulls=False, **kwargs)
+
+
+    @classmethod
+    def nulls(cls, size: int, **kwargs: AttributeValueType) -> Self:
+        """Create a table with nulls.
+
+        :param size: The number of rows to create.
+        :param \\**kwargs: Additional keyword arguments to set the Table's attributes.
+
+
+        Even for tables which do not permit nulls in their columns, it is possible
+        to create a table with nulls in the context of SubTableColumn. So for
+        both of these cases, we need a method to populate tables with null values
+        for all columns, while also setting the Table's attributes.
+        """
+        null_array = pa.repeat(None, size)
+        data = [null_array for _ in range(len(cls.schema))]  # type: ignore
+        null_table = pa.table(data, schema=cls.schema)
+        return cls.from_pyarrow(table=null_table, validate=False, permit_nulls=True, **kwargs)
 
     def attributes(self) -> dict[str, Any]:
         """Return a dictionary of the table's attributes."""
