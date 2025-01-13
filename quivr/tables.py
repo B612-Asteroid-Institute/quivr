@@ -1002,12 +1002,12 @@ class Table:
         valid = self.apply_mask(pyarrow.compute.invert(failure_indices))
         invalid = self.apply_mask(failure_indices)
         return valid, invalid
-    
+
     def null_mask(self) -> pa.Array:
         """Return a boolean mask indicating which rows of the entire table are null."""
         # Get the null mask for each column
         flattened_table = self.flattened_table()
-        mask = pa.repeat(True, len(flattened_table ))
+        mask = pa.repeat(True, len(flattened_table))
         for name in flattened_table.column_names:
             mask = pc.and_(mask, pc.is_null(flattened_table.column(name)))
         return pa.array(mask, type=pa.bool_())
@@ -1021,7 +1021,6 @@ class Table:
         data = [[] for _ in range(len(cls.schema))]  # type: ignore
         empty_table = pa.table(data, schema=cls.schema)
         return cls.from_pyarrow(table=empty_table, validate=False, permit_nulls=False, **kwargs)
-
 
     @classmethod
     def nulls(cls, size: int, **kwargs: AttributeValueType) -> Self:
