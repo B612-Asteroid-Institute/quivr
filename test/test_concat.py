@@ -147,3 +147,30 @@ def test_concatenate_same_attrs():
 def test_concatenate_no_values():
     with pytest.raises(ValueError, match="No values to concatenate"):
         qv.concatenate([])
+
+
+def test_concatenate_empty_tables_preserve_attributes():
+    class TableWithAttrs(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+        name = qv.StringAttribute(default="default")
+        id = qv.IntAttribute(default=0)
+
+    # Create two empty tables with non-default attributes
+    t1 = TableWithAttrs.from_kwargs(x=[], y=[], name="foo", id=1)
+    t2 = TableWithAttrs.from_kwargs(x=[], y=[], name="bat", id=3)
+    
+    # Concatenate them and verify we get an empty table with the same attributes
+    have = qv.concatenate([t1, t2])
+    assert len(have) == 0
+    assert have.name == "foo"  # Not "default"
+    assert have.id == 1  # Not 0
+
+    # Also verify it works when concatenating with a non-empty table
+    # Attributes should be preserved from the non-empty tables
+    t3 = TableWithAttrs.from_kwargs(x=[1], y=[2], name="bar", id=2)
+    have = qv.concatenate([t1, t2, t3])
+    assert len(have) == 1
+    assert have.name == "bar"
+    assert have.id == 2
+
