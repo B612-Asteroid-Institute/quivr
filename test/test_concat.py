@@ -159,7 +159,7 @@ def test_concatenate_empty_tables_preserve_attributes():
     # Create two empty tables with non-default attributes
     t1 = TableWithAttrs.from_kwargs(x=[], y=[], name="foo", id=1)
     t2 = TableWithAttrs.from_kwargs(x=[], y=[], name="bat", id=3)
-    
+
     # Concatenate them and verify we get an empty table with the same attributes
     have = qv.concatenate([t1, t2])
     assert len(have) == 0
@@ -173,4 +173,3 @@ def test_concatenate_empty_tables_preserve_attributes():
     assert len(have) == 1
     assert have.name == "bar"
     assert have.id == 2
-
