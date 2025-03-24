@@ -448,7 +448,7 @@ def _concatenate_linkage_components(
 
 
 def combine_multilinkages(
-    links: Iterable[MultiKeyLinkage[LeftTable, RightTable]]
+    links: Iterable[MultiKeyLinkage[LeftTable, RightTable]],
 ) -> MultiKeyLinkage[LeftTable, RightTable]:
     """Combine a list of MultiKeyLinkages into a single MultiKeyLinkage.
 

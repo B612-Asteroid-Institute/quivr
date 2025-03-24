@@ -2,3 +2,5 @@ dist/
 *~
 .mypy_cache
 .dir-locals.el
+pdm.lock
+.pdm-python

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [project]
 name = "quivr"
@@ -17,7 +17,10 @@ dependencies = [
   "mmh3",
   "typing_extensions>=4.0.0"
 ]
-dynamic = [ "version" ]
+dynamic = ["version"]
+
+[project.urls]
+Source = "https://github.com/B612-Asteroid-Institute/quivr"
 
 [project.optional-dependencies]
 docs = [
@@ -28,19 +31,16 @@ docs = [
   "furo==2023.08.17",
 ]
 
-[project.urls]
-Source = "https://github.com/spenczar/quivr"
+[tool.pdm.build]
+includes = ["quivr"]
 
-[tool.hatch.build.targets.sdist]
-include = [
-  "/quivr",
-]
+[tool.pdm.version]
+source = "scm"
+write_to = "quivr/__version__.py"
+write_template = "__version__ = '{}'"
 
-[tool.hatch.version]
-path = "quivr/__version__.py"
-
-[tool.hatch.envs.dev]
-dependencies = [
+[dependency-groups]
+dev = [
   "black",
   "isort",
   "mypy",
@@ -51,39 +51,7 @@ dependencies = [
   "ipython"
 ]
 
-[tool.hatch.envs.dev.scripts]
-check = [
-  "lint",
-  "typecheck",
-  "test",
-]
-fix = [
-  "ruff ./quivr ./test --fix"
-]
-lint = [
-  "ruff check ./quivr ./test",
-  "black --check ./quivr ./test",
-  "isort --check-only ./quivr ./test"
-]
-format = [
-  "black ./quivr ./test",
-  "isort ./quivr ./test"
-]
-typecheck = [
-  "mypy --strict ./quivr ./examples ./test/typing_tests",
-]
 test = [
-  "pytest --benchmark-disable ./test {args}",
-]
-doctest = [
-  "pytest --doctest-modules ./quivr {args}"
-]
-benchmark = [
-  "pytest --benchmark-only ./test {args}"
-]
-
-[tool.hatch.envs.test]
-dependencies = [
   "black",
   "isort",
   "mypy",
@@ -93,49 +61,27 @@ dependencies = [
   "ruff",
 ]
 
-[[tool.hatch.envs.test.matrix]]
-python = ["3.10", "3.11"]
-
-[tool.hatch.envs.test.scripts]
-all = [
+[tool.pdm.scripts]
+check = { composite = ["lint", "typecheck", "test"] }
+fix = "ruff check ./quivr ./test --fix"
+lint = { composite = [
   "ruff check ./quivr ./test",
   "black --check ./quivr ./test",
-  "isort --check-only ./quivr ./test",
-  "mypy --strict ./quivr ./examples ./test/typing_tests",
-  "pytest --benchmark-disable ./test {args}",
-  "pytest --doctest-modules ./quivr",  
-]
+  "isort --check-only ./quivr ./test"
+] }
+format = { composite = [
+  "black ./quivr ./test",
+  "isort ./quivr ./test"
+] }
+typecheck = "mypy --strict ./quivr ./examples ./test/typing_tests"
+test = "pytest --benchmark-disable ./test {args}"
+doctest = "pytest --doctest-modules ./quivr {args}"
+benchmark = "pytest --benchmark-only ./test {args}"
 
-benchmark = [
-  "pytest --benchmark-only ./test"
-]
-
-[tool.hatch.envs.docs]
-dependencies = [
-  "sphinx==7.2.2",
-  "sphinx-autodoc-typehints",
-  "sphinx-copybutton",
-  "sphinx-toolbox",
-  "furo==2023.08.17",
-]
-
-[tool.hatch.envs.docs.scripts]
-make-html = [
-  "make -C docs html"
-]
-
-open-html = [
-  "open docs/build/html/index.html"
-]
-
-clean = [
-  "make -C docs clean"
-]
-
-rebuild = [
-  "make -C docs clean",
-  "make -C docs html"
-]
+docs-html = "make -C docs html"
+docs-open = "open docs/build/html/index.html"
+docs-clean = "make -C docs clean"
+docs-rebuild = { composite = ["docs-clean", "docs-html"] }
 
 [tool.black]
 line-length = 110
