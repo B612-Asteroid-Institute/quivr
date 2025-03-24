@@ -27,12 +27,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: true
           cache-dependency-path: ./pyproject.toml
-      - name: Install Testing Dependencies
+      - name: Install dependencies
+        run: pdm install -G test
+      - name: Check file
         run: |
-          pdm install -G test
+          file quivr/__version__.py
+          hexdump -C quivr/__version__.py
       - name: Lint
-        run: pdm run lint
-      - name: Test with coverage
+        run: |
+          pdm run black --check --diff --verbose quivr/__version__.py
+          pdm run lint
+      - name: Test
         run: pdm run test
       - name: Run benchmarks
         run: |
