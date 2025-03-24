@@ -51,6 +51,9 @@ jobs:
           output-file-path: bench.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
+          alert-threshold: '150%'
+          comment-on-alert: true
+          fail-on-alert: true
           gh-pages-branch: gh-pages
       - name: Compare benchmarks
         if: github.event_name == 'pull_request'
@@ -61,6 +64,6 @@ jobs:
           output-file-path: bench.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           comment-always: true
-          fail-threshold: '200%'
           alert-threshold: '150%'
-          auto-push: false
+          fail-threshold: '200%'
+          gh-pages-branch: gh-pages
