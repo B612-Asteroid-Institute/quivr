@@ -29,6 +29,9 @@ def concatenate(
     if len(values_list) == 0:
         raise ValueError("No values to concatenate")
 
+    # Note, we don't return immediately if there is only one table,
+    # because we still want to optionally defragment the result.
+
     batches = []
     first_full = False
 
@@ -58,10 +61,15 @@ def concatenate(
             )
 
     if len(batches) == 0:
-        return first_cls.empty()
+        # Return the first table, to preserve the attributes
+        table = first_val.table
+    else:
+        table = pa.Table.from_batches(batches)
 
-    table = pa.Table.from_batches(batches)
+    # We re-initialize the table to optionally validate and create
+    # a unique object
     result = first_cls.from_pyarrow(table=table, validate=validate)
+
     if defrag:
         result = defragment.defragment(result)
     return result
