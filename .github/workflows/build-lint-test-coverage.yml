@@ -1,4 +1,4 @@
-name: Build Lint Test
+name: Build Lint Test and Coverage
 
 on:
   push:
@@ -8,10 +8,9 @@ on:
 
 jobs:
   build-lint-test-coverage:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest]
         python-version: ["3.10", "3.11"]
     defaults:
       run:
@@ -22,15 +21,49 @@ jobs:
         uses: actions/checkout@v3
       - name: Get git tags
         run:  git fetch --prune --unshallow --tags
-      - uses: actions/setup-python@v4
+      - name: Setup PDM
+        uses: pdm-project/setup-pdm@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip' # caching pip dependencies
-      - name: Install hatch, the build tool
-        run: pip install hatch
-      - name: Build
-        run: hatch build
+          cache: true
+          cache-dependency-path: ./pyproject.toml
+      - name: Install dependencies
+        run: pdm install -G test
+      - name: Check file
+        run: |
+          file quivr/__version__.py
+          hexdump -C quivr/__version__.py
       - name: Lint
-        run: hatch run dev:lint
+        run: |
+          pdm run black --check --diff --verbose quivr/__version__.py
+          pdm run lint
       - name: Test
-        run: hatch run test:all
+        run: pdm run test
+      - name: Run benchmarks
+        run: |
+          pdm run benchmark --benchmark-json bench.json
+      - name: Store main benchmark result
+        if: github.ref == 'refs/heads/main'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark
+          tool: 'pytest'
+          output-file-path: bench.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: '150%'
+          comment-on-alert: true
+          fail-on-alert: true
+          gh-pages-branch: gh-pages
+      - name: Compare benchmarks
+        if: github.event_name == 'pull_request'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark
+          tool: 'pytest'
+          output-file-path: bench.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-always: true
+          alert-threshold: '150%'
+          fail-threshold: '200%'
+          gh-pages-branch: gh-pages

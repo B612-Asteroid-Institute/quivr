@@ -1,4 +1,8 @@
-from .__version__ import __version__
+try:
+    from .__version__ import __version__
+except ImportError:
+    __version__ = "unknown"
+
 from .attributes import FloatAttribute, IntAttribute, StringAttribute
 from .columns import (
     BinaryColumn,

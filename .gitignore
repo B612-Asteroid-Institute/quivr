@@ -2,3 +2,6 @@ dist/
 *~
 .mypy_cache
 .dir-locals.el
+pdm.lock
+.pdm-python
+quivr/__version__.py

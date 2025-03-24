@@ -274,13 +274,14 @@ class Table:
                 arrays.append(None)
                 continue
 
+            assert hasattr(array, "__len__"), f"Cannot determine length of {type(array).__name__}"
             if size is None:
                 size = len(array)
                 size_col = column_name
             elif len(array) != size:
                 raise errors.InvalidColumnDataError(
                     column,
-                    f"wrong length {len(value)} (expected {size} based on column {size_col})",
+                    f"wrong length {len(array)} (expected {size} based on column {size_col})",
                 )
 
             arrays.append(array)
@@ -1036,7 +1037,7 @@ class Table:
         for all columns, while also setting the Table's attributes.
         """
         null_array = pa.repeat(None, size)
-        data = [null_array for _ in range(len(cls.schema))]  # type: ignore
+        data = [null_array for _ in range(len(cls.schema))]
         null_table = pa.table(data, schema=cls.schema)
         return cls.from_pyarrow(table=null_table, validate=False, permit_nulls=True, **kwargs)
 
