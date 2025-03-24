@@ -37,7 +37,8 @@ includes = ["quivr"]
 [tool.pdm.version]
 source = "scm"
 write_to = "quivr/__version__.py"
-write_template = "__version__ = '{}'"
+write_template = """__version__ = "{}"
+"""
 
 [dependency-groups]
 dev = [

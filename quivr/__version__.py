@@ -1,3 +1,1 @@
-"""Version information."""
-
-__version__ = "0.0.0"  # Will be replaced by PDM during build
+__version__ = "0.7.6.dev5+gef14295.d20250324"
