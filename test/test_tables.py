@@ -2051,3 +2051,14 @@ def test_bench_from_pyarrow_needs_cast(benchmark, N):
     table = pa.table({"x": x, "y": y})
 
     benchmark(Pair.from_pyarrow, table)
+
+
+@pytest.mark.parametrize("N", [100_000, 1_000_000, 10_000_000])
+@pytest.mark.benchmark(group="from-pyarrow")
+def test_bench_from_pyarrow_reorder_only(benchmark, N):
+    x = pa.array(np.random.randint(low=-10000, high=1000, size=N), type=pa.int64())
+    y = pa.array(np.random.randint(low=-10000, high=1000, size=N), type=pa.int64())
+    # Build with matching types but columns in opposite order
+    table = pa.table({"y": y, "x": x})
+
+    benchmark(Pair.from_pyarrow, table)

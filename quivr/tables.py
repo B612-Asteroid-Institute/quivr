@@ -196,6 +196,18 @@ class Table:
                 # Only metadata differs; replace without touching data buffers
                 table = table.replace_schema_metadata(desired_schema.metadata)
             # else: already perfectly matches; keep as-is
+        elif set(table.schema.names) == set(schema.names):
+            # Columns are the same but ordered differently; reorder by name first
+            reordered = table.select(list(schema.names))
+            if reordered.schema.equals(schema, check_metadata=False):
+                # Only metadata may differ after reorder
+                if not reordered.schema.equals(desired_schema, check_metadata=True):
+                    table = reordered.replace_schema_metadata(desired_schema.metadata)
+                else:
+                    table = reordered
+            else:
+                # Types/nullability differ; cast after reorder to aligned names
+                table = reordered.cast(desired_schema)
         else:
             # Fallback: perform Arrow cast to coerce to the desired schema (may raise if names missing)
             table = table.cast(desired_schema)
