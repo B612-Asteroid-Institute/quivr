@@ -186,10 +186,19 @@ class Table:
                     fields.append(field.with_nullable(True))
             schema = pa.schema(fields, metadata=schema.metadata)
 
-        # Absorb metadata from the table
-        schema = schema.with_metadata(table.schema.metadata)
+        # Desired resulting schema uses the input table's metadata
+        desired_schema = schema.with_metadata(table.schema.metadata)
 
-        table = table.cast(schema)
+        # Fast paths to avoid expensive full casts when unnecessary
+        if table.schema.equals(schema, check_metadata=False):
+            # Field types/names/nullability already match our target
+            if not table.schema.equals(desired_schema, check_metadata=True):
+                # Only metadata differs; replace without touching data buffers
+                table = table.replace_schema_metadata(desired_schema.metadata)
+            # else: already perfectly matches; keep as-is
+        else:
+            # Fallback: perform Arrow cast to coerce to the desired schema (may raise if names missing)
+            table = table.cast(desired_schema)
         instance = cls(table, **kwargs)
         if validate:
             instance.validate()
