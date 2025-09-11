@@ -150,6 +150,13 @@ class Column:
 
             return self._nulls(size_hint)
         if isinstance(data, pa.ChunkedArray) or isinstance(data, pa.Array):
+            # Fast path: avoid cast when dtype already matches
+            try:
+                data_type = data.type  # both Array and ChunkedArray expose .type
+            except AttributeError:
+                data_type = None
+            if data_type is not None and data_type == self.dtype:
+                return data
             return data.cast(self.dtype)
         return pa.array(data, type=self.dtype)
 
