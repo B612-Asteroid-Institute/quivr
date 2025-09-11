@@ -2062,3 +2062,36 @@ def test_bench_from_pyarrow_reorder_only(benchmark, N):
     table = pa.table({"y": y, "x": x})
 
     benchmark(Pair.from_pyarrow, table)
+
+
+# Microbenchmarks for from_kwargs construction
+@pytest.mark.parametrize("N", [100_000, 1_000_000])
+@pytest.mark.benchmark(group="from-kwargs")
+def test_bench_from_kwargs_flat(benchmark, N):
+    class T(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+
+    x = pa.array(np.random.randint(low=-1000, high=1000, size=N), type=pa.int64())
+    y = pa.array(np.random.randint(low=-1000, high=1000, size=N), type=pa.int64())
+
+    benchmark(T.from_kwargs, x=x, y=y)
+
+
+@pytest.mark.parametrize("N", [100_000, 1_000_000])
+@pytest.mark.benchmark(group="from-kwargs")
+def test_bench_from_kwargs_nested_subtable(benchmark, N):
+    class Inner(qv.Table):
+        x = qv.Int64Column()
+        y = qv.Int64Column()
+
+    class Outer(qv.Table):
+        inner = Inner.as_column()
+        id = qv.StringColumn()
+
+    x = pa.array(np.random.randint(low=-1000, high=1000, size=N), type=pa.int64())
+    y = pa.array(np.random.randint(low=-1000, high=1000, size=N), type=pa.int64())
+    inner = Inner.from_kwargs(x=x, y=y)
+    ids = pa.array(np.arange(N).astype(str), type=pa.string())
+
+    benchmark(Outer.from_kwargs, inner=inner, id=ids)
