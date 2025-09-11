@@ -1305,14 +1305,14 @@ def test_no_forbidden_column_names():
 
 def test_column():
     t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
-    assert pc.all(pc.equal(t.x, t.column("x")))
+    assert pc.all(pc.equal(t.x, t.column("x"))).as_py()
 
 
 def test_column_nested():
     w = Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
-    assert pc.all(pc.equal(w.pair.x, w.column("pair.x")))
-    assert pc.all(pc.equal(w.pair.y, w.column("pair.y")))
-    assert pc.all(pc.equal(w.id, w.column("id")))
+    assert pc.all(pc.equal(w.pair.x, w.column("pair.x"))).as_py()
+    assert pc.all(pc.equal(w.pair.y, w.column("pair.y"))).as_py()
+    assert pc.all(pc.equal(w.id, w.column("id"))).as_py()
 
 
 def test_column_nested_doubly():
@@ -1322,9 +1322,9 @@ def test_column_nested_doubly():
     dn = DoublyNested.from_kwargs(
         inner=Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
     )
-    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
-    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
-    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
+    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x"))).as_py()
+    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y"))).as_py()
+    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id"))).as_py()
 
 
 def test_column_nulls():
@@ -1333,12 +1333,12 @@ def test_column_nulls():
         y = qv.Int64Column(nullable=True)
 
     t = PairWithNulls.from_kwargs(y=[4, 5, 6])
-    assert pc.all(pc.equal(t.x, t.column("x")))
-    assert pc.all(pc.equal(t.y, t.column("y")))
+    assert pc.all(pc.equal(pc.is_null(t.x), pc.is_null(t.column("x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(t.y), pc.is_null(t.column("y")))).as_py()
 
     t = PairWithNulls.from_kwargs(x=[1, 2, 3])
-    assert pc.all(pc.equal(t.x, t.column("x")))
-    assert pc.all(pc.equal(t.y, t.column("y")))
+    assert pc.all(pc.equal(pc.is_null(t.x), pc.is_null(t.column("x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(t.y), pc.is_null(t.column("y")))).as_py()
 
 
 def test_column_nested_nulls():
@@ -1352,15 +1352,15 @@ def test_column_nested_nulls():
 
     # Null grandchild
     w = WrapperWithNulls.from_kwargs(id=["a", "b", "c"], pair=PairWithNulls.from_kwargs(y=[4, 5, 6]))
-    assert pc.all(pc.equal(w.pair.x, w.column("pair.x")))
-    assert pc.all(pc.equal(w.pair.y, w.column("pair.y")))
-    assert pc.all(pc.equal(w.id, w.column("id")))
+    assert pc.all(pc.equal(pc.is_null(w.pair.x), pc.is_null(w.column("pair.x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(w.pair.y), pc.is_null(w.column("pair.y")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(w.id), pc.is_null(w.column("id")))).as_py()
 
     # Null child
     w = WrapperWithNulls.from_kwargs(id=["a", "b", "c"])
-    assert pc.all(pc.equal(w.pair.x, w.column("pair.x")))
-    assert pc.all(pc.equal(w.pair.y, w.column("pair.y")))
-    assert pc.all(pc.equal(w.id, w.column("id")))
+    assert pc.all(pc.equal(pc.is_null(w.pair.x), pc.is_null(w.column("pair.x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(w.pair.y), pc.is_null(w.column("pair.y")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(w.id), pc.is_null(w.column("id")))).as_py()
 
 
 def test_column_nested_doubly_nulls():
@@ -1381,26 +1381,26 @@ def test_column_nested_doubly_nulls():
         id=["a", "b", "c"],
         inner=WrapperWithNulls.from_kwargs(id=["a", "b", "c"], pair=PairWithNulls.from_kwargs(y=[4, 5, 6])),
     )
-    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
-    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
-    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
-    assert pc.all(pc.equal(dn.id, dn.column("id")))
+    assert pc.all(pc.equal(pc.is_null(dn.inner.pair.x), pc.is_null(dn.column("inner.pair.x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.inner.pair.y), pc.is_null(dn.column("inner.pair.y")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.inner.id), pc.is_null(dn.column("inner.id")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.id), pc.is_null(dn.column("id")))).as_py()
 
     # Null grandchild
     dn = DoublyNestedWithNulls.from_kwargs(
         id=["a", "b", "c"], inner=WrapperWithNulls.from_kwargs(id=["a", "b", "c"])
     )
-    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
-    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
-    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
-    assert pc.all(pc.equal(dn.id, dn.column("id")))
+    assert pc.all(pc.equal(pc.is_null(dn.inner.pair.x), pc.is_null(dn.column("inner.pair.x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.inner.pair.y), pc.is_null(dn.column("inner.pair.y")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.inner.id), pc.is_null(dn.column("inner.id")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.id), pc.is_null(dn.column("id")))).as_py()
 
     # Null child
     dn = DoublyNestedWithNulls.from_kwargs(id=["a", "b", "c"])
-    assert pc.all(pc.equal(dn.inner.pair.x, dn.column("inner.pair.x")))
-    assert pc.all(pc.equal(dn.inner.pair.y, dn.column("inner.pair.y")))
-    assert pc.all(pc.equal(dn.inner.id, dn.column("inner.id")))
-    assert pc.all(pc.equal(dn.id, dn.column("id")))
+    assert pc.all(pc.equal(pc.is_null(dn.inner.pair.x), pc.is_null(dn.column("inner.pair.x")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.inner.pair.y), pc.is_null(dn.column("inner.pair.y")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.inner.id), pc.is_null(dn.column("inner.id")))).as_py()
+    assert pc.all(pc.equal(pc.is_null(dn.id), pc.is_null(dn.column("id")))).as_py()
 
 
 def test_column_empty():
