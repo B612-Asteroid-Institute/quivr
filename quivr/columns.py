@@ -202,6 +202,50 @@ class SubTableColumn(Column, Generic[T]):
         dtype = pa.struct(self.schema)
         super().__init__(dtype, nullable=nullable, metadata=metadata)
 
+    def _load(self, data: Union["tables.Table", pa.Array, pa.ChunkedArray, list[Any], None], size_hint: Optional[int]) -> Optional[pa.Array]:  # type: ignore[name-defined]
+        """Load input into a StructArray for this subtable column.
+
+        Fast paths:
+        - If data is a matching quivr Table, convert via to_structarray (and adjust nullability if needed).
+        - If data is a StructArray/ChunkedArray with matching struct type, avoid cast.
+        """
+        # Handle missing data similarly to Column._load
+        if data is None:
+            if not self.nullable and self.default is None:
+                raise errors.InvalidColumnDataError(
+                    self, "received no data, but field is not nullable and has no default"
+                )
+            if size_hint is None:
+                return None
+            return self._nulls(size_hint)
+
+        # If caller provided a quivr Table of the correct type, convert directly
+        if isinstance(data, tables.Table):
+            if not isinstance(data, self.table_type):
+                raise errors.InvalidColumnDataError(
+                    self, f"expected {self.table_type.__name__}, got {type(data).__name__}"
+                )
+            # Optionally validate size
+            if size_hint is not None and len(data) != size_hint:
+                raise errors.InvalidColumnDataError(self, f"wrong length {len(data)} (expected {size_hint})")
+            struct_array = data.to_structarray()
+            if self.nullable:
+                # Ensure all fields are nullable when the subtable column is nullable
+                fields = [field.with_nullable(True) for field in struct_array.type]
+                struct_array = pa.StructArray.from_arrays(struct_array.flatten(), fields=fields)
+            return struct_array
+
+        # If caller provided Arrow data, try zero-cost path when dtype matches
+        if isinstance(data, pa.StructArray) or isinstance(data, pa.ChunkedArray):
+            data_type = data.type  # type: ignore[attr-defined]
+            if data_type == self.dtype:
+                return data  # type: ignore[return-value]
+            # Otherwise, cast to our struct dtype
+            return data.cast(self.dtype)  # type: ignore[return-value]
+
+        # Fallback: construct a StructArray from generic input
+        return pa.array(data, type=self.dtype)
+
     def _set_on_pyarrow_table(self, table: pa.Table, value: T) -> pa.Table:
         """Set the data for this column on a pyarrow Table. This
         includes setting metadata which encodes the subtable's
