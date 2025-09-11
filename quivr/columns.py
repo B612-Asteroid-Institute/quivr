@@ -232,6 +232,8 @@ class SubTableColumn(Column, Generic[T]):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, T]:
         if obj is None:
             return self
+        # Do NOT cache subtable objects: they are mutable via attributes,
+        # and caching would make attribute mutations appear persistent.
         array = obj.table.column(self.name)
 
         metadata = self.metadata
@@ -287,7 +289,12 @@ class Int8Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int8Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Int16Column(Column):
@@ -317,7 +324,12 @@ class Int16Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int16Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Int32Column(Column):
@@ -347,7 +359,12 @@ class Int32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int32Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Int64Column(Column):
@@ -377,7 +394,13 @@ class Int64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.Int64Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        # Array access cache: avoid recombining chunks repeatedly
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class UInt8Column(Column):
@@ -407,7 +430,12 @@ class UInt8Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt8Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class UInt16Column(Column):
@@ -437,7 +465,12 @@ class UInt16Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt16Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class UInt32Column(Column):
@@ -467,7 +500,12 @@ class UInt32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt32Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class UInt64Column(Column):
@@ -497,7 +535,12 @@ class UInt64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.UInt64Array]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Float16Column(Column):
@@ -535,7 +578,12 @@ class Float16Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.HalfFloatArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Float32Column(Column):
@@ -565,7 +613,12 @@ class Float32Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.FloatArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Float64Column(Column):
@@ -595,7 +648,12 @@ class Float64Column(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.lib.DoubleArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class BooleanColumn(Column):
@@ -623,7 +681,12 @@ class BooleanColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[pa.BooleanArray, Self]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class StringColumn(Column):
@@ -657,7 +720,12 @@ class StringColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[pa.StringArray, Self]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class LargeBinaryColumn(Column):
@@ -686,7 +754,12 @@ class LargeBinaryColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeBinaryArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class LargeStringColumn(Column):
@@ -715,7 +788,12 @@ class LargeStringColumn(Column):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, pa.LargeStringArray]:
         if obj is None:
             return self
-        return _fast_combine_chunks(obj.table[self.name])
+        cached = obj._array_cache.get(self.name)
+        if cached is not None:
+            return cached  # type: ignore[return-value]
+        arr = _fast_combine_chunks(obj.table[self.name])
+        obj._array_cache[self.name] = arr
+        return arr
 
 
 class Date32Column(Column):

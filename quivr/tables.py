@@ -135,6 +135,11 @@ class Table:
 
     def __init__(self, table: pa.Table, **kwargs: AttributeValueType):
         self.table = table
+        # Per-instance caches for frequently accessed derived values.
+        # Tables are immutable, so these caches are safe to maintain.
+        self._array_cache: dict[str, pa.Array] = {}
+        self._subtable_cache: dict[str, "Table"] = {}
+        self._column_metadata_cache: dict[str, dict[bytes, bytes]] = {}
         for name, value in kwargs.items():
             if name in self._quivr_attributes:
                 setattr(self, name, value)
@@ -1159,13 +1164,19 @@ class Table:
 
     def _metadata_for_column(self, column_name: str) -> dict[bytes, bytes]:
         """Return a dictionary of metadata associated with a subtable column."""
+        # Serve from cache if available
+        cached = self._column_metadata_cache.get(column_name)
+        if cached is not None:
+            return cached
         result: dict[bytes, bytes] = {}
         if self.table.schema.metadata is None:
+            self._column_metadata_cache[column_name] = result
             return result
         column_name_bytes = (column_name + ".").encode("utf8")
         for key, value in self.table.schema.metadata.items():
             if key.startswith(column_name_bytes):
                 result[key[len(column_name_bytes) :]] = value
+        self._column_metadata_cache[column_name] = result
         return result
 
     @classmethod
