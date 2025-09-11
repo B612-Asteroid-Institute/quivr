@@ -1573,6 +1573,32 @@ def test_set_column_changes_subtable_attribute():
     assert o2.inner.name == "b"
 
 
+def test_cached_accessor_not_stale_after_set_column():
+    # Access a column to exercise accessor caching, then mutate via set_column
+    t = Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6])
+    _ = t.x  # populate cache on this instance
+
+    t2 = t.set_column("x", [7, 8, 9])
+
+    # Original remains unchanged
+    assert t.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # New table reflects mutation
+    assert t2.x.equals(pa.array([7, 8, 9], pa.int64()))
+
+
+def test_cached_subtable_not_stale_after_set_column():
+    # Access a subtable to exercise subtable caching, then mutate nested column
+    w = Wrapper.from_kwargs(id=["a", "b", "c"], pair=Pair.from_kwargs(x=[1, 2, 3], y=[4, 5, 6]))
+    _ = w.pair  # populate subtable cache on this instance
+
+    w2 = w.set_column("pair.x", [7, 8, 9])
+
+    # Original remains unchanged
+    assert w.pair.x.equals(pa.array([1, 2, 3], pa.int64()))
+    # New table reflects mutation
+    assert w2.pair.x.equals(pa.array([7, 8, 9], pa.int64()))
+
+
 def test_get_unique_indices_first():
     t = Pair.from_kwargs(x=[1, 2, 3, 1, 2, 3], y=[4, 5, 6, 4, 5, 6])
 
