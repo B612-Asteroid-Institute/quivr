@@ -884,6 +884,139 @@ def test_set_missing_column_with_nullable_subtable():
     assert have.pairs.y.null_count == 0
 
 
+def test_nullable_subtable_with_extension_type():
+    """Test that nullable subtables with extension type columns can be created with nulls.
+
+    This test covers the issue where pa.array([None] * n, type=extension_type)
+    would raise ArrowNotImplementedError for extension types like FixedShapeTensorType.
+    The fix was to use pa.nulls(n, type=self.dtype) instead in SubTableColumn._nulls().
+    """
+
+    class TableWithExtension(qv.Table):
+        id = qv.Int64Column()
+        tensor = qv.Column(pa.fixed_shape_tensor(pa.float64(), (3, 3)))
+
+    class Wrapper(qv.Table):
+        name = qv.StringColumn()
+        data = TableWithExtension.as_column(nullable=True)
+
+    # Test 1: All nulls - no data provided for subtable
+    # This should not raise ArrowNotImplementedError when creating nulls
+    # for the extension type column
+    result = Wrapper.from_kwargs(name=["a", "b", "c"])
+
+    # Verify the nulls are created correctly
+    assert result.name.null_count == 0
+    assert result.data.id.null_count == 3
+    # The tensor field should also have nulls
+    assert result.data.tensor.null_count == 3
+
+    # Test 2: Round-trip with all nulls
+    result2 = Wrapper.from_kwargs(name=result.name, data=result.data)
+    assert result2.name.null_count == 0
+    assert result2.data.id.null_count == 3
+    assert result2.data.tensor.null_count == 3
+
+    # Test 3: All data provided (no nulls)
+    tensors = pa.FixedShapeTensorArray.from_numpy_ndarray(np.random.rand(3, 3, 3))
+    data_with_values = TableWithExtension.from_kwargs(id=[1, 2, 3], tensor=tensors)
+    result3 = Wrapper.from_kwargs(name=["a", "b", "c"], data=data_with_values)
+    assert result3.name.null_count == 0
+    assert result3.data.id.null_count == 0
+    assert result3.data.tensor.null_count == 0
+
+    # Test 4: Partial nulls - mix of null and non-null rows
+    # Create a subtable with 5 rows, then use a mask to null out some rows
+    tensors_partial = pa.FixedShapeTensorArray.from_numpy_ndarray(np.random.rand(5, 3, 3))
+    data_partial = TableWithExtension.from_kwargs(id=[1, 2, 3, 4, 5], tensor=tensors_partial)
+    wrapper_partial = Wrapper.from_kwargs(name=["a", "b", "c", "d", "e"], data=data_partial)
+
+    # Apply a mask to create partial nulls (nullify rows 1 and 3, keep 0, 2, 4)
+    mask = pa.array([True, False, True, False, True])
+    result4 = wrapper_partial.apply_mask(mask)
+
+    assert result4.name.null_count == 0
+    assert len(result4) == 3
+    assert result4.data.id.null_count == 0  # All remaining rows have data
+    assert result4.data.tensor.null_count == 0
+
+    # Verify the correct rows were kept
+    assert result4.name.to_pylist() == ["a", "c", "e"]
+    assert result4.data.id.to_pylist() == [1, 3, 5]
+
+    # Test 5: Nullable extension type column with partial nulls within the column
+    class TableWithNullableExtension(qv.Table):
+        id = qv.Int64Column()
+        tensor = qv.Column(pa.fixed_shape_tensor(pa.float64(), (3, 3)), nullable=True)
+
+    class WrapperNullable(qv.Table):
+        name = qv.StringColumn()
+        data = TableWithNullableExtension.as_column(nullable=True)
+
+    # Create a FixedShapeTensorArray with some null tensor entries
+    # Note: NumPy doesn't have nulls (only NaN), so we need to create the array
+    # and then add nulls at the PyArrow level to make entire tensors null
+
+    # Build the array by concatenating valid tensors and nulls
+    # Create individual valid tensors
+    tensor1 = pa.FixedShapeTensorArray.from_numpy_ndarray(np.random.rand(1, 3, 3))
+    tensor2 = pa.nulls(1, type=pa.fixed_shape_tensor(pa.float64(), (3, 3)))
+    tensor3 = pa.FixedShapeTensorArray.from_numpy_ndarray(np.random.rand(1, 3, 3))
+    tensor4 = pa.nulls(1, type=pa.fixed_shape_tensor(pa.float64(), (3, 3)))
+
+    # Concatenate them to create array: [valid, null, valid, null]
+    tensor_array_with_nulls = pa.concat_arrays([tensor1, tensor2, tensor3, tensor4])
+
+    data_nullable = TableWithNullableExtension.from_kwargs(
+        id=[10, 20, 30, 40], tensor=tensor_array_with_nulls
+    )
+    result5 = WrapperNullable.from_kwargs(name=["x", "y", "z", "w"], data=data_nullable)
+
+    assert result5.name.null_count == 0
+    assert result5.data.id.null_count == 0  # id column has no nulls
+    assert result5.data.tensor.null_count == 2  # Tensor has 2 null entries (at indices 1 and 3)
+    assert result5.data.id.to_pylist() == [10, 20, 30, 40]
+
+    # Verify which entries are null
+    tensor_column = result5.table.column("data").flatten()[1]  # Get the tensor field
+    assert tensor_column.is_null().to_pylist() == [False, True, False, True]
+
+    # Test 6: Tensors with NaN values within the tensor data (not null entries)
+    # This tests that we can handle tensors containing NaN values
+    class TableWithNanTensors(qv.Table):
+        id = qv.Int64Column()
+        tensor = qv.Column(pa.fixed_shape_tensor(pa.float64(), (3, 3)))
+
+    class WrapperWithNans(qv.Table):
+        name = qv.StringColumn()
+        data = TableWithNanTensors.as_column(nullable=True)
+
+    # Create tensors with NaN values inside them
+    tensors_with_nans = np.random.rand(4, 3, 3)
+    # Set some elements to NaN (not the entire tensor, just some values within)
+    tensors_with_nans[0, 1, 1] = np.nan  # First tensor has a NaN at position [1,1]
+    tensors_with_nans[2, 0, 2] = np.nan  # Third tensor has a NaN at position [0,2]
+    tensors_with_nans[3, 2, 2] = np.nan  # Fourth tensor has a NaN at position [2,2]
+
+    tensor_array_with_nans = pa.FixedShapeTensorArray.from_numpy_ndarray(tensors_with_nans)
+    data_with_nans = TableWithNanTensors.from_kwargs(id=[100, 200, 300, 400], tensor=tensor_array_with_nans)
+    result6 = WrapperWithNans.from_kwargs(name=["p", "q", "r", "s"], data=data_with_nans)
+
+    # All entries should be non-null (the tensors exist, they just contain NaN values)
+    assert result6.name.null_count == 0
+    assert result6.data.id.null_count == 0
+    assert result6.data.tensor.null_count == 0
+
+    # Verify the data can be retrieved and contains NaN values
+    retrieved_tensors = result6.data.tensor.combine_chunks().to_numpy_ndarray()
+    assert np.isnan(retrieved_tensors[0, 1, 1])
+    assert np.isnan(retrieved_tensors[2, 0, 2])
+    assert np.isnan(retrieved_tensors[3, 2, 2])
+    # Verify some non-NaN values exist
+    assert not np.isnan(retrieved_tensors[0, 0, 0])
+    assert not np.isnan(retrieved_tensors[1, 1, 1])
+
+
 class TableWithAttributes(qv.Table):
     x = qv.Int64Column()
     y = qv.Int64Column()

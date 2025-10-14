@@ -257,7 +257,8 @@ class SubTableColumn(Column, Generic[T]):
         # manually.
         #
         # See: https://github.com/apache/arrow/issues/37072
-        return pa.array([None] * n, type=self.dtype)
+        # return pa.array([None] * n, type=self.dtype)
+        return pa.nulls(n, type=self.dtype)
 
 
 class Int8Column(Column):
