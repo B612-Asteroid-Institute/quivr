@@ -63,6 +63,7 @@ _FORBIDDEN_COLUMN_NAMES = {
     "_quivr_subtables",
     "_quivr_attributes",
     "_column_validators",
+    "_quivr_subtable_cache",
 }
 
 
@@ -1027,12 +1028,16 @@ class Table:
 
     def null_mask(self) -> pa.Array:
         """Return a boolean mask indicating which rows of the entire table are null."""
-        # Get the null mask for each column
         flattened_table = self.flattened_table()
-        mask = pa.repeat(True, len(flattened_table))
-        for name in flattened_table.column_names:
-            mask = pc.and_(mask, pc.is_null(flattened_table.column(name)))
-        return pa.array(mask, type=pa.bool_())
+        columns = flattened_table.columns
+        if not columns:
+            return pa.array([], type=pa.bool_())
+        mask = pc.is_null(columns[0])
+        for col in columns[1:]:
+            mask = pc.and_(mask, pc.is_null(col))
+        if isinstance(mask, pa.ChunkedArray):
+            mask = mask.combine_chunks()
+        return mask
 
     @classmethod
     def empty(cls, **kwargs: AttributeValueType) -> Self:

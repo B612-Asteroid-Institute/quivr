@@ -32,39 +32,34 @@ def concatenate(
     # Note, we don't return immediately if there is only one table,
     # because we still want to optionally defragment the result.
 
-    batches = []
-    first_full = False
-
-    # Find the first non-empty table to get the class
+    first_cls = values_list[0].__class__
+    first_val = values_list[0]
+    # Find the first non-empty table to get the class for attribute comparison
     for v in values_list:
-        if not first_full and len(v) > 0:
+        if len(v) > 0:
             first_cls = v.__class__
             first_val = v
-            first_full = True
             break
 
-    # No non-empty tables found so lets pick the first table
-    # to get the class and attributes
-    if not first_full:
-        first_cls = values_list[0].__class__
-        first_val = values_list[0]
-
-    # Scan the values and now make sure they are all the same class
-    # as the first non-empty table
+    pa_tables = []
     for v in values_list:
-        batches += v.table.to_batches()
         if v.__class__ != first_cls:
             raise errors.TablesNotCompatibleError("All tables must be the same class to concatenate")
         if not first_val._attr_equal(v) and len(v) > 0:
             raise errors.TablesNotCompatibleError(
                 "All non-empty tables must have the same attribute values to concatenate"
             )
+        # Skip empty tables: their metadata can override that of non-empty
+        # tables (pa.concat_tables takes schema from the first input), and
+        # they contribute no rows.
+        if len(v) > 0:
+            pa_tables.append(v.table)
 
-    if len(batches) == 0:
-        # Return the first table, to preserve the attributes
+    if not pa_tables:
+        # All tables were empty; return the first to preserve attributes.
         table = first_val.table
     else:
-        table = pa.Table.from_batches(batches)
+        table = pa.concat_tables(pa_tables)
 
     # We re-initialize the table to optionally validate and create
     # a unique object

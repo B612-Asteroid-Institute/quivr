@@ -232,14 +232,33 @@ class SubTableColumn(Column, Generic[T]):
     def __get__(self, obj: Optional[tables.Table], objtype: type) -> Union[Self, T]:
         if obj is None:
             return self
+
+        # Cache the canonicalized subtable pa.Table per-instance, keyed on
+        # the parent table's identity so cache entries are naturally
+        # invalidated whenever the parent's pa.Table is replaced (e.g. via
+        # Attribute.__set__ on a mutable attribute or set_column returning
+        # a new instance). Each access still wraps the cached pa.Table in
+        # a fresh quivr Table, so callers can mutate attributes on the
+        # returned view without affecting future reads of obj.<name>.
+        cache = obj.__dict__.get("_quivr_subtable_cache")
+        if cache is None:
+            cache = {}
+            obj.__dict__["_quivr_subtable_cache"] = cache
+        else:
+            entry = cache.get(self.name)
+            if entry is not None and entry[0] is obj.table:
+                return self.table_type(entry[1])
+
         array = obj.table.column(self.name)
 
-        metadata = self.metadata
-        if metadata is None:
-            metadata = {}
-        metadata.update(obj._metadata_for_column(self.name))  # type: ignore
+        # Build the per-call metadata dict without mutating self.metadata,
+        # which is class-level state shared across instances.
+        column_metadata: dict[Byteslike, Byteslike] = {}
+        if self.metadata is not None:
+            column_metadata.update(self.metadata)
+        column_metadata.update(obj._metadata_for_column(self.name))  # type: ignore
 
-        schema = self.schema.with_metadata(metadata)
+        schema = self.schema.with_metadata(column_metadata)
 
         subtable = pa.Table.from_arrays(array.flatten(), schema=schema)
         # We don't validate the subtable. If the parent table was validated,
@@ -247,7 +266,9 @@ class SubTableColumn(Column, Generic[T]):
         # If the parent table is intentionally not validated, then we don't
         # want to validate the subtable at this time as it will throw an error
         # when accessing the subtable as a column (e.g. during concatenation).
-        return self.table_type.from_pyarrow(subtable, permit_nulls=self.nullable, validate=False)
+        result = self.table_type.from_pyarrow(subtable, permit_nulls=self.nullable, validate=False)
+        cache[self.name] = (obj.table, result.table)
+        return result
 
     def _nulls(self, n: int) -> pa.Array:
         """Return an array of nulls of the appropriate size."""

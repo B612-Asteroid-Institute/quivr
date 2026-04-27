@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Generic, Iterable, Iterator, List, Optional, Tuple, TypeVar
 
+import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 
 from . import concat, errors, tables
 
@@ -12,27 +14,88 @@ class ArrowArrayIndex:
     Represents an index over the values in a PyArrow Array.
     """
 
-    index: dict[pa.Scalar, pa.UInt64Array]
+    index: dict[pa.Scalar, pa.Array]
     values: set[pa.Scalar]
 
     def __init__(self, array: pa.Array):
-        self.index = {}
-        self.values = set()
-
         if array.null_count > 0:
             raise ValueError("Array must not contain null values to be an index")
 
-        in_progress_index: dict[pa.Scalar, list[pa.Scalar]] = {}
+        n = len(array)
+        if n == 0:
+            self.index = {}
+            self.values = set()
+            return
+
+        # Group positions by value without wrapping every element in a
+        # pa.Scalar in Python. For primitives, use dictionary_encode to
+        # get integer codes; for struct arrays (used by MultiKeyLinkage),
+        # dictionary_encode is not supported, so encode each field
+        # separately and lexsort the resulting integer columns. If a key
+        # type rejects dictionary_encode (e.g. nested struct/list fields),
+        # fall back to the original element-by-element grouping.
+        try:
+            order, diff_any = self._compute_order(array, n)
+        except pa.lib.ArrowNotImplementedError:
+            self._init_fallback(array)
+            return
+
+        change_points = np.flatnonzero(diff_any) + 1
+        boundaries = np.concatenate(([0], change_points, [n])).astype(np.int64)
+
+        # Resolve all unique keys with a single Arrow take(), and slice
+        # the (zero-copy) pyarrow array of positions for each group.
+        first_positions = order[boundaries[:-1]]
+        keys_array = array.take(pa.array(first_positions))
+        order_arr = pa.array(order)
+
+        index: dict[pa.Scalar, pa.Array] = {}
+        for b in range(len(boundaries) - 1):
+            start = int(boundaries[b])
+            length = int(boundaries[b + 1]) - start
+            index[keys_array[b]] = order_arr.slice(start, length)
+
+        self.index = index
+        self.values = set(index.keys())
+
+    @staticmethod
+    def _compute_order(array: pa.Array, n: int) -> Tuple[np.ndarray, np.ndarray]:
+        if pa.types.is_struct(array.type):
+            field_codes = []
+            for field in array.type:
+                ef = pc.dictionary_encode(array.field(field.name))
+                if isinstance(ef, pa.ChunkedArray):
+                    ef = ef.combine_chunks()
+                field_codes.append(ef.indices.to_numpy(zero_copy_only=False))
+            # np.lexsort treats the LAST key as primary, so reverse the
+            # field list to sort by first field primarily.
+            order = np.lexsort(field_codes[::-1])
+            if n == 1:
+                diff_any = np.zeros(0, dtype=bool)
+            else:
+                diff_any = np.zeros(n - 1, dtype=bool)
+                for fc in field_codes:
+                    diff_any |= np.diff(fc[order]) != 0
+            return order, diff_any
+
+        encoded = pc.dictionary_encode(array)
+        if isinstance(encoded, pa.ChunkedArray):
+            encoded = encoded.combine_chunks()
+        codes = encoded.indices.to_numpy(zero_copy_only=False)
+        order = np.argsort(codes, kind="stable")
+        diff_any = np.diff(codes[order]) != 0 if n > 1 else np.zeros(0, dtype=bool)
+        return order, diff_any
+
+    def _init_fallback(self, array: pa.Array) -> None:
+        in_progress: dict[pa.Scalar, list[int]] = {}
         for i in range(len(array)):
             val = array[i]
-            if val in in_progress_index:
-                in_progress_index[val].append(i)
+            if val in in_progress:
+                in_progress[val].append(i)
             else:
-                in_progress_index[val] = [i]
-            self.values.add(val)
-
-        for val, indices in in_progress_index.items():
-            self.index[val] = pa.array(indices)
+                in_progress[val] = [i]
+        self.index = {val: pa.array(idx) for val, idx in in_progress.items()}
+        self.values = set(self.index.keys())
 
     def get(self, val: pa.Scalar) -> Optional[pa.UInt64Array]:
         return self.index.get(val, None)
